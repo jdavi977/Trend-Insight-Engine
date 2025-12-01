@@ -1,14 +1,13 @@
 import json
+from DatasetCreation import getYoutubeComments
 
-def loadAndClean(ref):
-    with open(ref, 'r') as r:
-        data = json.load(r)
-
-    for list in data:
-        list.pop("Author", None)
+def loadAndClean():
+    data = getYoutubeComments()
     newData= []
     test = []
 
+    print(len(data))
+    
     for comment in data:
         if ((comment['Likes']) != ''):
             newData.append(comment)
@@ -34,5 +33,4 @@ def loadAndClean(ref):
     print(filtered)
     print(len(filtered))
 
-#loadAndClean('Datasets/Practice.json')
-loadAndClean('Datasets/2025.json')
+loadAndClean()
