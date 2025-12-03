@@ -1,12 +1,10 @@
 import json
-from DatasetCreation import getYoutubeComments
+from ingestion.DatasetCreation import getYoutubeComments
 
 def loadAndClean():
     data = getYoutubeComments()
     newData= []
     test = []
-
-    print(len(data))
     
     for comment in data:
         if ((comment['Likes']) != ''):
@@ -30,7 +28,4 @@ def loadAndClean():
         for word in keywords:
             if word in comment["Text"]:
                 filtered.append(comment)
-    print(filtered)
-    print(len(filtered))
-
-loadAndClean()
+    return filtered
