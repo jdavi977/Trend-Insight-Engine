@@ -1,31 +1,44 @@
 import json
+import re
 from ingestion.DatasetCreation import getYoutubeComments
+
+#TODO: stopword removal? remove urls?
 
 def loadAndClean():
     data = getYoutubeComments()
-    newData= []
-    test = []
-    
-    for comment in data:
-        if ((comment['Likes']) != ''):
-            newData.append(comment)
-    
-    for comment in newData:
-        if (int(comment['Likes']) >= 10):
-            test.append(comment)
-
+    cleaned = []
+    filtered = []
     keywords = [
-        "add", "feature", "wish", "need", "could", "missing", "support",
-        "issue", "bug", "problem", "crash", "lag", "slow", "broken", "fix",
-        "hard", "confusing", "complicated", "clear", "should be easier",
-        "unlike", "other tool", "competitor", "better",
-        "automatic", "AI", "automate", "future", "huge if"
+        "add", "adding", "feature", "wish", "need", "could", "missing", "support",
+        "issue", "bug", "problem", "crash", "crashes", "lag", "laggy",
+        "slow", "broken", "fix", "fixed", "hard", "confusing", "complicated",
+        "easier", "should be easier", "unlike", "better",
+        "automatic", "automation", "ai", "automate"
     ]
 
-    filtered = []
+    # Filtering based off likes
+    for comment in data:
+        try:
+            likes = comment.get('Likes', 0)
+        except:
+            likes = 0
+        if likes >= 50:
+            cleaned.append({
+                "Text": comment['Text'].lower().strip(),
+                "Likes": likes
+            })
 
-    for comment in test:
-        for word in keywords:
-            if word in comment["Text"]:
+    # Filtering for keywords
+    for comment in cleaned:
+        for key in keywords:
+            pattern = re.compile(r"\b" + re.escape(key) + r"\b")
+            match = pattern.search(comment['Text'])
+            if match:
                 filtered.append(comment)
-    return filtered
+                pass
+            else:
+                pass
+
+    unique = list({c["Text"]: c for c in filtered}.values())
+
+    return unique

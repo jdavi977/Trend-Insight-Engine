@@ -10,8 +10,8 @@ def getYoutubeComments():
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.commentThreads().list(
         part="snippet",
-        videoId="RDIlU7VLXu0",
-        maxResults = 50,
+        videoId="3DvPInfIXGo",
+        maxResults = 100,
         order = "relevance",
         textFormat = "plainText"
     )
@@ -25,8 +25,6 @@ def getYoutubeComments():
             "Text": snippet["textDisplay"]
         })
     service.close()
+    print(len(comments))
     return comments
-
-print(getYoutubeComments)
-
 
