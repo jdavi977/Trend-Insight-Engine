@@ -36,19 +36,24 @@ Here is the example JSON array of comments I want you to return:
     ]
 }
 """
+data = loadAndClean()
+
+userDataPrompt = f"""
+Here is the data found {data}
+"""
+
 def extractInsights(data):
     client = OpenAI(api_key=OPENAI_KEY)
 
     response = client.responses.create(
         model="gpt-5-mini",
         input=[
-            {"role": "system", "content": systemPrompt},
-            {"role": "user", "content": [{
-                "type": "input_text", "input_text": data}]},
-            {"role": "system", "content": systemPromptOutput}
+            {"role": "developer", "content": systemPrompt},
+            {"role": "user", "content": userDataPrompt},
+            {"role": "assistant", "content": systemPromptOutput}
         ]
     )
 
     print(response.output_text)
 
-extractInsights(loadAndClean())
+extractInsights(data)

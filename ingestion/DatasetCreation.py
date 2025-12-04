@@ -27,6 +27,6 @@ def getYoutubeComments():
     service.close()
     return comments
 
-
+print(getYoutubeComments)
 
 
