@@ -6,11 +6,15 @@ load_dotenv()
 
 YOUTUBE_API = os.getenv("YOUTUBE_API")
 
-def getYoutubeComments():
+def getVideoId(link):
+    id = link.split("v=")[1]
+    return id
+
+def getYoutubeComments(id):
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.commentThreads().list(
         part="snippet",
-        videoId="3DvPInfIXGo",
+        videoId=id,
         maxResults = 100,
         order = "relevance",
         textFormat = "plainText"
@@ -25,6 +29,4 @@ def getYoutubeComments():
             "Text": snippet["textDisplay"]
         })
     service.close()
-    print(len(comments))
     return comments
-

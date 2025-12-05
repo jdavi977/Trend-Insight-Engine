@@ -1,7 +1,6 @@
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
-from preprocessing.CommentClean import loadAndClean
 
 load_dotenv()
 
@@ -36,14 +35,13 @@ Here is the example JSON array of comments I want you to return:
     ]
 }
 """
-data = loadAndClean()
-
-userDataPrompt = f"""
-Here is the data found {data}
-"""
 
 def extractInsights(data):
     client = OpenAI(api_key=OPENAI_KEY)
+
+    userDataPrompt = f"""
+    Here is the data found {data}
+    """
 
     response = client.responses.create(
         model="gpt-5-mini",
@@ -54,6 +52,4 @@ def extractInsights(data):
         ]
     )
 
-    print(response.output_text)
-
-extractInsights(data)
+    return response.output_text

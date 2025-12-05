@@ -4,8 +4,7 @@ from ingestion.DatasetCreation import getYoutubeComments
 
 #TODO: stopword removal? remove urls?
 
-def loadAndClean():
-    data = getYoutubeComments()
+def loadAndClean(data):
     cleaned = []
     filtered = []
     keywords = [
