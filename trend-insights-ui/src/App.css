@@ -123,6 +123,16 @@
   color: #9ca3af;
 }
 
+.error-message {
+  color: #fca5a5;
+  background-color: #7f1d1d;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #991b1b;
+  text-align: left;
+}
+
 .problems-list {
   list-style: none;
   padding: 0;
