@@ -1,5 +1,5 @@
 import "./App.css";
-import React, { useState } from "react";
+import { useState } from "react";
 
 function App() {
   const [url, setUrl] = useState("");
@@ -34,8 +34,8 @@ function App() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
-      
+      const parsedData = typeof data === "string" ? JSON.parse(data) : data;
+
       setAnalytics(parsedData);
       setLoading(false);
     } catch (error) {
@@ -49,14 +49,12 @@ function App() {
     <div className="app-shell">
       <div className="app-header">
         <h1>Trend Insight Engine</h1>
-        <p className="app-subtitle">Analyze YouTube comments to discover insights and trends</p>
+        <p className="app-subtitle">
+          Analyze YouTube comments to discover insights and trends
+        </p>
       </div>
 
-      {error && (
-        <div className="error-message">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
 
       <div className="input-row">
         <input
@@ -65,7 +63,7 @@ function App() {
           placeholder="Paste your YouTube link here..."
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !loading && analyze()}
+          onKeyDown={(e) => e.key === "Enter" && !loading && analyze()}
           required
         />
         <button onClick={analyze} disabled={loading}>
@@ -77,7 +75,9 @@ function App() {
         <div className="analytics-card">
           <div className="card-header">
             <h2>Insights</h2>
-            <span className="pill">{problems.length} {problems.length === 1 ? 'Problem' : 'Problems'}</span>
+            <span className="pill">
+              {problems.length} {problems.length === 1 ? "Problem" : "Problems"}
+            </span>
           </div>
           <ul className="problems-list">
             {problems.map((problem, index) => (

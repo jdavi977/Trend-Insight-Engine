@@ -1,6 +1,6 @@
 import json
 import re
-from ingestion.DatasetCreation import getYoutubeComments
+from ingestion.YTCommentsCreation import getYoutubeComments
 
 #TODO: stopword removal? remove urls?
 

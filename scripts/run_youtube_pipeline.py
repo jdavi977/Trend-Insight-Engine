@@ -1,4 +1,4 @@
-from ingestion.getYoutubeComments import getVideoId, getYoutubeComments
+from ingestion.YTCommentsCreation import getVideoId, getYoutubeComments
 from preprocessing.CommentClean import loadAndClean
 from llm.ExtractInsights import extractInsights
 

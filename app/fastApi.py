@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from scripts.run_youtube_pipeline import run_pipeline
-from preprocessing.ValidateUrl import validateURL
+from preprocessing.ValidateUrl import validateYoutube
 
 app = FastAPI()
 
@@ -19,7 +19,7 @@ class AnalyzeRequest(BaseModel):
 
 @app.post("/analyze")
 def analyze_video(request: AnalyzeRequest):
-    if not validateURL(request.youtubeURL):
+    if not validateYoutube(request.youtubeURL):
         raise HTTPException(status_code=400, detail="Invalid link")
     else:
         result = run_pipeline(request.youtubeURL)
