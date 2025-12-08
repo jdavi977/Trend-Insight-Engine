@@ -1,11 +1,11 @@
 import re
 from config.keywords import YOUTUBE_KEYWORDS
+from utilities.text_cleaning import keyword_filtering, remove_emojis, remove_duplicates
 
 #TODO: stopword removal? remove urls?
 
 def loadAndClean(data):
     cleaned = []
-    filtered = []
 
     # Filtering based off likes
     for comment in data:
@@ -15,21 +15,16 @@ def loadAndClean(data):
             likes = 0
         if likes >= 50:
             cleaned.append({
-                "Text": comment['Text'].lower().strip(),
-                "Likes": likes
+                "Likes": likes,
+                "Content": comment['Text'].lower().strip(),
             })
 
     # Filtering for keywords
-    for comment in cleaned:
-        for key in YOUTUBE_KEYWORDS:
-            pattern = re.compile(r"\b" + re.escape(key) + r"\b")
-            match = pattern.search(comment['Text'])
-            if match:
-                filtered.append(comment)
-                pass
-            else:
-                pass
+    filtered = keyword_filtering(cleaned, YOUTUBE_KEYWORDS)
+
+    # Clean out emojis
+    emoji_removed = remove_emojis(filtered)
 
     # Filtering duplicates
-    unique = list({c["Text"]: c for c in filtered}.values())
-    return unique
+    finished = remove_duplicates(emoji_removed)
+    return finished
