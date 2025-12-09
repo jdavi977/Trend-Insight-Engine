@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from scripts.run_youtube_pipeline import run_pipeline
-from preprocessing.validateUrl import validateYoutube
+from scripts.run_youtube_pipeline import run_youtube_pipeline
+from scripts.run_app_pipeline import run_app_pipeline
+from preprocessing.validateUrl import validateYoutube, validateAppStore
 
 app = FastAPI()
 
@@ -14,13 +15,22 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-class AnalyzeRequest(BaseModel):
+class YoutubeAnalyzeRequest(BaseModel):
     youtubeURL: str
 
-@app.post("/analyze")
-def analyze_video(request: AnalyzeRequest):
+class AppStoreAnalyzeRequest(BaseModel):
+    appStoreURL: str
+
+@app.post("/analyze/youtube")
+def analyze_youtube(request: YoutubeAnalyzeRequest):
     if not validateYoutube(request.youtubeURL):
         raise HTTPException(status_code=400, detail="Invalid link")
     else:
-        result = run_pipeline(request.youtubeURL)
-        return result
+        return run_youtube_pipeline(request.youtubeURL)
+
+@app.post("/analyze/appStore")
+def analyze_appStore(request: AppStoreAnalyzeRequest):
+    if not validateAppStore(request.appStoreURL):
+        raise HTTPException(status_code=400, detail="Invalid link")
+    else:
+        return run_app_pipeline(request.appStoreURL)
