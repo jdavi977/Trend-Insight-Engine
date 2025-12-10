@@ -25,5 +25,6 @@ def appReviewClean(data):
     emoji_removed = remove_emojis(filtered)
 
     finished = remove_duplicates(emoji_removed)
+
     return finished
 

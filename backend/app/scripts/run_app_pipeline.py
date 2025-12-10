@@ -8,6 +8,5 @@ def run_app_pipeline(link):
     id = getAppId(link)
     raw_data = getAppReviews(id, APP_REVIEW_PAGES)
     cleaned_data = appReviewClean(raw_data)
-    print(cleaned_data)
     insights = extractInsights(cleaned_data, appStoreSystemPrompt, appStorePromptOutput)
     return insights

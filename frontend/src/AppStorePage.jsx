@@ -44,7 +44,7 @@ function AppStorePage() {
     }
   };
 
-  const problems = analytics?.Problems || analytics?.["Problems:"] || [];
+  const problems = analytics?.problems || analytics?.["problems:"] || [];
 
   return (
     <div className="app-shell">
@@ -106,4 +106,3 @@ function AppStorePage() {
 }
 
 export default AppStorePage;
-

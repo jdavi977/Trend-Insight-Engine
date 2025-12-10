@@ -44,7 +44,7 @@ function YouTubePage() {
     }
   };
 
-  const problems = analytics?.Problems || analytics?.["Problems:"] || [];
+  const problems = analytics?.problems || analytics?.["problems:"] || [];
 
   return (
     <div className="app-shell">
@@ -71,8 +71,7 @@ function YouTubePage() {
           {loading ? "Analyzing..." : "Analyze"}
         </button>
       </div>
-
-      {analytics && problems.length > 0 && (
+      {problems.length > 0 && (
         <div className="analytics-card">
           <div className="card-header">
             <h2>Insights</h2>
@@ -96,7 +95,7 @@ function YouTubePage() {
         </div>
       )}
 
-      {analytics && problems.length === 0 && (
+      {problems.length === 0 && (
         <div className="analytics-card">
           <p className="empty-state">No problems found in the comments.</p>
         </div>
@@ -106,4 +105,3 @@ function YouTubePage() {
 }
 
 export default YouTubePage;
-

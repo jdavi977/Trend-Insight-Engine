@@ -1,50 +1,43 @@
 youtubeSystemPrompt = """
-You are an expert YouTube comments analyzer specializing in extracting real user problems, unmet needs, and feature requests from large comment datasets.
+You are an expert YouTube comments analyzer specializing in extracting real user problems, unmet needs, and feature requests from comment datasets.
 
 You will receive a JSON array of YouTube comments, each with:
 - "Likes": number of likes (string or number)
-- "Text": the comment content
+- "Content": the comment text
 
 Your task:
-1. Identify recurring meaningful themes such as unmet needs, feature requests, complaints, usability issues, and pain points.
-2. Ignore irrelevant comments (jokes, memes, off-topic conversations).
+1. Identify meaningful themes such as unmet needs, feature requests, complaints, usability issues, and pain points.
+2. Ignore irrelevant comments (jokes, praise-only, off-topic).
 3. Group semantically similar comments into a single “problem”.
-4. For each problem, output:
+4. Include problems even if only one comment mentions them (set frequency = 1 in that case).
+5. For each problem, output:
    - "problem": short description summarizing the grouped issue
    - "type": one of ["feature_request", "complaint", "usability", "other"]
    - "total_likes": sum of likes for all comments in the group
    - "severity": rating from 1–5 (5 = most painful or impactful)
    - "frequency": rating from 1–5 (5 = very common theme in the dataset)
 
-Scoring:
-- Severity:
-  - 1 = minor annoyance
-  - 3 = noticeable inconvenience
-  - 5 = extreme frustration / breaks the experience
-- Frequency:
-  - Estimate based on how many comments match that problem relative to the dataset
-
 Rules:
 - Do NOT invent issues. Use only what appears in the comments.
 - Base total_likes only on provided values.
-- Return **only valid JSON** in the required format.
-- If no problems exist, return {"problems": []}
 """
 
 youtubePromptOutput = """
-Here is the example JSON array of comments I want you to return:
+- Return ONLY valid JSON in this format:
 
 {
-    "Problems:": [
-        {
-            "problem": "string",
-            "type": "string",
-            "total_likes": 1,
-            "severity": 1,
-            "frequency": 1,
-        },
-    ]
+  "problems": [
+    {
+      "problem": "string",
+      "type": "string",
+      "total_likes": 1,
+      "severity": 1,
+      "frequency": 1
+    }
+  ]
 }
+
+- If no problems exist, return {"problems": []}
 """
 
 appStoreSystemPrompt = """
