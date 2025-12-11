@@ -44,6 +44,29 @@ function YouTubePage() {
     }
   };
 
+  const save = async () => {
+    try {
+      const payload = {
+        data: analytics,
+      };
+      const response = await fetch("http://localhost:8000/data/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      setError("Failed to send data. Please try again.");
+      setLoading(false);
+      console.error("Error", error);
+    }
+  };
+
   const problems = analytics?.problems || analytics?.["problems:"] || [];
 
   return (
@@ -58,6 +81,7 @@ function YouTubePage() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="input-row">
+        -
         <input
           type="text"
           id="youtube-link"
@@ -71,7 +95,7 @@ function YouTubePage() {
           {loading ? "Analyzing..." : "Analyze"}
         </button>
       </div>
-      {problems.length > 0 && (
+      {analytics && problems.length > 0 && (
         <div className="analytics-card">
           <div className="card-header">
             <h2>Insights</h2>
@@ -92,10 +116,13 @@ function YouTubePage() {
               </li>
             ))}
           </ul>
+          <div>
+            <button onClick={save}>Save Data</button>
+          </div>
         </div>
       )}
 
-      {problems.length === 0 && (
+      {analytics && problems.length === 0 && (
         <div className="analytics-card">
           <p className="empty-state">No problems found in the comments.</p>
         </div>

@@ -1,0 +1,18 @@
+{
+    "problems": [
+        {
+            "problem": "Thumbnail looks like a different, recognizable presenter (caused a mistaken click / misleading expectation)",
+            "type": "complaint",
+            "total_likes": 483,
+            "severity": 2,
+            "frequency": 1
+        },
+        {
+            "problem": "Lack of video chapters/timestamps \u2014 commenter posted timestamps manually (needs built-in chapters or a pinned timestamped summary)",
+            "type": "feature_request",
+            "total_likes": 350,
+            "severity": 3,
+            "frequency": 1
+        }
+    ]
+}
