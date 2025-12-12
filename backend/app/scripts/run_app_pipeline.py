@@ -6,7 +6,9 @@ from llm.extractInsights import extractInsights
 
 def run_app_pipeline(link):
     id = getAppId(link)
-    raw_data = getAppReviews(id, APP_REVIEW_PAGES)
-    cleaned_data = appReviewClean(raw_data)
+    mostRecent = getAppReviews(id, "mostRecent", APP_REVIEW_PAGES)
+    mostHelpful = getAppReviews(id, "mostHelpful", APP_REVIEW_PAGES)
+    all_items = mostRecent + mostHelpful
+    cleaned_data = appReviewClean(all_items)
     insights = extractInsights(cleaned_data, appStoreSystemPrompt, appStorePromptOutput)
     return insights

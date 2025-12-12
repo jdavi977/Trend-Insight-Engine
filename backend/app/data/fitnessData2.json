@@ -1,0 +1,21 @@
+{
+  "problems": [
+    {
+      "problem": "Request for more balanced, sustainable dieting content (not extreme diets/workouts)",
+      "type": "feature_request",
+      "total_likes": 1160,
+      "severity": 3,
+      "frequency": 1
+    },
+    {
+      "problem": "Harmful effects of severe/very large calorie deficits: low energy, crankiness, muscle loss and metabolic slowdown",
+      "type": "complaint",
+      "total_likes": 1080,
+      "severity": 5,
+      "frequency": 2
+    }
+  ],
+  "link": {
+    "link": "https://www.youtube.com/watch?v=IBvJ_BRsymI"
+  }
+}

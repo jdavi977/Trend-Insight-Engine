@@ -44,6 +44,29 @@ function AppStorePage() {
     }
   };
 
+  const save = async () => {
+    try {
+      const payload = {
+        data: analytics,
+      };
+      const response = await fetch("http://localhost:8000/data/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      setError("Failed to send data. Please try again.");
+      setLoading(false);
+      console.error("Error", error);
+    }
+  };
+
   const problems = analytics?.problems || analytics?.["problems:"] || [];
 
   return (
@@ -93,6 +116,9 @@ function AppStorePage() {
               </li>
             ))}
           </ul>
+          <div className="card-header">
+            <button onClick={save}>Save Data</button>
+          </div>
         </div>
       )}
 

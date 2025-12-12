@@ -1,0 +1,25 @@
+{
+    "problems": [
+        {
+            "problem": "Procrastination / watching videos instead of studying (distraction)",
+            "type": "complaint",
+            "total_likes": 2649,
+            "severity": 4,
+            "frequency": 4
+        },
+        {
+            "problem": "Declining grades, reduced attention and motivation ('glow down' / laziness)",
+            "type": "complaint",
+            "total_likes": 312,
+            "severity": 5,
+            "frequency": 2
+        },
+        {
+            "problem": "Need for concise, actionable last-minute exam tips and study strategies",
+            "type": "feature_request",
+            "total_likes": 684,
+            "severity": 4,
+            "frequency": 2
+        }
+    ]
+}

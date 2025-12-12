@@ -10,13 +10,13 @@ def getVideoId(link):
     id = link.split("v=")[1]
     return id
 
-def getYoutubeComments(id):
+def getYoutubeComments(id, order):
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.commentThreads().list(
         part="snippet",
-        videoId=id,
+        videoId= id,
         maxResults = 100,
-        order = "relevance",
+        order = order,
         textFormat = "plainText"
     )
     comments = []

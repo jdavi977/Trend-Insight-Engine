@@ -1,18 +1,18 @@
 import requests
 import json
 
-# EXAMPLE
-# https://apps.apple.com/ca/app/focus-friend-by-hank-green/id6742278016
+# TODO:
+# FIX feed/entry not existing when page is over limit or comment not having those fields
 
 
 def getAppId(link):
     id = link.split("/id")[1]
     return id
 
-def getAppReviews(id, max_pages):
+def getAppReviews(id, sortBy, max_pages):
     all_reviews = []
     for page in range(1, max_pages + 1):
-        url = f"https://itunes.apple.com/rss/customerreviews/id={id}/sortBy=mostRecent/page={page}/json"
+        url = f"https://itunes.apple.com/rss/customerreviews/id={id}/sortBy={sortBy}/page={page}/json"
         response = requests.get(url, timeout=10)
 
         if response.status_code != 200:

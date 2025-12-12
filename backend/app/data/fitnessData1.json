@@ -1,0 +1,21 @@
+{
+  "problems": [
+    {
+      "problem": "App lacks advanced/progressive routines for experienced users aiming to build significant muscle",
+      "type": "complaint",
+      "total_likes": 482,
+      "severity": 4,
+      "frequency": 3
+    },
+    {
+      "problem": "Need for accessible, no\u2011equipment or low\u2011cost home workout options for users who can't afford gym memberships or equipment",
+      "type": "other",
+      "total_likes": 1343,
+      "severity": 4,
+      "frequency": 3
+    }
+  ],
+  "link": {
+    "link": "https://www.youtube.com/watch?v=ZUdQNiryFEg"
+  }
+}

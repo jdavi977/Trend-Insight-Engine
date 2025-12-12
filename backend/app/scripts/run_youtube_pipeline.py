@@ -5,7 +5,9 @@ from config.prompts import youtubeSystemPrompt, youtubePromptOutput
 
 def run_youtube_pipeline(link):
     id = getVideoId(link)
-    raw_data = getYoutubeComments(id)
-    cleaned_data = loadAndClean(raw_data)
+    relevance = getYoutubeComments(id, "relevance")
+    time = getYoutubeComments(id, "time")
+    all_items = relevance + time
+    cleaned_data = loadAndClean(all_items)
     insights = extractInsights(cleaned_data, youtubeSystemPrompt, youtubePromptOutput)
     return insights

@@ -1,0 +1,25 @@
+{
+    "problems": [
+        {
+            "problem": "Students find textbooks inefficient and prefer practice questions or concise chapter summaries instead of reading full textbooks",
+            "type": "feature_request",
+            "total_likes": 778,
+            "severity": 4,
+            "frequency": 1
+        },
+        {
+            "problem": "Difficulty getting started and maintaining momentum/focus while studying (initially slow/hard to start and stay productive)",
+            "type": "complaint",
+            "total_likes": 862,
+            "severity": 5,
+            "frequency": 5
+        },
+        {
+            "problem": "Need for better energy and rest management as part of study routines (rest is important to sustain focus/energy)",
+            "type": "other",
+            "total_likes": 84,
+            "severity": 4,
+            "frequency": 1
+        }
+    ]
+}

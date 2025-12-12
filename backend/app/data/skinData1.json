@@ -1,0 +1,39 @@
+{
+    "problems": [
+        {
+            "problem": "Users seek effective, accessible natural remedies for acne scars, dark spots and fine lines (e.g., aloe vera) but may be unsure about efficacy and use",
+            "type": "complaint",
+            "total_likes": 194,
+            "severity": 4,
+            "frequency": 1
+        },
+        {
+            "problem": "Unclear instructions for DIY face masks: what ingredients to combine or avoid, correct application time and rinsing procedure",
+            "type": "usability",
+            "total_likes": 194,
+            "severity": 3,
+            "frequency": 1
+        },
+        {
+            "problem": "Need for clearer diet guidance related to skin (which foods to avoid like sugar/refined carbs and how hydration/coffee affect skin)",
+            "type": "other",
+            "total_likes": 194,
+            "severity": 3,
+            "frequency": 1
+        },
+        {
+            "problem": "Confusion and safety concerns around cold therapy (ice water) vs. cleansing order \u2014 risk of trapping dirt if pores are tightened first",
+            "type": "usability",
+            "total_likes": 194,
+            "severity": 3,
+            "frequency": 1
+        },
+        {
+            "problem": "Unclear everyday skincare habit guidance (when to wash, avoid popping pimples, not touching face, not sleeping/exercising with makeup, and avoiding product overload)",
+            "type": "usability",
+            "total_likes": 194,
+            "severity": 2,
+            "frequency": 1
+        }
+    ]
+}
