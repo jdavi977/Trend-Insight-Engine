@@ -1,0 +1,81 @@
+{
+  "problems": [
+    {
+      "problem": "App is sluggish/unresponsive when logging food and sometimes UI elements close unexpectedly (long pauses, freezing, or disappearing dialogs while adding items).",
+      "type": "performance",
+      "average_rating": 3,
+      "frequency": 3,
+      "severity": 4,
+      "example_reviews": [
+        "over the last few months, it became very sluggish and frustrating... delete and reinstall the app and it completely fixed the problem.",
+        "it becomes unresponsive for at least 5 seconds whenever i try to log a new meal... makes it frustrating to use, and i\u2019ve found myself logging less and less because of it."
+      ]
+    },
+    {
+      "problem": "Intrusive ads and constant upsell pop-ups in the free app (unskippable ads, repeated 'last chance' pricing banners) that disrupt use and discourage paying for premium.",
+      "type": "pricing",
+      "average_rating": 2.5,
+      "frequency": 4,
+      "severity": 3,
+      "example_reviews": [
+        "the new, usually unskippable ads... it completely breaks this app in my mind.",
+        "a pop up appears telling me that it\u2019s my 'last chance' to get the extra features at 25% off. it\u2019s been my 'last chance' for over three months."
+      ]
+    },
+    {
+      "problem": "Food database inaccuracies and inconsistent entries: incorrect portion/calorie values, multiple conflicting search results, and noisy user-added items (unverified entries).",
+      "type": "usability",
+      "average_rating": 4,
+      "frequency": 3,
+      "severity": 3,
+      "example_reviews": [
+        "sometimes the portions aren\u2019t correct even when scanned (bag of trader joe\u2019s beef jerky is not 90 cal, it\u2019s 360cal).",
+        "more than three search results will appear for the same item, but completely different information regarding calorie count, sugar, fiber and so on."
+      ]
+    },
+    {
+      "problem": "Missing or limited tracking/convenience features requested: ability to track calcium, edit blood sugar time/date, save previous search term, organize recipes into folders, reorder recipe ingredients, and a one-time pay option or monthly subscription.",
+      "type": "feature_request",
+      "average_rating": 4.5,
+      "frequency": 3,
+      "severity": 2,
+      "example_reviews": [
+        "my only wish is that i could track grams of calcium in food since i have osteoporosis.",
+        "for the 'recipes' category, you should be able to create folders so you can organize your recipes... when creating recipes, there should be an option to move your added ingredients into any order you want."
+      ]
+    },
+    {
+      "problem": "Community moderation / safety concerns in groups: underage users posting harmful content about starvation and purging, making groups unsafe.",
+      "type": "complaint",
+      "average_rating": 2,
+      "frequency": 1,
+      "severity": 5,
+      "example_reviews": [
+        "it has since become the new hangout spot for underage kids asking adults how to starve themselves... every other post is filled with an underage teen ranting about how they just binged & tried to make themselves throw up."
+      ]
+    },
+    {
+      "problem": "Sync or data reliability issues (activity/steps disappearing and paid features not showing expected goal metrics).",
+      "type": "complaint",
+      "average_rating": 3,
+      "frequency": 1,
+      "severity": 3,
+      "example_reviews": [
+        "i\u2019ve had several days where in the mornings the app has logged my steps, but somehow at the end of the evening, the steps have magically disappeared.",
+        "with the paid version you\u2019re supposed to be able to see all set goals... however, the only goal that shows up is the one for my steps."
+      ]
+    },
+    {
+      "problem": "Limited reporting/export options and inconsistent email report formatting (weekly report columns mangled, no longer-term historical reports).",
+      "type": "usability",
+      "average_rating": 3,
+      "frequency": 1,
+      "severity": 2,
+      "example_reviews": [
+        "the weekly report intentionally mangles the column order of the embedded table in the email each week... i have to rearrange the columns in my spreadsheet every time.",
+        "they seem content to only go back one week for the emails."
+      ]
+    }
+  ],
+  "link": "https://apps.apple.com/ca/app/lose-it-calorie-counter/id297368629"
+}

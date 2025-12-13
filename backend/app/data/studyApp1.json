@@ -1,0 +1,93 @@
+{
+  "problems": [
+    {
+      "problem": "No built-in weekly view and monthly calendar features (monthly view is behind paywall)",
+      "type": "feature_request",
+      "average_rating": 4.4,
+      "frequency": 4,
+      "severity": 3,
+      "example_reviews": [
+        "\u201cbut beware, this app does not offer free monthly planning. i\u2019m order to have access to the monthly calendar you do have to pay a fee.\u201d",
+        "\u201ci wish so badly that structured would add a weekly view. with this one additional view, i think this app would be perfect.\u201d"
+      ]
+    },
+    {
+      "problem": "Pricing / purchase model concerns \u2014 monthly features gated by paid plan and users prefer one-time/lifetime payment",
+      "type": "pricing",
+      "average_rating": 4.8,
+      "frequency": 4,
+      "severity": 2,
+      "example_reviews": [
+        "\u201cit does not offer free monthly planning... it is not large, about $4\u201310 dollars a year i believe, and it does have a lifetime payment of about $30.\u201d",
+        "\u201cbuy once, keep it forever: i'm tired of all the subscription-based apps... $10 for what it offers is a great deal imo. i hope they don't switch to subscription model.\u201d"
+      ]
+    },
+    {
+      "problem": "Rescheduling is tedious \u2014 dragging tasks doesn't easily move/bump other tasks; users want snooze or automatic shifting",
+      "type": "usability",
+      "average_rating": 4.2,
+      "frequency": 4,
+      "severity": 4,
+      "example_reviews": [
+        "\u201cwhy not let me simply drag my 30 minute 5pm task down to my 2pm slot and bump everything back by the duration of that task? as is, drag and drop is too tedious.\u201d",
+        "\u201cthe only thing that i'm missing is a 'snooze' option...all the following tasks would be moved in time accordingly because i don't have time to reschedule all the following tasks manually.\u201d"
+      ]
+    },
+    {
+      "problem": "Time input / picker issues \u2014 limited increments and glitches when setting times (hard to type in longer durations)",
+      "type": "usability",
+      "average_rating": 4.1,
+      "frequency": 3,
+      "severity": 3,
+      "example_reviews": [
+        "\u201cfor some reason the app only goes up from the starting time increments of 5-15 minutes. i think that feature should have a bit more customization.\u201d",
+        "\u201cwhen i go to set the time for longer tasks that i need to complete, it glitches a lot and makes it hard to put in the time (even when you try to type it in manually).\u201d"
+      ]
+    },
+    {
+      "problem": "Recurring tasks/subtasks behave incorrectly \u2014 subtasks don't reliably reset and recurring items may keep original timestamps",
+      "type": "complaint",
+      "average_rating": 3.5,
+      "frequency": 3,
+      "severity": 4,
+      "example_reviews": [
+        "\u201cthe subtasks are supposed to uncheck themselves under the re-occurring tasks daily...some of my re-occurring subtasks would be randomly checked off.\u201d",
+        "\u201cwhen i plan my day and use reoccurring tasks... it will post the time to the set time the original was posted even if it\u2019s already there. i think it should update.\u201d"
+      ]
+    },
+    {
+      "problem": "App becomes stuck or unresponsive while editing; users must force-quit frequently after recent updates",
+      "type": "performance",
+      "average_rating": 2,
+      "frequency": 2,
+      "severity": 5,
+      "example_reviews": [
+        "\u201ca few updates ago it began to get really buggy...it will not allow me to exit the task editing screen no matter what i push. the only way to reset it is to force quit and reopen.\u201d",
+        "\u201ci usually have to do this multiple times per day. was recommending this to all of my coworkers, but now i can't do so.\u201d"
+      ]
+    },
+    {
+      "problem": "Missing small quality-of-life features: search, 'go to today', delete task history, more icons and icon organization, sort inbox",
+      "type": "feature_request",
+      "average_rating": 4.3,
+      "frequency": 3,
+      "severity": 2,
+      "example_reviews": [
+        "\u201cnot having a search function for events or tasks is rough and lastly not having a button that takes you back to today is annoying.\u201d",
+        "\u201cit would be great if we had the option of deleting tasks from the task history...adding more icons (laundry/clothes, pencil/pens, foods, etc.), organizing them into sections so you don\u2019t have to keep scrolling.\u201d"
+      ]
+    },
+    {
+      "problem": "Requests for additional integrations and alternate layout options (import from Todo/Microsoft, iCal-style daily layout)",
+      "type": "feature_request",
+      "average_rating": 4.2,
+      "frequency": 2,
+      "severity": 2,
+      "example_reviews": [
+        "\u201ci want the to dos in my inbox to be able to be sorted into categories the way they are in my reminders app (really i want to be able to import from microsoft to do).\u201d",
+        "\u201ci want to have a different option for the layout of the daily schedule that looks more like ical. the overlapping tasks are difficult to visualize.\u201d"
+      ]
+    }
+  ],
+  "link": "https://apps.apple.com/us/app/structured-daily-planner/id1499198946"
+}

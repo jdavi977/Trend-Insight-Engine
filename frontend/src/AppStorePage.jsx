@@ -109,9 +109,14 @@ function AppStorePage() {
                 <h3 className="problem-title">{problem.problem}</h3>
                 <div className="problem-meta">
                   <span className="pill">{problem.type}</span>
-                  <span className="pill">👍 {problem.total_likes} likes</span>
+                  <span className="pill">
+                    {problem.average_rating} Average Rating
+                  </span>
                   <span className="pill">Severity: {problem.severity}/5</span>
                   <span className="pill">Frequency: {problem.frequency}/5</span>
+                  <span className="pill">Example_reviews:</span>
+                  <span className="pill">{problem.example_reviews[0]}</span>
+                  <span className="pill">{problem.example_reviews[1]}</span>
                 </div>
               </li>
             ))}

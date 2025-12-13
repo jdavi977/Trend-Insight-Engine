@@ -1,0 +1,92 @@
+{
+    "problems": [
+        {
+            "problem": "Apple Watch app and phone app do not stay in sync (timers stop, logs not recorded, watch UI glitches)",
+            "type": "performance",
+            "average_rating": 2.5,
+            "frequency": 4,
+            "severity": 4,
+            "example_reviews": [
+                "the app on the watch and the app on the phone don\u2019t seem to work in perfect synchronicity.",
+                "on my watch the timer randomly stops while on the phone it works fine... it won\u2019t record it though i press the log button."
+            ]
+        },
+        {
+            "problem": "Workout generation gives odd or inconsistent weight/rep suggestions and repeats the same workouts / muscle groups",
+            "type": "complaint",
+            "average_rating": 3,
+            "frequency": 4,
+            "severity": 3,
+            "example_reviews": [
+                "i\u2019ve seen very strange weight/rep recommendations... i maxed out one exercise at 13 reps for 50 pounds. a couple days later the app wants me to do 15 reps for 40 pounds.",
+                "i continue to get the same workouts over and over despite marking muscle groups as not recovered... for a week straight the app tried to get me to do only legs."
+            ]
+        },
+        {
+            "problem": "Cannot add custom exercises or workouts; exercise library is missing specific types (e.g., kickboxing, some advanced lifts)",
+            "type": "feature_request",
+            "average_rating": 3.5,
+            "frequency": 3,
+            "severity": 2,
+            "example_reviews": [
+                "they don\u2019t have as many different workouts as i like (for example, kickboxing and heavy bag workouts) and you don\u2019t have the option of adding it.",
+                "please add the following exercises: pendlay rows, deficit deadlifts, halting deadlift, rack pulls, barbell overhead press..."
+            ]
+        },
+        {
+            "problem": "Subscription pricing/affordability is a barrier for some users (annual or monthly cost complaints)",
+            "type": "pricing",
+            "average_rating": 3,
+            "frequency": 3,
+            "severity": 3,
+            "example_reviews": [
+                "the $60 annual is a bit too much for me to justify at the moment",
+                "40$ a year is just not worth what i\u2019m getting... i wish you wouldn\u2019t force users to buy a subscription to use it."
+            ]
+        },
+        {
+            "problem": "Bugs and stability issues (inconsistent timers/beeps, occasional crashes, trial activation requires reinstall, adding exercises resets data)",
+            "type": "performance",
+            "average_rating": 2.5,
+            "frequency": 3,
+            "severity": 3,
+            "example_reviews": [
+                "when setting up the initial free 30 day trial, i had to install, delete, and reinstall the app three times before i was able to begin the free trial.",
+                "the timer beeps are inconsistent between sets... sometimes it\u2019ll beep and other times it won\u2019t."
+            ]
+        },
+        {
+            "problem": "Limited in-workout navigation and missing quick access to personal records (can't browse app while workout active)",
+            "type": "usability",
+            "average_rating": 3.5,
+            "frequency": 2,
+            "severity": 2,
+            "example_reviews": [
+                "once the work out is started you are not allowed to navigate the rest of the very limited app unless you end your work out.",
+                "there should be a tab or something to locate your personal records without having to individually look all of them up."
+            ]
+        },
+        {
+            "problem": "Superset pairing and advanced-lifter features are weak or inefficient (bad pairing, lack of superset control)",
+            "type": "usability",
+            "average_rating": 3,
+            "frequency": 3,
+            "severity": 2,
+            "example_reviews": [
+                "pair supersets in a way that is efficient. sometimes similar exercises are paired... they use the same piece of equipment that need rearranged.",
+                "after using the paid version... it\u2019s quite useless for an advanced lifter... advance category needs the incorporation of supersets."
+            ]
+        },
+        {
+            "problem": "Requests for small personalization options (themes, alarm sounds, UI tweaks, less-promotional sharing)",
+            "type": "feature_request",
+            "average_rating": 4,
+            "frequency": 2,
+            "severity": 1,
+            "example_reviews": [
+                "more personalization ability for the user like... changing the color of the background, seasonal theming, or even... changing the sound of the alarms.",
+                "forcefully promoting your app when your trying to just show friends and family your workouts via the share button needs to be stopped."
+            ]
+        }
+    ]
+}

@@ -1,0 +1,82 @@
+{
+  "problems": [
+    {
+      "problem": "Steep learning curve and clunky UI makes basic tasks difficult (beginners can't get started or do simple actions)",
+      "type": "usability",
+      "average_rating": 1,
+      "frequency": 4,
+      "severity": 3,
+      "example_reviews": [
+        "everything about this app is clunky and difficult to use... it shouldn\u2019t take an hour to figure out how to get started with something as simple as flash cards.",
+        "i absolutely hated this app. i couldn\u2019t import decks that i\u2019d paid for... couldn\u2019t create cards on the mobile version... i spent 2 hours trying to get the app to work."
+      ]
+    },
+    {
+      "problem": "Sync failures and update-related outages causing data loss or rendering the app unusable",
+      "type": "performance",
+      "average_rating": 2.67,
+      "frequency": 4,
+      "severity": 5,
+      "example_reviews": [
+        "during the period right before the single biggest ... the creator pushed an update that was poorly tested and all my flash cards became completely useless until he was able to patch the bug.",
+        "the first deck i created was deleted to some error while synchronizing."
+      ]
+    },
+    {
+      "problem": "Mobile feature gaps / limited in-app deck browsing, importing, card creation, and media/tts support",
+      "type": "feature_request",
+      "average_rating": 1.75,
+      "frequency": 5,
+      "severity": 4,
+      "example_reviews": [
+        "you can\u2019t browse and download decks in the app, you have to go to safari and download them, and load them in the app.",
+        "before i bought this app i emailed your support ... you told me yes [it supports TTS]. i just bought the app 10 minutes and the app does not support tts."
+      ]
+    },
+    {
+      "problem": "High up-front price and difficulty obtaining refunds or clear purchase support",
+      "type": "pricing",
+      "average_rating": 1,
+      "frequency": 3,
+      "severity": 2,
+      "example_reviews": [
+        "this is not some free app, it is one of the most expensive apps on the store!!",
+        "there is no option to contact the developers for a refund. works class scam artists here."
+      ]
+    },
+    {
+      "problem": "Insufficient in-app bug reporting and limited developer support / no easy rollback for bad releases",
+      "type": "complaint",
+      "average_rating": 3.5,
+      "frequency": 2,
+      "severity": 3,
+      "example_reviews": [
+        "i would love to see an easier way to report bugs through the app, without having to create an account on some random forum online.",
+        "i do not understand why the app was not just rolled back if the bug was that big?"
+      ]
+    },
+    {
+      "problem": "Store confusion with copycat/ripoff apps and users being misled by other apps using the Anki name",
+      "type": "other",
+      "average_rating": 3.33,
+      "frequency": 3,
+      "severity": 2,
+      "example_reviews": [
+        "this app is really well done... i don't understand why or how apple promotes the knockoff apps over this one.",
+        "they are not the real anki- a copy cat app that does not have the same learning algorithms..."
+      ]
+    },
+    {
+      "problem": "Outdated visual design / non-modern UI and flashcard aesthetics",
+      "type": "usability",
+      "average_rating": 1.5,
+      "frequency": 2,
+      "severity": 2,
+      "example_reviews": [
+        "this app must have been made when the internet came out. for almost $30 i\u2019d expect a state of the art app.",
+        "the interface looked outdated ... but to my surprise this is the best flash card maker out there."
+      ]
+    }
+  ],
+  "link": "https://apps.apple.com/us/app/ankimobile-flashcards/id373493387"
+}

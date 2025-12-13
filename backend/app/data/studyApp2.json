@@ -1,0 +1,60 @@
+{
+  "problems": [
+    {
+      "problem": "App repeatedly prompts users to sign in / requires cloud/login with no easy way to disable local/offline use.",
+      "type": "usability",
+      "average_rating": 4.5,
+      "frequency": 2,
+      "severity": 3,
+      "example_reviews": [
+        "the only thing that needs to be changed is when they ask you to login everytime you refresh or whenever... they should make it much easier to turn that feature off so you wont constanly be asked to sign in or log in.",
+        "when you get a desktop app that doesn\u2019t require a web browser i will get a second account for my work related tasks."
+      ]
+    },
+    {
+      "problem": "Subscription/paywall and task limits: users hit limits or are forced to subscribe for more tasks/features; many request one-time purchase option.",
+      "type": "pricing",
+      "average_rating": 3,
+      "frequency": 4,
+      "severity": 4,
+      "example_reviews": [
+        "all of a sudden i got to the limit of number of tasks i could schedule... you have to subscribe to some kind of 'plan' to get more features... i deleted the app",
+        "i wish there was a way to get the premium version with a one time payment... i'm just so tired of having to subscribe to apps all the time."
+      ]
+    },
+    {
+      "problem": "Missing advanced scheduling/time-management features: users want customizable 'end of day' time, task duration estimates summed for Today, project/deadline and 'plan ahead' auto-scheduling.",
+      "type": "feature_request",
+      "average_rating": 5,
+      "frequency": 3,
+      "severity": 2,
+      "example_reviews": [
+        "for a way to set your 'end of day' time in the app... by default, the new day starts at midnight... if i could set it to like 2am it would be great",
+        "prompt me when putting in a task to assign how long it will honestly take... it would automatically total all my times for the today list"
+      ]
+    },
+    {
+      "problem": "No 'incomplete' task state and deleting tasks can remove future repeated instances (affects stats and recurring tasks).",
+      "type": "usability",
+      "average_rating": 4,
+      "frequency": 1,
+      "severity": 3,
+      "example_reviews": [
+        "there is no option for incomplete. the only options are to mark it as complete... or leave it alone and it runs into the next day as overdue",
+        "if i choose delete task and it\u2019s something i have set to repeat (like my workouts), it automatically deletes all of the future workout tasks."
+      ]
+    },
+    {
+      "problem": "Users compare TickTick to competitors (Wunderlist, Things3) and want certain competitor features\u2014desktop offline client, Things3-like deadline/plan features.",
+      "type": "other",
+      "average_rating": 4.7,
+      "frequency": 3,
+      "severity": 1,
+      "example_reviews": [
+        "ticktick has numerous features that wunderlist lacks... when you get a desktop app that doesn\u2019t require a web browser i will get a second account",
+        "it could also use a deadline function similar to things3 and a 'plan ahead' function that takes the events yet to be assigned a deadline"
+      ]
+    }
+  ],
+  "link": "https://apps.apple.com/us/app/ticktick-to-do-list-calendar/id626144601"
+}

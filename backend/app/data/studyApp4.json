@@ -1,0 +1,69 @@
+{
+  "problems": [
+    {
+      "problem": "Server sync failures and unresponsive support causing deck download failures and data loss",
+      "type": "complaint",
+      "average_rating": 1,
+      "frequency": 3,
+      "severity": 5,
+      "example_reviews": [
+        "the day before my exams the server goes down ... i had spent weeks working on my cards ... and it was gone - and i could not log on.",
+        "my decks stopped downloading and syncing ... i've emailed the support group twice and after weeks nothing has been done."
+      ]
+    },
+    {
+      "problem": "Missing advanced Anki features (robust SRS, sorting/search, hierarchical tags, add-ons) making it unsuitable for heavy exam preparation",
+      "type": "complaint",
+      "average_rating": 3,
+      "frequency": 3,
+      "severity": 3,
+      "example_reviews": [
+        "the spaced repetition software is not as robust as the original app ... inadequate sorting and search features.",
+        "it\u2019s a less-powerful rip off of anki ... it has ~5% of the very powerful features and add-ons that are available (for free) for anki desktop."
+      ]
+    },
+    {
+      "problem": "Update broke ability to create a single reversible card (review front-back and back-front) without making two cards",
+      "type": "bug",
+      "average_rating": 1,
+      "frequency": 2,
+      "severity": 4,
+      "example_reviews": [
+        "recently an update went out that broke the ability to create a card once but review both front-back and back-front without having to create two cards.",
+        "my old decks still work but presently i cannot make a new deck with this functionality."
+      ]
+    },
+    {
+      "problem": "Ads and paywall practices: frequent ads after sessions and important features (cross-device sync, longer sessions, some functionality) behind paid tiers or separate subscriptions",
+      "type": "pricing",
+      "average_rating": 1.5,
+      "frequency": 3,
+      "severity": 3,
+      "example_reviews": [
+        "very annoying to get an add after every sitting of flashcards ... many of the features (like one account across devices) seem to be behind a pay-wall.",
+        "there is a backside to this app called ankinexxus which apparently forces you to pay a yearly price ... it seems there is a limit to this app and they never mention it."
+      ]
+    },
+    {
+      "problem": "Study session customization removed/limited (cannot choose longer/50-card sessions)",
+      "type": "feature_request",
+      "average_rating": 2,
+      "frequency": 2,
+      "severity": 3,
+      "example_reviews": [
+        "the newest update seemingly eliminates longer study sessions, i.e., i can no longer go through settings and choose a 50-card study session instead of the standard 10."
+      ]
+    },
+    {
+      "problem": "Request for localization / UI language options (e.g., Japanese interface)",
+      "type": "feature_request",
+      "average_rating": 5,
+      "frequency": 1,
+      "severity": 1,
+      "example_reviews": [
+        "it would be great if there was an option to change language to japanese ... i use this app about 8 hours a day ... it would be great if it was in japanese."
+      ]
+    }
+  ],
+  "link": "https://apps.apple.com/us/app/algoapp-flashcards/id689185915"
+}

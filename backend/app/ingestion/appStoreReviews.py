@@ -1,10 +1,6 @@
 import requests
 import json
 
-# TODO:
-# FIX feed/entry not existing when page is over limit or comment not having those fields
-
-
 def getAppId(link):
     id = link.split("/id")[1]
     return id
@@ -25,14 +21,12 @@ def getAppReviews(id, sortBy, max_pages):
         entry = feed.get("entry", [])
         if not entry or len(entry) <= 1:
             break
-        for review in entry[1:]:
+        for review in entry:
             review = {
                 "rating": review.get("im:rating").get("label"),
                 "title": review.get("title").get("label"),
                 "content": review.get("content").get("label"),
                 "vote_count": review.get("im:voteCount").get("label")
             }
-        all_reviews.append(review)
+            all_reviews.append(review)
     return all_reviews
-
-

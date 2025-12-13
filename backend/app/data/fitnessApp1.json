@@ -1,0 +1,102 @@
+{
+  "problems": [
+    {
+      "problem": "Confusing subscription purchase & trial flow that led to unexpected or duplicate charges (trial not applied; subscription options hidden until after purchase).",
+      "type": "pricing",
+      "average_rating": 2.5,
+      "frequency": 3,
+      "severity": 5,
+      "example_reviews": [
+        "i wanted to make use of the 7-day trial and click on the \u201ctrial\u201d checkbox... i was immediately charged the $59 and my subscription didn\u2019t show the free trial.",
+        "i cannot find a way to unsubscribe anywhere inside the app or on the developer website... i\u2019m afraid i\u2019m going to be charged whether i like the app or not."
+      ]
+    },
+    {
+      "problem": "Perceived high membership cost / affordability concerns (membership seen as unnecessary or too expensive for teens).",
+      "type": "pricing",
+      "average_rating": 5,
+      "frequency": 2,
+      "severity": 2,
+      "example_reviews": [
+        "there is an option to get a membership which i think is pointless because you can do so much without it. and it\u2019s $40/month... for a 14 year old that\u2019s a little much.",
+        "there are monthly options and a $19 annual option available through the app store, but i was only able to access that screen after making the in-app purchase."
+      ]
+    },
+    {
+      "problem": "Women\u2019s workout images are poor / misleading and appear inequitable compared to men's images (undermines confidence in program).",
+      "type": "complaint",
+      "average_rating": 1,
+      "frequency": 1,
+      "severity": 3,
+      "example_reviews": [
+        "the women's pictures are highly unsatisfactory and fail to demonstrate any progress... it's difficult for me to believe that these workouts are effective.",
+        "there is a clear discrepancy when comparing the women's images to those of men, which raises concerns of sexism."
+      ]
+    },
+    {
+      "problem": "Request for a nutrition/diet feature (diet plans or guidance based on body weight / BMI).",
+      "type": "feature_request",
+      "average_rating": 5,
+      "frequency": 1,
+      "severity": 2,
+      "example_reviews": [
+        "i believe that a dietary area based on body weight and bmi index would be a great addition to this app.",
+        "it would be great for people like me who are trying to put on some healthy pounds."
+      ]
+    },
+    {
+      "problem": "Users want the ability to create/save custom personal programs (beyond editing existing ones).",
+      "type": "feature_request",
+      "average_rating": 5,
+      "frequency": 3,
+      "severity": 2,
+      "example_reviews": [
+        "create your own personal program. yes, you can edit existing ones for your own but i want to keep those.",
+        "i want to keep existing ones while building my own personal program."
+      ]
+    },
+    {
+      "problem": "App does not auto-pause on incoming calls (workout only pauses when hitting home button).",
+      "type": "usability",
+      "average_rating": 5,
+      "frequency": 1,
+      "severity": 3,
+      "example_reviews": [
+        "program needs to pause when a call comes in. it will pause if you hit the home button but it should auto-pause on incoming calls."
+      ]
+    },
+    {
+      "problem": "Duplicate or incorrectly labeled exercises in workout plans (same exercise repeated under different names / repeated within a day).",
+      "type": "performance",
+      "average_rating": 4,
+      "frequency": 1,
+      "severity": 3,
+      "example_reviews": [
+        "sometimes when the workout happens and it goes into rest the same workout i just did shows up as something else but the name changed.",
+        "on arm in 30 day workout, i did intermediate arm and so on... for each day i did the same part twice."
+      ]
+    },
+    {
+      "problem": "Full-body program may not provide sufficient leg work for some users (content imbalance).",
+      "type": "feature_request",
+      "average_rating": 5,
+      "frequency": 1,
+      "severity": 3,
+      "example_reviews": [
+        "the full body doesn't really hit the legs enough.",
+        "both programs take about 25 minutes total... the full body doesn't really hit the legs enough."
+      ]
+    },
+    {
+      "problem": "Users request better ad-based incentives (rewards for supporting app by watching or tapping ads).",
+      "type": "feature_request",
+      "average_rating": 5,
+      "frequency": 1,
+      "severity": 1,
+      "example_reviews": [
+        "there is an ad button you can press, if you want to support them... you should make a reward for a certain amount of times the user taps the button."
+      ]
+    }
+  ],
+  "link": "https://apps.apple.com/ca/app/home-workout-no-equipments/id1313192037"
+}
