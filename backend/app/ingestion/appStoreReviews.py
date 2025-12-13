@@ -19,7 +19,12 @@ def getAppReviews(id, sortBy, max_pages):
             print(f"Stopped at page: {page}, status: {response.status_code}")
 
         data = response.json()
-        entry = data['feed']['entry']
+        if not data['feed']:
+            break
+        feed = data['feed']
+        entry = feed.get("entry", [])
+        if not entry or len(entry) <= 1:
+            break
         for review in entry[1:]:
             review = {
                 "rating": review.get("im:rating").get("label"),
@@ -27,5 +32,7 @@ def getAppReviews(id, sortBy, max_pages):
                 "content": review.get("content").get("label"),
                 "vote_count": review.get("im:voteCount").get("label")
             }
-            all_reviews.append(review)
+        all_reviews.append(review)
     return all_reviews
+
+

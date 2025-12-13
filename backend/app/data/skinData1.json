@@ -1,38 +1,45 @@
 {
     "problems": [
         {
-            "problem": "Users seek effective, accessible natural remedies for acne scars, dark spots and fine lines (e.g., aloe vera) but may be unsure about efficacy and use",
-            "type": "complaint",
+            "problem": "Persistent acne, acne scars, dark spots and fine lines \u2014 need effective remedies",
+            "type": "other",
             "total_likes": 194,
             "severity": 4,
             "frequency": 1
         },
         {
-            "problem": "Unclear instructions for DIY face masks: what ingredients to combine or avoid, correct application time and rinsing procedure",
+            "problem": "Uncertainty about safely combining natural ingredients (which combinations to use and which to avoid)",
             "type": "usability",
             "total_likes": 194,
             "severity": 3,
             "frequency": 1
         },
         {
-            "problem": "Need for clearer diet guidance related to skin (which foods to avoid like sugar/refined carbs and how hydration/coffee affect skin)",
+            "problem": "Confusion about building a simple, non-overwhelming skincare routine (avoid using too many products / proper order/timing)",
+            "type": "usability",
+            "total_likes": 194,
+            "severity": 3,
+            "frequency": 1
+        },
+        {
+            "problem": "Diet-related skin issues and lack of clear guidance on which foods to cut or add (sugar/refined carbs, coffee, hydration)",
             "type": "other",
             "total_likes": 194,
             "severity": 3,
             "frequency": 1
         },
         {
-            "problem": "Confusion and safety concerns around cold therapy (ice water) vs. cleansing order \u2014 risk of trapping dirt if pores are tightened first",
-            "type": "usability",
-            "total_likes": 194,
-            "severity": 3,
-            "frequency": 1
-        },
-        {
-            "problem": "Unclear everyday skincare habit guidance (when to wash, avoid popping pimples, not touching face, not sleeping/exercising with makeup, and avoiding product overload)",
+            "problem": "Risk of trapping dirt and causing harm when using ice/water treatments due to improper technique",
             "type": "usability",
             "total_likes": 194,
             "severity": 2,
+            "frequency": 1
+        },
+        {
+            "problem": "Harmful habits (popping pimples, touching face, sleeping/exercising with makeup) and need for practical behavioral guidance",
+            "type": "other",
+            "total_likes": 194,
+            "severity": 4,
             "frequency": 1
         }
     ]
