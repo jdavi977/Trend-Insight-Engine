@@ -41,3 +41,22 @@ def getYoutubeComments(id, order):
         })
     service.close()
     return comments
+
+def getMostPopularVideos(category):
+    service = build('youtube', 'v3', developerKey=YOUTUBE_API)
+    request = service.videos().list(
+        part="id",
+        chart="mostPopular",
+        videoCategoryId=category,
+        maxResults=10
+    )
+    ids = []
+    response = request.execute()
+    
+    for item in response["items"]:
+        ids.append({
+            "Id": item["id"]
+        })
+
+    service.close()
+    return ids

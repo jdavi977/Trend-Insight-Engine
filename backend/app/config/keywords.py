@@ -47,3 +47,37 @@ YOUTUBE_KEYWORDS = [
     "need this feature", "i wish they", "why did they remove",
     "please change", "please fix this"
 ]
+
+GAME_KEYWORDS = [
+  "gameplay","mechanic","controls","input","aim","movement","camera","combat","weapon",
+  "damage","hitbox","aim assist","recoil","cooldown","ability","skill","perk","build",
+
+  "progression","grind","level","xp","rank","ladder","elo","mmr","quest","mission","objective",
+  "battle pass","season","daily","weekly","event","challenge","unlock","drop rate","rng","loot",
+
+  "balance","buff","nerf","overpowered","op","underpowered","broken","meta","tier",
+  "matchup","counter","fair","pay to win","p2w",
+
+  "monetization","microtransaction","mtx","currency","gold","coins","gems","credits",
+  "pricing","cost","expensive","shop","store","bundle","skin","cosmetic","gacha","crate","loot box",
+
+  "bug","glitch","crash","freeze","stutter","lag","fps","frame rate","performance",
+  "optimization","loading","desync","server","disconnect","timeout","hit registration",
+
+  "ui","ux","menu","hud","inventory","crafting","map","marker","tutorial","onboarding",
+  "interface","quality of life","qol","settings","keybind","sensitivity",
+
+  "matchmaking","queue","lobby","party","squad","ranked","casual","crossplay",
+  "anti-cheat","cheater","hacker","smurf","griefer","toxic","report","ban",
+
+  "feature","mode","map","character","hero","brawler","class","boss","raid","dungeon",
+  "difficulty","endgame","story","single player","co-op","pvp","pve","sandbox",
+
+  "accessibility","colorblind","subtitles","captions","remap","controller support"
+]
+
+GAME_EXCLUDE_KEYWORDS = [
+  "creator","youtuber","streamer","upload","editing","edited","video","episode","part",
+  "mic","audio","sound quality","camera man","thumbnail","like and subscribe",
+  "burnout","break","pressure","drama","award","slander","community","comment section"
+]

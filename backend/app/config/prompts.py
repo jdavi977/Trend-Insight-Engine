@@ -26,6 +26,8 @@ youtubePromptOutput = """
 - Return ONLY valid JSON in this format:
 
 {
+  "source": "youtube",
+  "name": "name of the product/service/game"
   "problems": [
     {
       "problem": "string",

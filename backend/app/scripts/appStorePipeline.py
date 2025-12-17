@@ -4,7 +4,7 @@ from config.settings import APP_REVIEW_PAGES
 from config.prompts import appStoreSystemPrompt, appStorePromptOutput
 from llm.extractInsights import extractInsights
 
-def run_app_pipeline(link):
+def app_store_manual(link):
     id = getAppId(link)
     mostRecent = getAppReviews(id, "mostRecent", APP_REVIEW_PAGES)
     mostHelpful = getAppReviews(id, "mostHelpful", APP_REVIEW_PAGES)

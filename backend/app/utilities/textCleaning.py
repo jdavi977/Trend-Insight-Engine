@@ -22,6 +22,19 @@ def keyword_filtering(data, keywords):
                 pass
     return filtered
 
+def exclude_keywords(data, keywords):
+    filtered = []
+    for row in data:
+        for key in keywords:
+            pattern = re.compile(r"\b" + re.escape(key) + r"\b")
+            match = pattern.search(row['Content'])
+            if not match:
+                filtered.append(row)
+                pass
+            else:
+                pass
+    return filtered
+
 def remove_duplicates(data):
     unique = list({c["Content"]: c for c in data}.values())
     return unique
