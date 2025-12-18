@@ -23,5 +23,3 @@ def getVideoCategories():
         })
     service.close()
     return list
-
-print(getVideoCategories())

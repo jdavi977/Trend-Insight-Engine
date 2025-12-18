@@ -15,6 +15,7 @@ def loadAndClean(data, keywords: list, exclude=[""]):
             likes = 0
         if likes >= 50:
             cleaned.append({
+                "Title": comment['Title'],
                 "Likes": likes,
                 "Content": comment['Text'].lower().strip(),
             })
@@ -30,3 +31,4 @@ def loadAndClean(data, keywords: list, exclude=[""]):
     # Filtering duplicates
     finished = remove_duplicates(emoji_removed)
     return finished
+

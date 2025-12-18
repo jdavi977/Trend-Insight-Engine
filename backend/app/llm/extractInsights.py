@@ -13,7 +13,7 @@ def extractInsights(data, systemPrompt, promptOutput):
     userDataPrompt = f"""
     Here is the data found {data}
     """
-    
+        
     response = client.responses.create(
         model="gpt-5-mini",
         input=[

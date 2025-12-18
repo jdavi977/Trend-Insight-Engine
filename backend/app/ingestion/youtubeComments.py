@@ -1,6 +1,7 @@
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from urllib.parse import urlparse, parse_qs
+from config.settings import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
 import os
 
 load_dotenv()
@@ -21,12 +22,12 @@ def getVideoId(url: str) -> str:
 
     return ""
 
-def getYoutubeComments(id, order):
+def getYoutubeComments(id, title, order):
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.commentThreads().list(
         part="snippet",
         videoId= id,
-        maxResults = 100,
+        maxResults = YOUTUBE_COMMENTS_AMOUNT,
         order = order,
         textFormat = "plainText"
     )
@@ -36,6 +37,7 @@ def getYoutubeComments(id, order):
     for item in response["items"]:
         snippet = item["snippet"]["topLevelComment"]["snippet"]
         comments.append({
+            "Title": title,
             "Likes": snippet["likeCount"],
             "Text": snippet["textDisplay"]
         })
@@ -45,16 +47,17 @@ def getYoutubeComments(id, order):
 def getMostPopularVideos(category):
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.videos().list(
-        part="id",
+        part="snippet",
         chart="mostPopular",
         videoCategoryId=category,
-        maxResults=10
+        maxResults=YOUTUBE_VIDEO_AMOUNT
     )
     ids = []
     response = request.execute()
     
     for item in response["items"]:
         ids.append({
+            "Title": item["snippet"]["title"],
             "Id": item["id"]
         })
 
