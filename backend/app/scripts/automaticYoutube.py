@@ -11,7 +11,7 @@ import json
 def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
     list = []
     for id in ids:
-        relevance = getYoutubeComments(id['Id'], id['Title'], "relevance")
+        relevance = getYoutubeComments(id['Id'], "relevance", id['Title'])
         cleaned_data = loadAndClean(relevance, keywords, exclude)
 
         if len(cleaned_data) <= 0:

@@ -22,7 +22,7 @@ def getVideoId(url: str) -> str:
 
     return ""
 
-def getYoutubeComments(id, title, order):
+def getYoutubeComments(id, order, title=None,):
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.commentThreads().list(
         part="snippet",
@@ -31,8 +31,11 @@ def getYoutubeComments(id, title, order):
         order = order,
         textFormat = "plainText"
     )
+
     comments = []
     response = request.execute()
+
+    # Fix not appending title for manual links
 
     for item in response["items"]:
         snippet = item["snippet"]["topLevelComment"]["snippet"]
@@ -41,27 +44,7 @@ def getYoutubeComments(id, title, order):
             "Likes": snippet["likeCount"],
             "Text": snippet["textDisplay"]
         })
-    service.close()
-    return comments
 
-def getComments(id, order):
-    service = build('youtube', 'v3', developerKey=YOUTUBE_API)
-    request = service.commentThreads().list(
-        part="snippet",
-        videoId= id,
-        maxResults = YOUTUBE_COMMENTS_AMOUNT,
-        order = order,
-        textFormat = "plainText"
-    )
-    comments = []
-    response = request.execute()
-
-    for item in response["items"]:
-        snippet = item["snippet"]["topLevelComment"]["snippet"]
-        comments.append({
-            "Likes": snippet["likeCount"],
-            "Text": snippet["textDisplay"]
-        })
     service.close()
     return comments
 
