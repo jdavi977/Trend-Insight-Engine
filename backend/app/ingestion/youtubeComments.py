@@ -44,6 +44,27 @@ def getYoutubeComments(id, title, order):
     service.close()
     return comments
 
+def getComments(id, order):
+    service = build('youtube', 'v3', developerKey=YOUTUBE_API)
+    request = service.commentThreads().list(
+        part="snippet",
+        videoId= id,
+        maxResults = YOUTUBE_COMMENTS_AMOUNT,
+        order = order,
+        textFormat = "plainText"
+    )
+    comments = []
+    response = request.execute()
+
+    for item in response["items"]:
+        snippet = item["snippet"]["topLevelComment"]["snippet"]
+        comments.append({
+            "Likes": snippet["likeCount"],
+            "Text": snippet["textDisplay"]
+        })
+    service.close()
+    return comments
+
 def getMostPopularVideos(category):
     service = build('youtube', 'v3', developerKey=YOUTUBE_API)
     request = service.videos().list(

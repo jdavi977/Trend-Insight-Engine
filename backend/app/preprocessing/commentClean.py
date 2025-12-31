@@ -32,3 +32,28 @@ def loadAndClean(data, keywords: list, exclude=[""]):
     finished = remove_duplicates(emoji_removed)
     return finished
 
+def load(data, keywords: list):
+    cleaned = []
+
+    # Filtering based off likes
+    for comment in data:
+        try:
+            likes = comment.get('Likes', 0)
+        except:
+            likes = 0
+        if likes >= 50:
+            cleaned.append({
+                "Likes": likes,
+                "Content": comment['Text'].lower().strip(),
+            })
+
+    # Filtering for keywords
+    filtered = keyword_filtering(cleaned, keywords)
+
+    # Clean out emojis
+    emoji_removed = remove_emojis(filtered)
+
+    # Filtering duplicates
+    finished = remove_duplicates(emoji_removed)
+    return finished
+
