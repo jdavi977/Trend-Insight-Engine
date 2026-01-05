@@ -5,6 +5,18 @@ from scripts.youtubePipeline import youtube_manual
 from scripts.appStorePipeline import app_store_manual
 from scripts.data_save import data_save
 from preprocessing.validateUrl import validateYoutube, validateAppStore
+from typing import Any, Optional
+import logging
+import os
+
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+logger = logging.getLogger("api")
 
 app = FastAPI()
 
@@ -15,6 +27,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+class ErrorResponse(BaseModel):
+    error: str
+    message: str
+    request_id: Optional[str] = None
+    details: Optional[Any] = None
 
 class YoutubeAnalyzeRequest(BaseModel):
     youtubeURL: str

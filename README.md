@@ -1,275 +1,154 @@
 # Trend Insight Engine
 
-**A full-stack application that transforms user-generated content into structured product insights using LLM-powered analysis. Extract recurring problems, feature requests, and unmet needs from YouTube comments and App Store reviews to validate niches and inform product decisions.**
+A full-stack application that extracts structured product insights from user-generated content (YouTube comments and App Store reviews) using LLM-powered analysis. Transforms raw feedback into actionable insights by identifying recurring problems, feature requests, and unmet needs with severity and frequency metrics.
 
-## Why This Matters
+---
 
-This project demonstrates end-to-end product engineering: from API integration and data pipelines to structured LLM outputs and frontend-backend communication. It solves a real problem—helping creators and indie developers validate product ideas by analyzing what users actually say—while showcasing technical depth in data processing, error handling, and system design.
+## Project Overview
 
-**Product Thinking:** The application addresses a genuine need in the product development workflow: moving from intuition-based decisions to data-driven insights. By aggregating and analyzing user feedback at scale, it helps identify patterns that would be impossible to spot manually.
-
-**Technical Depth:** The implementation covers multiple engineering concerns: external API integration (YouTube Data API, iTunes RSS), text preprocessing pipelines, defensive error handling for unreliable data sources, structured LLM prompting for consistent outputs, and a clean separation of concerns that enables extensibility.
+Product teams and indie developers often struggle to identify patterns in user feedback scattered across multiple platforms. Manually analyzing hundreds of comments and reviews is time-consuming and error-prone. Trend Insight Engine automates this process by ingesting user feedback from YouTube videos and App Store listings, cleaning and filtering the data, then using LLMs to extract and cluster recurring themes into structured insights with engagement metrics.
 
 ---
 
 ## Key Features
 
-- **YouTube Comment Ingestion**: Fetches comments via YouTube Data API v3, sorted by relevance and time
-- **App Store Review Ingestion**: Retrieves reviews from iTunes RSS feed, sorted by most recent and most helpful
-- **Text Cleaning Pipeline**: Removes emojis, URLs, duplicates, and filters by engagement metrics (likes/votes)
-- **LLM-Powered Extraction**: Uses OpenAI API to identify and cluster recurring problems, feature requests, and unmet needs
-- **Structured JSON Output**: Returns normalized insights with metrics (severity, frequency, engagement scores)
-- **Simple React UI**: Clean interface for submitting URLs and viewing extracted insights
+- **Multi-Source Data Ingestion**: Fetches comments from YouTube Data API v3 (sorted by relevance and time) and reviews from iTunes RSS feeds (most recent and most helpful)
+- **Engagement-Based Filtering**: Filters content by engagement metrics (YouTube comments with ≥50 likes, App Store reviews with >5 votes) to prioritize high-signal feedback
+- **Text Preprocessing Pipeline**: Removes emojis, filters by domain-specific keywords, eliminates duplicates, and normalizes text for analysis
+- **LLM-Powered Insight Extraction**: Uses OpenAI API with structured prompts to identify, cluster, and categorize problems (feature requests, complaints, usability issues, performance, pricing)
+- **Structured JSON Output**: Returns normalized insights with severity (1-5), frequency (1-5), engagement scores (total likes, average ratings), and example excerpts
+- **React Frontend**: Clean, responsive UI for submitting URLs and viewing extracted insights with problem categorization and metrics
+- **RESTful API**: FastAPI backend with Pydantic request validation, CORS middleware, and URL format validation
+
+---
+
+## Architecture
+
+The system follows a modular pipeline architecture with clear separation of concerns:
+
+**Frontend (React + Vite)**: Single-page application with separate views for YouTube and App Store analysis. Components handle URL input, API communication via Fetch, and display of structured insights.
+
+**Backend (FastAPI)**: REST API with three main endpoints (`/analyze/youtube`, `/analyze/appStore`, `/data/send`). Routes delegate to pipeline scripts that orchestrate the data flow.
+
+**Data Pipeline**: 
+1. **Ingestion Layer** (`ingestion/`): YouTube Data API v3 client and iTunes RSS scraper fetch raw comments/reviews
+2. **Preprocessing Layer** (`preprocessing/`): Filters by engagement, removes emojis/duplicates, applies keyword filtering
+3. **LLM Layer** (`llm/`): Sends cleaned data to OpenAI API with structured prompts for insight extraction
+4. **Output**: Returns JSON string with clustered problems, types, and metrics
+
+**Storage**: Local file system for manual data saves (optional). Supabase client available for future database integration.
 
 ---
 
 ## Tech Stack
 
-**Frontend:**
-- React 19
-- Vite
-- Fetch API for backend communication
+### Backend
+- **FastAPI** (Python) - REST API framework with async support
+- **Pydantic** - Request/response validation and data modeling
+- **Uvicorn** - ASGI server for production deployment
+- **python-dotenv** - Environment variable management
+- **google-api-python-client** - YouTube Data API v3 integration
+- **openai** - OpenAI API client for LLM inference
+- **requests** - HTTP client for iTunes RSS feed scraping
 
-**Backend:**
-- FastAPI (Python)
-- Pydantic for request/response validation
-- Uvicorn ASGI server
+### Frontend
+- **React 19** - UI library with hooks-based state management
+- **Vite** - Build tool and dev server
+- **Fetch API** - HTTP client for backend communication
 
-**APIs & Services:**
-- YouTube Data API v3 (Google)
-- iTunes RSS Feed (Apple App Store)
-- OpenAI API (GPT models)
+### Data & APIs
+- **YouTube Data API v3** - Comment retrieval (relevance and time-sorted)
+- **iTunes RSS Feed** - App Store review scraping (paginated)
+- **OpenAI API** - LLM for structured insight extraction
 
-**LLM:**
-- OpenAI GPT for structured extraction and clustering
-
----
-
-## How It Works
-
-```
-User submits URL
-    ↓
-Backend validates URL format
-    ↓
-Ingestion Layer:
-  - YouTube: Fetch comments (relevance + time sorted)
-  - App Store: Fetch reviews (most recent + most helpful)
-    ↓
-Preprocessing:
-  - Filter by engagement (likes ≥ 50, votes > 5)
-  - Remove emojis, URLs, duplicates
-  - Keyword filtering for relevance
-    ↓
-LLM Analysis:
-  - Extract recurring themes
-  - Cluster similar feedback
-  - Calculate metrics (severity, frequency, engagement)
-    ↓
-Structured JSON Response:
-  - Problem descriptions
-  - Type classification
-  - Metrics and examples
-```
+### Infrastructure
+- **Local File System** - JSON file storage for manual saves
+- **Supabase** (optional) - Database client available for future persistence
 
 ---
 
-## API Endpoints
+## Implementation Highlights
 
-### `POST /analyze/youtube`
-
-Analyzes YouTube video comments to extract insights.
-
-**Request:**
-```json
-{
-  "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-}
-```
-
-**Response:**
-```json
-{
-  "problems": [
-    {
-      "problem": "Users want dark mode for better nighttime viewing",
-      "type": "feature_request",
-      "total_likes": 1247,
-      "severity": 3,
-      "frequency": 4
-    }
-  ]
-}
-```
-
-**Error Responses:**
-- `400 Bad Request`: Invalid YouTube URL format
+- **Modular Pipeline Architecture**: Clean separation between ingestion, preprocessing, and LLM layers enables easy extension to new data sources (e.g., Reddit, Twitter)
+- **Domain-Specific Keyword Filtering**: Configurable keyword lists (YouTube, App Store, game-specific) filter noise and focus on relevant feedback
+- **Structured LLM Prompting**: Carefully designed system prompts enforce consistent JSON schema output with explicit formatting rules and examples
+- **Engagement-Based Signal Quality**: Filters low-engagement content (likes/votes thresholds) to prioritize high-signal feedback before LLM analysis
+- **URL Validation**: Regex-based validation for YouTube (supports watch, shorts, youtu.be) and App Store URLs before API calls to fail fast
+- **Defensive Data Parsing**: Handles missing fields and malformed responses from external APIs with graceful degradation
 
 ---
 
-### `POST /analyze/appStore`
-
-Analyzes App Store reviews to extract insights.
-
-**Request:**
-```json
-{
-  "appStoreURL": "https://apps.apple.com/us/app/example-app/id123456789"
-}
-```
-
-**Response:**
-```json
-{
-  "problems": [
-    {
-      "problem": "App crashes when syncing data",
-      "type": "complaint",
-      "average_rating": 2.3,
-      "frequency": 4,
-      "severity": 5,
-      "example_reviews": [
-        "Crashes every time I try to sync. Very frustrating.",
-        "Lost all my data after the last update."
-      ]
-    }
-  ]
-}
-```
-
-**Error Responses:**
-- `400 Bad Request`: Invalid App Store URL format
-
----
-
-## Getting Started (Local)
+## Setup & Running Locally
 
 ### Prerequisites
-
-- Python 3.11+ (recommended)
+- Python 3.11+ 
 - Node.js 18+ and npm
-- API keys: YouTube Data API v3, OpenAI API
+- API keys:
+  - YouTube Data API v3 key ([Get one here](https://console.cloud.google.com/apis/credentials))
+  - OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
 
 ### Backend Setup
 
+1. Navigate to backend directory:
 ```bash
 cd backend/app
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install fastapi uvicorn[standard] pydantic python-dotenv google-api-python-client openai requests
 ```
 
-Create `.env` file in `backend/app/`:
+2. Create and activate virtual environment:
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install dependencies:
+```bash
+pip install fastapi uvicorn[standard] pydantic python-dotenv google-api-python-client openai requests supabase
+```
+
+4. Create `.env` file in `backend/app/`:
 ```bash
 YOUTUBE_API=your_youtube_api_key_here
 OPENAI_KEY=your_openai_api_key_here
+LOG_LEVEL=INFO  # Optional: DEBUG, INFO, WARNING, ERROR
 ```
 
-Run the server:
+5. Run the server:
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-API available at `http://localhost:8000`
+API will be available at `http://localhost:8000`
 
 ### Frontend Setup
 
+1. Navigate to frontend directory:
 ```bash
 cd frontend
+```
+
+2. Install dependencies:
+```bash
 npm install
+```
+
+3. Run development server:
+```bash
 npm run dev
 ```
 
-Frontend typically runs on `http://localhost:5173` (Vite default)
+Frontend will typically run on `http://localhost:5173` (Vite default)
 
-**CORS Note:** Backend is configured to allow requests from `http://localhost:5173`. If your frontend runs on a different port, update CORS settings in `backend/app/main.py`.
+**Note**: Backend CORS is configured for `http://localhost:5173`. If your frontend runs on a different port, update `allow_origins` in `backend/app/main.py`.
 
----
+### Testing the Application
 
-## Environment Variables
-
-Create a `.env` file in `backend/app/`:
-
-```bash
-# Required: YouTube Data API v3 key
-YOUTUBE_API_KEY=your_youtube_api_key_here
-
-# Required: OpenAI API key (or use GEMINI_API_KEY for alternative provider)
-OPENAI_API_KEY=your_openai_api_key_here
-# GEMINI_API_KEY=your_gemini_api_key_here
-
-# Optional: Number of App Store review pages to fetch (default: 10)
-# Configure in backend/app/config/settings.py
-```
-
----
-
-## Output Format
-
-The API returns structured JSON with extracted problems. Each problem includes:
-
-- **problem**: Short description of the issue or request
-- **type**: Classification (`feature_request`, `complaint`, `usability`, `performance`, `pricing`, `other`)
-- **severity**: 1-5 scale (5 = most painful/impactful)
-- **frequency**: 1-5 scale (5 = very common theme)
-- **total_likes** (YouTube): Aggregated likes for comments in this cluster
-- **average_rating** (App Store): Average star rating for reviews in this cluster
-- **example_reviews** (App Store): 1-2 example review excerpts
-
-**Example Response:**
-```json
-{
-  "problems": [
-    {
-      "problem": "Users want offline mode for travel",
-      "type": "feature_request",
-      "average_rating": 4.1,
-      "frequency": 5,
-      "severity": 4,
-      "example_reviews": [
-        "Great app but needs offline support for travel",
-        "Please add offline mode! I travel a lot."
-      ]
-    }
-  ],
-  "source": {
-    "platform": "app_store",
-    "url": "https://apps.apple.com/..."
-  }
-}
-```
-
----
-
-## Engineering Notes
-
-**Pagination and Graceful Degradation:** The App Store RSS feed pagination stops gracefully when `feed.entry` is missing (no more pages or invalid app ID). The pipeline handles this without crashing, logging the stopping point and returning whatever data was successfully collected.
-
-**Defensive Parsing and Error Handling:** All external API responses are parsed with defensive checks. Missing fields, malformed JSON, and network timeouts are handled at each layer. URL validation occurs before any API calls to fail fast on invalid input.
-
-**Rate Limits and Timeouts:** YouTube API quota limits are respected (10,000 units/day default). App Store RSS requests include 10-second timeouts to prevent hanging. Future improvements would include exponential backoff and request queuing.
-
-**Separation of Concerns:** The codebase is organized into distinct layers: `ingestion/` for API clients, `preprocessing/` for data cleaning, `llm/` for analysis, and `scripts/` for pipeline orchestration. This modularity makes it straightforward to add new data sources or swap LLM providers.
-
-**Testability and Extensibility:** Each module has clear interfaces and minimal dependencies. The pipeline functions accept URLs and return structured data, making them easy to unit test. Adding a new source (e.g., Reddit) requires implementing the ingestion and cleaning modules following the existing patterns.
-
-**Structured LLM Outputs:** Prompts are carefully designed to enforce consistent JSON schema. The system prompts include explicit formatting rules and examples to minimize parsing errors and ensure reliable structured outputs.
-
----
-
-## Roadmap
-
-- [ ] Add Reddit ingestion for subreddit analysis
-- [ ] Improve clustering algorithm for better problem grouping
-- [ ] Add caching layer to reduce API calls and improve performance
-- [ ] Implement pagination for large datasets
-- [ ] Enhanced UI with charts and visualizations
-- [ ] Async job processing with background tasks
-- [ ] Database storage for historical analysis
-- [ ] Export insights to CSV/Excel format
-- [ ] Add support for additional LLM providers (Gemini, Claude, etc.)
-- [ ] Batch processing for multiple URLs
-- [ ] API rate limiting and usage tracking
+1. Open `http://localhost:5173` in your browser
+2. Navigate to YouTube or App Store tab
+3. Paste a valid URL:
+   - YouTube: `https://www.youtube.com/watch?v=VIDEO_ID` or `https://youtu.be/VIDEO_ID`
+   - App Store: `https://apps.apple.com/us/app/app-name/id123456789`
+4. Click "Analyze" and wait for insights to load
+5. View extracted problems with severity, frequency, and engagement metrics
 
 ---
 
