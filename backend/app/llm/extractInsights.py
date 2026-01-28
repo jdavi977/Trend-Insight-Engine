@@ -1,11 +1,6 @@
-import os
 from openai import OpenAI
-from dotenv import load_dotenv
 from config.prompts import youtubeSystemPrompt, youtubePromptOutput, appStoreSystemPrompt, appStorePromptOutput
-
-load_dotenv()
-
-OPENAI_KEY = os.getenv("OPENAI_KEY")
+from config.config import OPENAI_KEY
 
 def extractInsights(data, systemPrompt, promptOutput):
     client = OpenAI(api_key=OPENAI_KEY)

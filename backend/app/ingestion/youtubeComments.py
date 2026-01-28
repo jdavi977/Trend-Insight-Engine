@@ -1,12 +1,7 @@
 from googleapiclient.discovery import build
-from dotenv import load_dotenv
 from urllib.parse import urlparse, parse_qs
 from config.settings import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
-import os
-
-load_dotenv()
-
-YOUTUBE_API = os.getenv("YOUTUBE_API")
+from config.config import YOUTUBE_API
 
 def getVideoId(url: str) -> str:
     p = urlparse(url)
