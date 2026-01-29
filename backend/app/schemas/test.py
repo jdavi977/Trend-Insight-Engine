@@ -1,9 +1,9 @@
 import json
-from llm_insights import LLMExtraction
+from llm_insights import LLMExtraction, ProblemItem
 
 raw = """
 {
-    "source": "youtubea",
+    "source": "youtube",
     "title": null,
     "problems": [
         {
@@ -11,7 +11,7 @@ raw = """
             "type": "feature_request",
             "total_likes": 487,
             "severity": 3,
-            "frequency": 6
+            "frequency": 3
         },
         {
             "problem": "Users lack affordable access to gyms and equipment and therefore need effective no-equipment/home workout solutions.",
@@ -25,7 +25,7 @@ raw = """
             "type": "usability",
             "total_likes": 436,
             "severity": 2,
-            "frequency": 1
+            "frequency": 8
         }
     ]
 }
@@ -33,12 +33,29 @@ raw = """
 
 data = json.loads(raw)
 
+check = True
+
+dead_data = []
+
 try:
     validated = LLMExtraction.model_validate(data)
     print(validated)
 except:
+    check = False
     print("Please try again")
-# print(validated.problems[0].severity)
 
+if check == True:
+    for i in range(len(validated.problems) -1, -1, -1):
+        try:
+            problem_validation = ProblemItem.model_validate(validated.problems[i])
+        except:
+            dead_data.append(validated.problems[i])
+            validated.problems.pop(i)
+print("--")
+print(validated)
+print("--")
+print(dead_data)
+
+# print(validated.problems[0].severity)
 # Plans: make a BaseModel for each validated.problems to validate each problem. think of what to do
 # for data that fails the validation

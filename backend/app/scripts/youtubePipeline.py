@@ -1,6 +1,7 @@
 from ingestion.youtubeComments import getVideoId, getYoutubeComments
 from preprocessing.commentClean import loadAndClean
 from llm.extractInsights import extractInsights
+from llm.validateOutput import validateOutput
 from config.prompts import youtubeSystemPrompt, youtubePromptOutput
 from config.keywords import YOUTUBE_KEYWORDS
 
@@ -11,4 +12,5 @@ def youtube_manual(link: str):
     all_items = relevance + time
     cleaned_data = loadAndClean(all_items, YOUTUBE_KEYWORDS)
     insights = extractInsights(cleaned_data, youtubeSystemPrompt, youtubePromptOutput)
-    return insights
+    validated_data = validateOutput(insights)
+    return validated_data
