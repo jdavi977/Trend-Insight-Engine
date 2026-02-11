@@ -14,3 +14,5 @@ def youtube_manual(link: str):
     insights = extractInsights(cleaned_data, youtubeSystemPrompt, youtubePromptOutput)
     validated_data = validateOutput(insights)
     return validated_data
+
+    

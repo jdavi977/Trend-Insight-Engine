@@ -39,3 +39,18 @@ def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
 # Same problems would be sent to supabase because openai changes up the problem phrasing by a little bit
 # Could try to create an id for the video and have the problems be foreign keys to the id
 # video id could be made using hash? so that it is the same for each title?
+#
+# Plans:
+# Find which categories of videos I want to automatically ingest into the webpage
+# Make sure backend works
+# Create web page for automatic category 
+# Make sure data is properly sent to backend
+# Use AI to make the webpage
+# Use cron for weekly insights
+#
+# Better order (still matching your goals)
+# Make backend reliably runnable (golden path, fail-fast config, no import side effects)
+# DB schema + idempotency (so automatic ingestion doesn’t spam duplicates)
+# Automatic ingestion categories (now it’s safe to run repeatedly)
+# Cron weekly run + weekly rollups (this is the core value)
+# Web page last (because now you have stable data + endpoints)
