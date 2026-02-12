@@ -8,17 +8,18 @@ from app.lib.db import update_automatic_trend
 import json
 
 # fix exclude issue, it exclude is not given it will exclude all comments due to ""
-def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
+def youtube_automatic(ids: list[str], keywords: list):
     list = []
     for id in ids:
+
+        
+
         # Check if id is already in database
         # if id is in database, fetch data
         # else continue pipeline
 
         relevance = getYoutubeComments(id['Id'], "relevance", id['Title'])
-        print(relevance)
-        # loadAndClean could be wrong as I am getting no data
-        cleaned_data = loadAndClean(relevance, keywords, exclude)
+        cleaned_data = loadAndClean(relevance, keywords)
 
         if len(cleaned_data) <= 0:
             continue
@@ -28,6 +29,7 @@ def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
         for item in data["problems"]:
             list = []
             list.append({
+                "key": id['Id'],
                 "source": data["source"],
                 "title": data["title"],
                 "problems": [
@@ -37,7 +39,6 @@ def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
                     "severity: ", item["severity"],
                     "frequency: ", item["frequency"]]
             })
-            print(list)
             if list:
                 update_automatic_trend(list)
 
@@ -67,10 +68,10 @@ if __name__ == "__main__":
 
 # idempotency - use vid_id, app_id so if it already exists we dont rerun
 
-# step 0 look at loadandclean funciton
-# step 1: check if automaticYoutube works
-# 2. check if data is being sent to the backend
-# 3. make sure id is being sent
+# step 0 look at loadandclean funciton  1
+# step 1: check if automaticYoutube works  1
+# 2. check if data is being sent to the backend  1
+# 3. make sure id is being sent  1
 # 4. make automatic pipeline first check database if youtubeid is already present
 # 5. if present we skip processing the id and instead pull data
 # 6. make page in react

@@ -4,7 +4,7 @@ from app.utilities.textCleaning import keyword_filtering, exclude_keywords, remo
 
 #TODO: stopword removal? remove urls?
 
-def loadAndClean(data, keywords: list, exclude=None):
+def loadAndClean(data, keywords: list):
     cleaned = []
 
     # Filtering based off likes
@@ -20,14 +20,16 @@ def loadAndClean(data, keywords: list, exclude=None):
                 "Content": comment['Text'].lower().strip(),
             })
 
-    if exclude:
-        exclude = exclude_keywords(cleaned, exclude)
-        filtered = keyword_filtering(exclude, keywords)
-    else: 
-        filtered = keyword_filtering(cleaned, keywords)
-
+    # if exclude:
+    #     print("2.1")
+    #     exclude = exclude_keywords(cleaned, exclude)
+    #     filtered = keyword_filtering(exclude, keywords)
+    # else: 
+    #     print("2.2")
+    #     filtered = keyword_filtering(cleaned, keywords)
+    
     # Clean out emojis
-    emoji_removed = remove_emojis(filtered)
+    emoji_removed = remove_emojis(cleaned)
 
     # Filtering duplicates
     finished = remove_duplicates(emoji_removed)
