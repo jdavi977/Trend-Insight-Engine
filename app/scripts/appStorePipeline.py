@@ -1,8 +1,8 @@
-from ingestion.appStoreReviews import getAppId, getAppReviews
-from preprocessing.reviewClean import appReviewClean
-from config.settings import APP_REVIEW_PAGES
-from config.prompts import appStoreSystemPrompt, appStorePromptOutput
-from llm.extractInsights import extractInsights
+from app.ingestion.appStoreReviews import getAppId, getAppReviews
+from app.preprocessing.reviewClean import appReviewClean
+from app.config.settings import APP_REVIEW_PAGES
+from app.config.prompts import appStoreSystemPrompt, appStorePromptOutput
+from app.llm.extractInsights import extractInsights
 
 def app_store_manual(link):
     id = getAppId(link)

@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from scripts.youtubePipeline import youtube_manual
-from scripts.appStorePipeline import app_store_manual
-from scripts.data_save import data_save
-from preprocessing.validateUrl import validateYoutube, validateAppStore
+from app.scripts.youtubePipeline import youtube_manual
+from app.scripts.appStorePipeline import app_store_manual
+from app.scripts.data_save import data_save
+from app.preprocessing.validateUrl import validateYoutube, validateAppStore
 from typing import Any, Optional
 import logging
 import os

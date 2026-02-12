@@ -1,4 +1,4 @@
-from config.regex import EMOJI_REGEX
+from app.config.regex import EMOJI_REGEX
 import re
 
 def remove_emojis(data):

@@ -1,6 +1,6 @@
 import re
-from config.keywords import APPLE_KEYWORDS
-from utilities.textCleaning import keyword_filtering, remove_emojis, remove_duplicates
+from app.config.keywords import APPLE_KEYWORDS
+from app.utilities.textCleaning import keyword_filtering, remove_emojis, remove_duplicates
 
 def appReviewClean(data):
     cleaned = []

@@ -1,17 +1,23 @@
-from ingestion.youtubeComments import getVideoId, getYoutubeComments, getMostPopularVideos
-from preprocessing.commentClean import loadAndClean
-from llm.extractInsights import extractInsights
-from config.prompts import youtubePromptOutput, youtubeGameSystemPrompt
-from config.keywords import GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS
-from config.settings import GAME_CATEGORY_ID
-from lib.db import update_automatic_trend
+from app.ingestion.youtubeComments import getVideoId, getYoutubeComments, getMostPopularVideos
+from app.preprocessing.commentClean import loadAndClean
+from app.llm.extractInsights import extractInsights
+from app.config.prompts import youtubePromptOutput, youtubeGameSystemPrompt
+from app.config.keywords import GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS
+from app.config.settings import GAME_CATEGORY_ID
+from app.lib.db import update_automatic_trend
 import json
 
 # fix exclude issue, it exclude is not given it will exclude all comments due to ""
 def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
     list = []
     for id in ids:
+        # Check if id is already in database
+        # if id is in database, fetch data
+        # else continue pipeline
+
         relevance = getYoutubeComments(id['Id'], "relevance", id['Title'])
+        print(relevance)
+        # loadAndClean could be wrong as I am getting no data
         cleaned_data = loadAndClean(relevance, keywords, exclude)
 
         if len(cleaned_data) <= 0:
@@ -31,8 +37,13 @@ def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
                     "severity: ", item["severity"],
                     "frequency: ", item["frequency"]]
             })
+            print(list)
             if list:
                 update_automatic_trend(list)
+
+if __name__ == "__main__":
+    test = getMostPopularVideos(20)
+    youtube_automatic(test, GAME_KEYWORDS)
 
 # youtube_automatic(getMostPopularVideos(GAME_CATEGORY_ID), GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS)
 # Current issue:
@@ -49,8 +60,20 @@ def youtube_automatic(ids: list[str], keywords: list, exclude=[""]):
 # Use cron for weekly insights
 #
 # Better order (still matching your goals)
-# Make backend reliably runnable (golden path, fail-fast config, no import side effects)
 # DB schema + idempotency (so automatic ingestion doesn’t spam duplicates)
 # Automatic ingestion categories (now it’s safe to run repeatedly)
 # Cron weekly run + weekly rollups (this is the core value)
 # Web page last (because now you have stable data + endpoints)
+
+# idempotency - use vid_id, app_id so if it already exists we dont rerun
+
+# step 0 look at loadandclean funciton
+# step 1: check if automaticYoutube works
+# 2. check if data is being sent to the backend
+# 3. make sure id is being sent
+# 4. make automatic pipeline first check database if youtubeid is already present
+# 5. if present we skip processing the id and instead pull data
+# 6. make page in react
+# 7. transfer data onto the page
+# 8. make weekly cron job
+# 9. add more categories other than just games

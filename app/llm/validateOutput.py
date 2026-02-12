@@ -1,6 +1,6 @@
 import json
 import time
-from schemas.llm_insights import LLMExtraction, ProblemItem
+from app.schemas.llm_insights import LLMExtraction, ProblemItem
 from pathlib import Path
 
 def validateOutput(data):

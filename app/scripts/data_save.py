@@ -3,7 +3,6 @@ import json
 from fastapi import HTTPException
 
 def data_save(data):
-    base_dir = "/backend/app"
     DATA_FOLDER = "data"
     file_name = "manually_change.json"
     file_path = os.path.join(DATA_FOLDER, file_name)

@@ -1,4 +1,4 @@
-from lib.supabaseClient import supabase_client
+from app.lib.supabaseClient import supabase_client
 
 def update_automatic_trend(data):
   print(1)

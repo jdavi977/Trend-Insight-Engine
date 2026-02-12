@@ -1,6 +1,6 @@
 import re
-from config.keywords import YOUTUBE_KEYWORDS
-from utilities.textCleaning import keyword_filtering, exclude_keywords, remove_emojis, remove_duplicates
+from app.config.keywords import YOUTUBE_KEYWORDS
+from app.utilities.textCleaning import keyword_filtering, exclude_keywords, remove_emojis, remove_duplicates
 
 #TODO: stopword removal? remove urls?
 
@@ -22,7 +22,6 @@ def loadAndClean(data, keywords: list, exclude=None):
 
     if exclude:
         exclude = exclude_keywords(cleaned, exclude)
-
         filtered = keyword_filtering(exclude, keywords)
     else: 
         filtered = keyword_filtering(cleaned, keywords)

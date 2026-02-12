@@ -1,9 +1,9 @@
-from ingestion.youtubeComments import getVideoId, getYoutubeComments
-from preprocessing.commentClean import loadAndClean
-from llm.extractInsights import extractInsights
-from llm.validateOutput import validateOutput
-from config.prompts import youtubeSystemPrompt, youtubePromptOutput
-from config.keywords import YOUTUBE_KEYWORDS
+from app.ingestion.youtubeComments import getVideoId, getYoutubeComments
+from app.preprocessing.commentClean import loadAndClean
+from app.llm.extractInsights import extractInsights
+from app.llm.validateOutput import validateOutput
+from app.config.prompts import youtubeSystemPrompt, youtubePromptOutput
+from app.config.keywords import YOUTUBE_KEYWORDS
 
 def youtube_manual(link: str):
     id = getVideoId(link)

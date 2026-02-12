@@ -1,6 +1,6 @@
 from openai import OpenAI
-from config.prompts import youtubeSystemPrompt, youtubePromptOutput, appStoreSystemPrompt, appStorePromptOutput
-from config.config import OPENAI_KEY
+from app.config.prompts import youtubeSystemPrompt, youtubePromptOutput, appStoreSystemPrompt, appStorePromptOutput
+from app.config.config import OPENAI_KEY
 
 def extractInsights(data, systemPrompt, promptOutput):
     client = OpenAI(api_key=OPENAI_KEY)

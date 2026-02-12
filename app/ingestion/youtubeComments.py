@@ -1,7 +1,7 @@
 from googleapiclient.discovery import build
 from urllib.parse import urlparse, parse_qs
-from config.settings import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
-from config.config import YOUTUBE_API
+from app.config.settings import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
+from app.config.config import YOUTUBE_API
 
 def getVideoId(url: str) -> str:
     p = urlparse(url)
@@ -35,6 +35,7 @@ def getYoutubeComments(id, order, title=None,):
     for item in response["items"]:
         snippet = item["snippet"]["topLevelComment"]["snippet"]
         comments.append({
+            "Id": id,
             "Title": title,
             "Likes": snippet["likeCount"],
             "Text": snippet["textDisplay"]
@@ -49,7 +50,7 @@ def getMostPopularVideos(category):
         part="snippet",
         chart="mostPopular",
         videoCategoryId=category,
-        maxResults=YOUTUBE_VIDEO_AMOUNT
+        maxResults=15
     )
     ids = []
     response = request.execute()
@@ -62,3 +63,7 @@ def getMostPopularVideos(category):
 
     service.close()
     return ids
+
+#if __name__ == "__main__":
+    #print(getMostPopularVideos(20))
+    #[{'Title': 'I Became King of the Unstable SMP', 'Id': '2WusTNLmBpE'}, {'Title': "Marvel Rivals: What's new in Season 6.5 // Dev Vision Vol. 14", 'Id': 'e12fPPx8-_0'}, {'Title': 'I Got The New LA ROMANTIC GRANDE..', 'Id': 'SgJpGVWwKWY'}, {'Title': 'Hermitcraft 11: Episode 10 - FINISHING THE CAVE!', 'Id': 'xEN85i57UmM'}, {'Title': 'DO NOT Let Me Work at a Quarantine Zone', 'Id': 'AMA6AkkexzE'}]

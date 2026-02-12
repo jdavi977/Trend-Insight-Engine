@@ -23,3 +23,6 @@ def getVideoCategories():
         })
     service.close()
     return list
+
+if __name__ == "__main__":
+    print(getVideoCategories())
