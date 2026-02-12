@@ -4,43 +4,59 @@ from app.llm.extractInsights import extractInsights
 from app.config.prompts import youtubePromptOutput, youtubeGameSystemPrompt
 from app.config.keywords import GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS
 from app.config.settings import GAME_CATEGORY_ID
-from app.lib.db import update_automatic_trend
+from app.lib.db import update_automatic_trend, check_youtube_id
 import json
 
 # fix exclude issue, it exclude is not given it will exclude all comments due to ""
 def youtube_automatic(ids: list[str], keywords: list):
-    list = []
     for id in ids:
-
+        print(id['Id'])
+        check = check_youtube_id(id['Id'])
         
-
-        # Check if id is already in database
-        # if id is in database, fetch data
-        # else continue pipeline
-
-        relevance = getYoutubeComments(id['Id'], "relevance", id['Title'])
-        cleaned_data = loadAndClean(relevance, keywords)
-
-        if len(cleaned_data) <= 0:
+        if check:
+            print("Pass")
             continue
+        else:
+            # Check if id is already in database
+            # if id is in database, fetch data
+            # else continue pipeline
 
-        insights = extractInsights(cleaned_data, youtubeGameSystemPrompt, youtubePromptOutput)
-        data = json.loads(insights)
-        for item in data["problems"]:
-            list = []
-            list.append({
-                "key": id['Id'],
-                "source": data["source"],
-                "title": data["title"],
-                "problems": [
-                    "problem: ", item["problem"],
-                    "type: ", item["type"],
-                    "total_likes: ", item["total_likes"],
-                    "severity: ", item["severity"],
-                    "frequency: ", item["frequency"]]
-            })
-            if list:
-                update_automatic_trend(list)
+            relevance = getYoutubeComments(id['Id'], "relevance", id['Title'])
+            cleaned_data = loadAndClean(relevance, keywords)
+
+            if len(cleaned_data) <= 0:
+                continue
+            
+            insights = extractInsights(cleaned_data, youtubeGameSystemPrompt, youtubePromptOutput)
+        
+            data = json.loads(insights)
+
+            # Makes sure data is a dictionary before accessing problems
+            if isinstance(data, list):
+                if len(data) > 0:
+                    data = data[0]
+                else:
+                    continue 
+            
+            if not data["problems"]:
+                print("Skipping")
+                continue
+            
+            for item in data["problems"]:
+                trend_data = []
+                trend_data.append({
+                    "key": id['Id'],
+                    "source": data["source"],
+                    "title": data["title"],
+                    "problems": [
+                        "problem: ", item["problem"],
+                        "type: ", item["type"],
+                        "total_likes: ", item["total_likes"],
+                        "severity: ", item["severity"],
+                        "frequency: ", item["frequency"]]
+                })
+                if trend_data:
+                    update_automatic_trend(trend_data)
 
 if __name__ == "__main__":
     test = getMostPopularVideos(20)
@@ -72,8 +88,8 @@ if __name__ == "__main__":
 # step 1: check if automaticYoutube works  1
 # 2. check if data is being sent to the backend  1
 # 3. make sure id is being sent  1
-# 4. make automatic pipeline first check database if youtubeid is already present
-# 5. if present we skip processing the id and instead pull data
+# 4. make automatic pipeline first check database if youtubeid is already present 1
+# 5. if present we skip processing the id and instead pull data 
 # 6. make page in react
 # 7. transfer data onto the page
 # 8. make weekly cron job
