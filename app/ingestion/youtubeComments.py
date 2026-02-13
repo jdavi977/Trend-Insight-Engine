@@ -50,7 +50,7 @@ def getMostPopularVideos(category):
         part="snippet",
         chart="mostPopular",
         videoCategoryId=category,
-        maxResults=5
+        maxResults=10
     )
     ids = []
     response = request.execute()

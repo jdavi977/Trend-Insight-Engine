@@ -9,22 +9,22 @@ import json
 
 # fix exclude issue, it exclude is not given it will exclude all comments due to ""
 def youtube_automatic(ids: list[str], keywords: list):
+    page_data = []
     for id in ids:
         print(id['Id'])
         check = check_youtube_id(id['Id'])
         
         if check:
-            print("Pass")
+            print("Updating data")
+            print(f"Skipped key: {id['Id']}. Found in Database.")
+            page_data.append(check)
             continue
         else:
-            # Check if id is already in database
-            # if id is in database, fetch data
-            # else continue pipeline
-
             relevance = getYoutubeComments(id['Id'], "relevance", id['Title'])
             cleaned_data = loadAndClean(relevance, keywords)
 
             if len(cleaned_data) <= 0:
+                print(f"Skipping key: {id['Id']} due to no problems found.")
                 continue
             
             insights = extractInsights(cleaned_data, youtubeGameSystemPrompt, youtubePromptOutput)
@@ -36,10 +36,11 @@ def youtube_automatic(ids: list[str], keywords: list):
                 if len(data) > 0:
                     data = data[0]
                 else:
+                    print(f"Skipping key: {id['Id']} due to no problems found.")
                     continue 
             
             if not data["problems"]:
-                print("Skipping")
+                print(f"Skipping key: {id['Id']} due to no problems found.")
                 continue
             
             for item in data["problems"]:
@@ -56,11 +57,14 @@ def youtube_automatic(ids: list[str], keywords: list):
                         "frequency: ", item["frequency"]]
                 })
                 if trend_data:
+                    print("Updating data")
                     update_automatic_trend(trend_data)
+                    page_data.append(trend_data)
+    return page_data
 
 if __name__ == "__main__":
     test = getMostPopularVideos(20)
-    youtube_automatic(test, GAME_KEYWORDS)
+    print(youtube_automatic(test, GAME_KEYWORDS))
 
 # youtube_automatic(getMostPopularVideos(GAME_CATEGORY_ID), GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS)
 # Current issue:
@@ -89,6 +93,7 @@ if __name__ == "__main__":
 # 2. check if data is being sent to the backend  1
 # 3. make sure id is being sent  1
 # 4. make automatic pipeline first check database if youtubeid is already present 1
+# 4.5 create function to pull data from automaticYoutube and place on webpage
 # 5. if present we skip processing the id and instead pull data 
 # 6. make page in react
 # 7. transfer data onto the page
