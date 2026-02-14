@@ -4,11 +4,15 @@ from app.llm.extractInsights import extractInsights
 from app.config.prompts import youtubePromptOutput, youtubeGameSystemPrompt
 from app.config.keywords import GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS
 from app.config.settings import GAME_CATEGORY_ID
-from app.lib.db import update_automatic_trend, check_youtube_id
+from app.lib.db import update_automatic_trend, check_youtube_id, update_automatic_video_date
+from app.utilities.getDate import getCurrentDate
 import json
 
 # fix exclude issue, it exclude is not given it will exclude all comments due to ""
-def youtube_automatic(ids: list[str], keywords: list):
+def youtube_automatic(ids: list[str], category: int, keywords: list):
+
+    today = str(getCurrentDate())
+
     page_data = []
     for id in ids:
         print(id['Id'])
@@ -17,6 +21,7 @@ def youtube_automatic(ids: list[str], keywords: list):
         if check:
             print("Updating data")
             print(f"Skipped key: {id['Id']}. Found in Database.")
+            update_automatic_video_date(id['Id'], today)
             page_data.append(check)
             continue
         else:
@@ -47,7 +52,8 @@ def youtube_automatic(ids: list[str], keywords: list):
                 trend_data = []
                 trend_data.append({
                     "key": id['Id'],
-                    "source": data["source"],
+                    "date": today,
+                    "category": category,
                     "title": data["title"],
                     "problems": [
                         "problem: ", item["problem"],
@@ -63,15 +69,10 @@ def youtube_automatic(ids: list[str], keywords: list):
     return page_data
 
 if __name__ == "__main__":
-    test = getMostPopularVideos(20)
-    print(youtube_automatic(test, GAME_KEYWORDS))
+    category = 20
+    test = getMostPopularVideos(category)
+    print(youtube_automatic(test, category, GAME_KEYWORDS))
 
-# youtube_automatic(getMostPopularVideos(GAME_CATEGORY_ID), GAME_KEYWORDS, GAME_EXCLUDE_KEYWORDS)
-# Current issue:
-# Same problems would be sent to supabase because openai changes up the problem phrasing by a little bit
-# Could try to create an id for the video and have the problems be foreign keys to the id
-# video id could be made using hash? so that it is the same for each title?
-#
 # Plans:
 # Find which categories of videos I want to automatically ingest into the webpage
 # Make sure backend works
@@ -86,15 +87,24 @@ if __name__ == "__main__":
 # Cron weekly run + weekly rollups (this is the core value)
 # Web page last (because now you have stable data + endpoints)
 
-# idempotency - use vid_id, app_id so if it already exists we dont rerun
-
 # step 0 look at loadandclean funciton  1
 # step 1: check if automaticYoutube works  1
 # 2. check if data is being sent to the backend  1
 # 3. make sure id is being sent  1
 # 4. make automatic pipeline first check database if youtubeid is already present 1
-# 4.5 create function to pull data from automaticYoutube and place on webpage
-# 5. if present we skip processing the id and instead pull data 
+# 5. if present we skip processing the id and instead pull data 1
+# 5.5 Make automatic_youtube only be a function to send popular page data to backend
+# 5.6 Figure out a way to get react page to get specific category data from database
+# Notes:
+# React page cant just pull latest date + category since a video may be on there from 2 weeks ago, not having a updated date
+# Unless we update the row date to current date when going through ids
+# Step 1:
+# Create category field in db -done
+# Create date field in db -done
+# Create funciton to get current date -done
+# Send date field to database -done
+# Update date field for exisitng ids in database that dont have matching dates -done
+
 # 6. make page in react
 # 7. transfer data onto the page
 # 8. make weekly cron job
