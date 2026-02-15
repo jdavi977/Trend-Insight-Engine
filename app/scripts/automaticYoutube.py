@@ -105,6 +105,11 @@ if __name__ == "__main__":
 # Send date field to database -done
 # Update date field for exisitng ids in database that dont have matching dates -done
 
+# Todo:
+# Make function to fetch database problems ->  cron will be scheduled for sunday night
+# Make function to get sunday date -done
+# Create function to fetch data with ids that have sunday date -done
+
 # 6. make page in react
 # 7. transfer data onto the page
 # 8. make weekly cron job
