@@ -68,6 +68,8 @@ function YouTubePage() {
   };
 
   const problems = analytics?.problems || analytics?.["problems:"] || [];
+  console.log(problems);
+  console.log(problems.length);
 
   return (
     <div className="app-shell">

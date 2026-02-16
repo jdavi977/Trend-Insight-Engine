@@ -55,12 +55,12 @@ def youtube_automatic(ids: list[str], category: int, keywords: list):
                     "date": today,
                     "category": category,
                     "title": data["title"],
-                    "problems": [
-                        "problem: ", item["problem"],
-                        "type: ", item["type"],
-                        "total_likes: ", item["total_likes"],
-                        "severity: ", item["severity"],
-                        "frequency: ", item["frequency"]]
+                    "problems": {
+                        "problem": item["problem"],
+                        "type": item["type"],
+                        "total_likes": item["total_likes"],
+                        "severity": item["severity"],
+                        "frequency": item["frequency"]}
                 })
                 if trend_data:
                     print("Updating data")
@@ -110,7 +110,9 @@ if __name__ == "__main__":
 # Make function to get sunday date -done
 # Create function to fetch data with ids that have sunday date -done
 
-# 6. make page in react
+# 6. make main page in react
+
+
 # 7. transfer data onto the page
 # 8. make weekly cron job
 # 9. add more categories other than just games

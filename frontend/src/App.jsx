@@ -2,13 +2,20 @@ import "./App.css";
 import { useState } from "react";
 import YouTubePage from "./YouTubePage";
 import AppStorePage from "./AppStorePage";
+import HomePage from "./HomePage";
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("youtube");
+  const [currentPage, setCurrentPage] = useState("homepages");
 
   return (
     <div>
       <nav className="page-nav">
+        <button
+          className={`nav-button ${currentPage === "homepage" ? "active" : ""}`}
+          onClick={() => setCurrentPage("homepage")}
+        >
+          Home
+        </button>
         <button
           className={`nav-button ${currentPage === "youtube" ? "active" : ""}`}
           onClick={() => setCurrentPage("youtube")}
@@ -24,6 +31,7 @@ function App() {
       </nav>
       {currentPage === "youtube" && <YouTubePage />}
       {currentPage === "appstore" && <AppStorePage />}
+      {currentPage === "homepage" && <HomePage />}
     </div>
   );
 }

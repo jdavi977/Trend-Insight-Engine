@@ -5,6 +5,7 @@ from app.scripts.youtubePipeline import youtube_manual
 from app.scripts.appStorePipeline import app_store_manual
 from app.scripts.data_save import data_save
 from app.preprocessing.validateUrl import validateYoutube, validateAppStore
+from app.lib.db import get_weekly_ids
 from typing import Any, Optional
 import logging
 import os
@@ -56,6 +57,11 @@ def analyze_appStore(request: AppStoreAnalyzeRequest):
         raise HTTPException(status_code=400, detail="Invalid link")
     else:
         return app_store_manual(request.appStoreURL)
+
+@app.get("/get/homePage")
+def get_home_data():
+    data = get_weekly_ids(20)
+    return data
 
 @app.post("/data/send")
 def save_data(request: DataSave):

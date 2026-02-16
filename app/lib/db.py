@@ -19,7 +19,7 @@ def check_youtube_id(key: str):
 def get_weekly_ids(category: int):
   date = getSundayDate()
   response = supabase_client.table("automatic_table").select().eq("date", date).eq("category", category).execute()
-  print(response.data)
+  return response.data
 
   
 if __name__ == "__main__":
