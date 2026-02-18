@@ -110,9 +110,12 @@ if __name__ == "__main__":
 # Make function to get sunday date -done
 # Create function to fetch data with ids that have sunday date -done
 
-# 6. make main page in react
+# 6. make main page in react -done 
+# 7. transfer data onto the page -done
 
+#Todo:
+# make home page defaulted -done
+# Group ids together in a section instead of all problems being randomly shown
 
-# 7. transfer data onto the page
 # 8. make weekly cron job
 # 9. add more categories other than just games

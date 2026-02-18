@@ -26,32 +26,39 @@ function HomePage() {
   }, []);
 
   const gameCatgeory = weeklyData.filter((item) => item.category === 20);
+  const gameIdGrouping = Object.groupBy(gameCatgeory, (game) => game.key);
+  console.log("hi", gameCatgeory);
+  console.log(gameIdGrouping);
 
   return (
     <div>
       <p>Weekly Youtube Insights</p>
-      {!loading && gameCatgeory.length > 0 && (
+      {!loading && gameIdGrouping && (
         <div className="analytics-card">
           <div className="card-header">
-            <h2>Insights</h2>
+            <h2>Game Category</h2>
           </div>
           <ul className="problems-list">
-            {gameCatgeory.map((problem, index) => (
-              <li key={index} className="problem-item">
-                <h3 className="problem-title">{problem.title}</h3>
-                <div>{problem.problems.problem}</div>
-                <div className="problem-meta">
-                  <span className="pill">{problem.problems.type}</span>
-                  <span className="pill">
-                    👍 {problem.problems.total_likes} likes
-                  </span>
-                  <span className="pill">
-                    Severity: {problem.problems.severity}/5
-                  </span>
-                  <span className="pill">
-                    Frequency: {problem.problems.frequency}/5
-                  </span>
-                </div>
+            {Object.entries(gameIdGrouping).map(([key, objects]) => (
+              <li key={key}>
+                <h3>{objects[0].title}</h3>
+                {objects.map((problem, index) => (
+                  <li key={index} className="problem-item">
+                    <div>{problem.problems.problem}</div>
+                    <div className="problem-meta">
+                      <span className="pill">{problem.problems.type}</span>
+                      <span className="pill">
+                        👍 {problem.problems.total_likes} likes
+                      </span>
+                      <span className="pill">
+                        Severity: {problem.problems.severity}/5
+                      </span>
+                      <span className="pill">
+                        Frequency: {problem.problems.frequency}/5
+                      </span>
+                    </div>
+                  </li>
+                ))}
               </li>
             ))}
           </ul>

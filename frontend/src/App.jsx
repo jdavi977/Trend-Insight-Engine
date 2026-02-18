@@ -5,7 +5,7 @@ import AppStorePage from "./AppStorePage";
 import HomePage from "./HomePage";
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("homepages");
+  const [currentPage, setCurrentPage] = useState("homepage");
 
   return (
     <div>
