@@ -63,7 +63,3 @@ def getMostPopularVideos(category):
 
     service.close()
     return ids
-
-#if __name__ == "__main__":
-    #print(getMostPopularVideos(20))
-    #[{'Title': 'I Became King of the Unstable SMP', 'Id': '2WusTNLmBpE'}, {'Title': "Marvel Rivals: What's new in Season 6.5 // Dev Vision Vol. 14", 'Id': 'e12fPPx8-_0'}, {'Title': 'I Got The New LA ROMANTIC GRANDE..', 'Id': 'SgJpGVWwKWY'}, {'Title': 'Hermitcraft 11: Episode 10 - FINISHING THE CAVE!', 'Id': 'xEN85i57UmM'}, {'Title': 'DO NOT Let Me Work at a Quarantine Zone', 'Id': 'AMA6AkkexzE'}]

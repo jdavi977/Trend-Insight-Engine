@@ -5,6 +5,7 @@ from app.scripts.youtubePipeline import youtube_manual
 from app.scripts.appStorePipeline import app_store_manual
 from app.scripts.data_save import data_save
 from app.preprocessing.validateUrl import validateYoutube, validateAppStore
+from app.config.settings import GAME_CATEGORY_ID, SCIENCE_TECH_ID, HOW_TO_STYLE_ID
 from app.lib.db import get_weekly_ids
 from typing import Any, Optional
 import logging
@@ -60,8 +61,14 @@ def analyze_appStore(request: AppStoreAnalyzeRequest):
 
 @app.get("/get/homePage")
 def get_home_data():
-    data = get_weekly_ids(20)
-    return data
+    ids = []
+    gameData = get_weekly_ids(GAME_CATEGORY_ID)
+    scitechData = get_weekly_ids(SCIENCE_TECH_ID)
+    howstyleData = get_weekly_ids(HOW_TO_STYLE_ID)
+    ids.append(gameData)
+    ids.append(scitechData)
+    ids.append(howstyleData)
+    return ids
 
 @app.post("/data/send")
 def save_data(request: DataSave):
