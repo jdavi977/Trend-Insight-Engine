@@ -1,0 +1,240 @@
+/* Insights page – white */
+.insights-page {
+  background: #fff;
+  color: #1a1a1a;
+  padding: 0 0 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+/* Hero placeholder */
+.insights-hero {
+  margin-bottom: 2.5rem;
+}
+
+.insights-hero-placeholder {
+  width: 100%;
+  height: 320px;
+  background: #e8e8e8;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Browse by Category */
+.insights-browse {
+  margin-bottom: 2.5rem;
+}
+
+.insights-browse-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.insights-browse-desc {
+  margin: 0 0 1.25rem;
+  font-size: 1rem;
+  color: #4a4a4a;
+  line-height: 1.6;
+  max-width: 720px;
+}
+
+.insights-browse-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.insights-pill {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  background: #fff;
+  color: #4a4a4a;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.insights-pill:hover {
+  background: #f0f0f0;
+  border-color: #b0b0b0;
+  color: #1a1a1a;
+}
+
+.insights-pill.active {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #fff;
+}
+
+/* All Videos section */
+.insights-all {
+  margin-bottom: 0;
+}
+
+.insights-all-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.insights-all-sub {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  color: #6b6b6b;
+  line-height: 1.5;
+}
+
+/* Row-based layout: each video and its issues are one aligned row */
+.insights-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.insights-row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
+  align-items: start;
+  padding: 1.5rem 1.25rem;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.insights-row-title {
+  padding-top: 0.25rem;
+}
+
+.insights-list-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.insights-list-date {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b6b6b;
+}
+
+.insights-row-detail {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.insights-detail-thumb {
+  width: 100%;
+  height: 180px;
+  background: #e8e8e8;
+}
+
+.insights-detail-body {
+  padding: 1.25rem 1.5rem;
+}
+
+.insights-detail-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.insights-detail-bullets {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  color: #4a4a4a;
+  line-height: 1.6;
+}
+
+.insights-detail-bullets li {
+  margin-bottom: 0.4rem;
+}
+
+.insights-detail-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+/* Loading & error */
+.insights-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 1rem;
+  color: #6b6b6b;
+}
+
+.insights-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #1a1a1a;
+  border-radius: 50%;
+  animation: insights-spin 0.8s linear infinite;
+}
+
+@keyframes insights-spin {
+  to { transform: rotate(360deg); }
+}
+
+.insights-error {
+  padding: 1rem 1.25rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+}
+
+.insights-error p {
+  margin: 0;
+}
+
+.insights-empty {
+  margin: 0;
+  padding: 2rem;
+  text-align: center;
+  color: #6b6b6b;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .insights-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .insights-page {
+    padding: 0 0 3rem;
+  }
+
+  .insights-hero-placeholder {
+    height: 200px;
+  }
+
+  .insights-browse-pills {
+    flex-direction: column;
+  }
+
+  .insights-pill {
+    width: 100%;
+    text-align: left;
+  }
+}

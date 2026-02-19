@@ -6,22 +6,25 @@ const CATEGORIES = [
     id: 20,
     label: "Games",
     slug: "games",
-    icon: "🎮",
-    accent: "var(--category-games)",
+    icon: "games",
+    description:
+      "Explore top gaming videos and discover trending player issues and feedback.",
   },
   {
     id: 28,
     label: "Science & Tech",
     slug: "scitech",
-    icon: "🔬",
-    accent: "var(--category-scitech)",
+    icon: "tech",
+    description:
+      "See what's popular in tech and the challenges viewers are talking about.",
   },
   {
     id: 26,
     label: "How-to & Style",
     slug: "howstyle",
-    icon: "✨",
-    accent: "var(--category-howstyle)",
+    icon: "lifestyle",
+    description:
+      "Track lifestyle and how-to topics and frequent audience problems.",
   },
 ];
 
@@ -30,6 +33,17 @@ function createCategoryGrouping(weeklyData, categoryId) {
     nestedArray.filter((item) => item.category === categoryId),
   );
   return Object.groupBy(category, (item) => item.key);
+}
+
+function getTopVideoEntries(weeklyData) {
+  const all = weeklyData.flat();
+  const byKey = Object.groupBy(all, (item) => item.key);
+  return Object.entries(byKey).slice(0, 3).map(([key, items]) => ({
+    key,
+    title: items[0].title,
+    category: items[0].category,
+    items,
+  }));
 }
 
 function HomePage() {
@@ -54,101 +68,99 @@ function HomePage() {
     getData();
   }, []);
 
+  const topVideos = getTopVideoEntries(weeklyData || []);
+
   return (
     <div className="homepage">
-      <header className="homepage-hero">
-        <h1 className="homepage-title">Weekly YouTube Insights</h1>
-        <p className="homepage-subtitle">
-          Top themes and problems from trending videos, by category
+      <section className="hero">
+        <h1 className="hero-title">Weekly YouTube Insights.</h1>
+        <p className="hero-subtitle">Popular videos, real user issues.</p>
+        <a href="#top-videos" className="hero-cta">
+          Explore Now
+        </a>
+      </section>
+
+      <section className="intro">
+        <p className="intro-lead">
+          Get insights from the most popular YouTube videos across three trending
+          categories.
         </p>
-      </header>
+        <p className="intro-sub">
+          Uncover what common user issues appear each week.
+        </p>
+      </section>
 
-      {loading && (
-        <div className="homepage-loading" aria-hidden="true">
-          <div className="homepage-loading-spinner" />
-          <p>Loading insights…</p>
+      <section className="category-cards" id="categories">
+        <div className="category-cards-inner">
+          {CATEGORIES.map((cat) => (
+            <article key={cat.id} className="category-card">
+              <div className={`category-card-icon category-card-icon--${cat.icon}`} />
+              <h2 className="category-card-title">{cat.label}.</h2>
+              <p className="category-card-desc">{cat.description}</p>
+            </article>
+          ))}
         </div>
-      )}
+      </section>
 
-      {error && (
-        <div className="homepage-error" role="alert">
-          <span className="homepage-error-icon" aria-hidden="true">
-            ⚠️
-          </span>
-          <p>{error}</p>
-        </div>
-      )}
+      <section className="top-videos" id="top-videos">
+        <h2 className="top-videos-title">Top Videos by Category</h2>
+        <p className="top-videos-subtitle">This week&apos;s most popular picks</p>
 
-      {!loading && !error && (
-        <div className="category-grid">
-          {CATEGORIES.map((cat) => {
-            const grouping = createCategoryGrouping(weeklyData, cat.id);
-            const hasData = grouping && Object.keys(grouping).length > 0;
-            return (
-              <section
-                key={cat.id}
-                className="category-column"
-                aria-labelledby={`category-heading-${cat.slug}`}
-                style={{ "--accent": cat.accent }}
-              >
-                <h2
-                  id={`category-heading-${cat.slug}`}
-                  className="category-column-title"
-                >
-                  <span className="category-column-icon" aria-hidden="true">
-                    {cat.icon}
-                  </span>
-                  {cat.label}
-                </h2>
+        {loading && (
+          <div className="homepage-loading">
+            <div className="homepage-loading-spinner" />
+            <p>Loading insights…</p>
+          </div>
+        )}
 
-                {!hasData && (
-                  <div className="category-empty">
-                    <p>No insights yet. Check back after the next run.</p>
-                  </div>
-                )}
+        {error && (
+          <div className="homepage-error" role="alert">
+            <span className="homepage-error-icon" aria-hidden="true">⚠️</span>
+            <p>{error}</p>
+          </div>
+        )}
 
-                {hasData && (
-                  <ul className="category-video-list">
-                    {Object.entries(grouping).map(([key, objects]) => (
-                      <li key={key} className="video-group">
-                        <h3 className="video-group-title">
-                          {objects[0].title}
-                        </h3>
-                        <ul className="problems-list">
-                          {objects.map((problem, index) => (
-                            <li
-                              key={`${key}-${index}`}
-                              className="problem-item"
-                            >
-                              <p className="problem-text">
-                                {problem.problems.problem}
-                              </p>
-                              <div className="problem-meta">
-                                <span className="pill type">
-                                  {problem.problems.type}
-                                </span>
-                                <span className="pill">
-                                  👍 {problem.problems.total_likes} likes
-                                </span>
-                                <span className="pill pill-metric">
-                                  Severity {problem.problems.severity}/5
-                                </span>
-                                <span className="pill pill-metric">
-                                  Frequency {problem.problems.frequency}/5
-                                </span>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
-        </div>
-      )}
+        {!loading && !error && topVideos.length === 0 && (
+          <p className="top-videos-empty">
+            No insights yet. Check back after the next run.
+          </p>
+        )}
+
+        {!loading && !error && topVideos.length > 0 && (
+          <div className="top-videos-grid">
+            {topVideos.map(({ key, title, items }) => (
+              <article key={key} className="top-video-card">
+                <div className="top-video-card-thumb" />
+                <h3 className="top-video-card-title">{title}</h3>
+                <p className="top-video-card-meta">
+                  {new Date().toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+                <ul className="top-video-card-insights">
+                  {items.slice(0, 3).map((item, idx) => (
+                    <li key={idx} className="top-video-card-insight">
+                      {item.problems?.problem}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="stay-updated">
+        <h2 className="stay-updated-title">Stay Updated.</h2>
+        <p className="stay-updated-subtitle">
+          Subscribe for new weekly insights.
+        </p>
+        <button type="button" className="stay-updated-cta">
+          Subscribe
+        </button>
+      </section>
     </div>
   );
 }
