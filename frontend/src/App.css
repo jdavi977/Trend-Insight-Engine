@@ -12,12 +12,12 @@
   text-align: left;
 }
 
-/* Site header – white */
+/* Site header – white, centered */
 .site-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.9rem 2rem;
+  justify-content: center;
+  padding: 1rem 2rem;
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
   flex-shrink: 0;
@@ -31,7 +31,7 @@
   text-decoration: none;
   cursor: pointer;
   padding: 0.35rem 0.5rem;
-  font-size: 0.95rem;
+  font-size: 1.12rem;
   transition: color 0.2s ease;
 }
 
@@ -46,11 +46,7 @@
 
 .site-header-nav {
   display: flex;
-  gap: 1.5rem;
-}
-
-.site-header-nav-left {
-  flex: 1;
+  gap: 12.5rem;
 }
 
 .site-header-logo {
@@ -92,7 +88,7 @@
 .site-header-logo-text {
   color: #1a1a1a;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 5rem;
 }
 
 /* Site main – grows to push footer down when on homepage */
@@ -106,8 +102,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 3rem;
-  padding: 2.5rem 2rem;
+  padding: 2.5rem 10rem;
   background: #fff;
   border-top: 1px solid #e5e5e5;
   flex-shrink: 0;
@@ -182,7 +177,9 @@
   font-size: 1rem;
   background: #fff;
   color: #1a1a1a;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .input-row input::placeholder {
@@ -205,7 +202,10 @@
   background: linear-gradient(135deg, #6366f1, #4338ca);
   box-shadow: 0 10px 24px rgba(79, 70, 229, 0.35);
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .input-row button:hover {

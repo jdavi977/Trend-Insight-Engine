@@ -6,7 +6,7 @@ const CATEGORIES = [
     id: 20,
     label: "Games",
     slug: "games",
-    icon: "games",
+    icon: "./assets/Pictures/Games.png",
     description:
       "Explore top gaming videos and discover trending player issues and feedback.",
   },
@@ -14,7 +14,7 @@ const CATEGORIES = [
     id: 28,
     label: "Science & Tech",
     slug: "scitech",
-    icon: "tech",
+    icon: "./assets/Pictures/SciTech.png",
     description:
       "See what's popular in tech and the challenges viewers are talking about.",
   },
@@ -22,7 +22,7 @@ const CATEGORIES = [
     id: 26,
     label: "How-to & Style",
     slug: "howstyle",
-    icon: "lifestyle",
+    icon: "./assets/Pictures/beauty.png",
     description:
       "Track lifestyle and how-to topics and frequent audience problems.",
   },
@@ -38,12 +38,14 @@ function createCategoryGrouping(weeklyData, categoryId) {
 function getTopVideoEntries(weeklyData) {
   const all = weeklyData.flat();
   const byKey = Object.groupBy(all, (item) => item.key);
-  return Object.entries(byKey).slice(0, 3).map(([key, items]) => ({
-    key,
-    title: items[0].title,
-    category: items[0].category,
-    items,
-  }));
+  return Object.entries(byKey)
+    .slice(0, 3)
+    .map(([key, items]) => ({
+      key,
+      title: items[0].title,
+      category: items[0].category,
+      items,
+    }));
 }
 
 function HomePage() {
@@ -75,15 +77,12 @@ function HomePage() {
       <section className="hero">
         <h1 className="hero-title">Weekly YouTube Insights.</h1>
         <p className="hero-subtitle">Popular videos, real user issues.</p>
-        <a href="#top-videos" className="hero-cta">
-          Explore Now
-        </a>
       </section>
 
       <section className="intro">
         <p className="intro-lead">
-          Get insights from the most popular YouTube videos across three trending
-          categories.
+          Get insights from the most popular YouTube videos across three
+          trending categories.
         </p>
         <p className="intro-sub">
           Uncover what common user issues appear each week.
@@ -94,8 +93,10 @@ function HomePage() {
         <div className="category-cards-inner">
           {CATEGORIES.map((cat) => (
             <article key={cat.id} className="category-card">
-              <div className={`category-card-icon category-card-icon--${cat.icon}`} />
-              <h2 className="category-card-title">{cat.label}.</h2>
+              <div>
+                <img className="resized-image" src={cat.icon} />
+              </div>
+              <h2 className="category-card-title">{cat.label}</h2>
               <p className="category-card-desc">{cat.description}</p>
             </article>
           ))}
@@ -104,7 +105,9 @@ function HomePage() {
 
       <section className="top-videos" id="top-videos">
         <h2 className="top-videos-title">Top Videos by Category</h2>
-        <p className="top-videos-subtitle">This week&apos;s most popular picks</p>
+        <p className="top-videos-subtitle">
+          This week&apos;s most popular picks
+        </p>
 
         {loading && (
           <div className="homepage-loading">
@@ -115,7 +118,9 @@ function HomePage() {
 
         {error && (
           <div className="homepage-error" role="alert">
-            <span className="homepage-error-icon" aria-hidden="true">⚠️</span>
+            <span className="homepage-error-icon" aria-hidden="true">
+              ⚠️
+            </span>
             <p>{error}</p>
           </div>
         )}
@@ -150,16 +155,6 @@ function HomePage() {
             ))}
           </div>
         )}
-      </section>
-
-      <section className="stay-updated">
-        <h2 className="stay-updated-title">Stay Updated.</h2>
-        <p className="stay-updated-subtitle">
-          Subscribe for new weekly insights.
-        </p>
-        <button type="button" className="stay-updated-cta">
-          Subscribe
-        </button>
       </section>
     </div>
   );

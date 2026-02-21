@@ -78,8 +78,6 @@ if __name__ == "__main__":
 
 
 # TODO:
-# add more categories
-# use AI to style webpage
-
+# use an AI program to style frontend
 # 8. make weekly cron job
 # 9. add more categories other than just games

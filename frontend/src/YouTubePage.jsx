@@ -81,7 +81,6 @@ function YouTubePage() {
       {error && <div className="error-message">{error}</div>}
 
       <div className="input-row">
-        -
         <input
           type="text"
           id="youtube-link"

@@ -58,10 +58,6 @@ function InsightsPage() {
 
   return (
     <div className="insights-page">
-      <section className="insights-hero">
-        <div className="insights-hero-placeholder" />
-      </section>
-
       <section className="insights-browse">
         <h2 className="insights-browse-title">Browse by Category</h2>
         <p className="insights-browse-desc">
@@ -110,7 +106,9 @@ function InsightsPage() {
         )}
 
         {!loading && !error && filteredEntries.length === 0 && (
-          <p className="insights-empty">No insights yet. Check back after the next run.</p>
+          <p className="insights-empty">
+            No insights yet. Check back after the next run.
+          </p>
         )}
 
         {!loading && !error && filteredEntries.length > 0 && (
@@ -133,9 +131,7 @@ function InsightsPage() {
                       </h4>
                       <ul className="insights-detail-bullets">
                         {problems.length > 0 ? (
-                          problems.map((text, idx) => (
-                            <li key={idx}>{text}</li>
-                          ))
+                          problems.map((text, idx) => <li key={idx}>{text}</li>)
                         ) : (
                           <li>No issues extracted for this video.</li>
                         )}
