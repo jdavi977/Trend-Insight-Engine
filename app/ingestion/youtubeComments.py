@@ -58,7 +58,8 @@ def getMostPopularVideos(category):
     for item in response["items"]:
         ids.append({
             "Title": item["snippet"]["title"],
-            "Id": item["id"]
+            "Id": item["id"],
+            "Thumbnail": item["snippet"]["thumbnails"]['medium']
         })
 
     service.close()

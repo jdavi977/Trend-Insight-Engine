@@ -14,8 +14,8 @@ def youtube_automatic(ids: list[str], category: int, categoryPrompt: str, keywor
 
     page_data = []
     for id in ids:
-        print(id['Id'])
         check = check_youtube_id(id['Id'])
+        print(id['Id'])
         
         if check:
             print("Updating data")
@@ -53,6 +53,7 @@ def youtube_automatic(ids: list[str], category: int, categoryPrompt: str, keywor
                 trend_data = []
                 trend_data.append({
                     "key": id['Id'],
+                    "thumbnail": id['Thumbnail'],
                     "date": today,
                     "category": category,
                     "title": data["title"],

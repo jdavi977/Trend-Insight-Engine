@@ -87,7 +87,7 @@ function InsightsPage() {
       </section>
 
       <section className="insights-all">
-        <h2 className="insights-all-title">All Videos</h2>
+        <h2 className="insights-all-title">Videos</h2>
         <p className="insights-all-sub">
           Filter videos by category to find what you want fastest.
         </p>

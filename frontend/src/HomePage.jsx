@@ -28,12 +28,12 @@ const CATEGORIES = [
   },
 ];
 
-function createCategoryGrouping(weeklyData, categoryId) {
-  const category = weeklyData.flatMap((nestedArray) =>
-    nestedArray.filter((item) => item.category === categoryId),
-  );
-  return Object.groupBy(category, (item) => item.key);
-}
+// function createCategoryGrouping(weeklyData, categoryId) {
+//   const category = weeklyData.flatMap((nestedArray) =>
+//     nestedArray.filter((item) => item.category === categoryId),
+//   );
+//   return Object.groupBy(category, (item) => item.key);
+// }
 
 function getTopVideoEntries(weeklyData) {
   const all = weeklyData.flat();
@@ -135,8 +135,13 @@ function HomePage() {
           <div className="top-videos-grid">
             {topVideos.map(({ key, title, items }) => (
               <article key={key} className="top-video-card">
-                <div className="top-video-card-thumb" />
-                <h3 className="top-video-card-title">{title}</h3>
+                <a
+                  href={`https://www.youtube.com/watch?v=${key}`}
+                  target="_blank"
+                >
+                  <div className="top-video-card-thumb" />
+                  <h3 className="top-video-card-title">{title}</h3>
+                </a>
                 <p className="top-video-card-meta">
                   {new Date().toLocaleDateString("en-US", {
                     year: "numeric",
@@ -161,3 +166,9 @@ function HomePage() {
 }
 
 export default HomePage;
+
+/*
+ * TODO:
+ * Add thumbnails
+ * Show Top videos for other categories
+ */
