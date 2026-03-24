@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from app.scripts.youtubePipeline import youtube_manual
@@ -48,26 +48,35 @@ class DataSave(BaseModel):
 @app.post("/analyze/youtube")
 def analyze_youtube(request: YoutubeAnalyzeRequest):
     if not validateYoutube(request.youtubeURL):
-        raise HTTPException(status_code=400, detail="Invalid link")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid link")
     else:
         return youtube_manual(request.youtubeURL)
 
 @app.post("/analyze/appStore")
 def analyze_appStore(request: AppStoreAnalyzeRequest):
     if not validateAppStore(request.appStoreURL):
-        raise HTTPException(status_code=400, detail="Invalid link")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid link")
     else:
         return app_store_manual(request.appStoreURL)
 
 @app.get("/get/homePage")
 def get_home_data():
     ids = []
-    gameData = get_weekly_ids(GAME_CATEGORY_ID)
-    scitechData = get_weekly_ids(SCIENCE_TECH_ID)
-    howstyleData = get_weekly_ids(HOW_TO_STYLE_ID)
-    ids.append(gameData)
-    ids.append(scitechData)
-    ids.append(howstyleData)
+    try:
+        gameData = get_weekly_ids(GAME_CATEGORY_ID)
+        ids.append(gameData)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Failed to fetch game data from supabase")
+    try:
+        scitechData = get_weekly_ids(SCIENCE_TECH_ID)
+        ids.append(scitechData)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Failed to fetch scitech data from supabase")
+    try:
+        howstyleData = get_weekly_ids(HOW_TO_STYLE_ID)
+        ids.append(howstyleData)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Failed to fetch style data from supabase")
     return ids
 
 @app.post("/data/send")
