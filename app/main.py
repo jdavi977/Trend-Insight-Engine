@@ -1,13 +1,19 @@
-from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
+
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
+from starlette.exceptions import HTTPException as StarletteHTTPException 
+
 from app.scripts.youtubePipeline import youtube_manual
 from app.scripts.appStorePipeline import app_store_manual
 from app.scripts.data_save import data_save
 from app.preprocessing.validateUrl import validateYoutube, validateAppStore
 from app.config.settings import GAME_CATEGORY_ID, SCIENCE_TECH_ID, HOW_TO_STYLE_ID
 from app.lib.db import get_weekly_ids
-from typing import Any, Optional
+
 import logging
 import os
 
@@ -29,12 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
-class ErrorResponse(BaseModel):
-    error: str
-    message: str
-    request_id: Optional[str] = None
-    details: Optional[Any] = None
 
 class YoutubeAnalyzeRequest(BaseModel):
     youtubeURL: str
@@ -59,6 +59,7 @@ def analyze_appStore(request: AppStoreAnalyzeRequest):
     else:
         return app_store_manual(request.appStoreURL)
 
+@app.get("/", include_in_schema=False, name="home")
 @app.get("/get/homePage")
 def get_home_data():
     ids = []
@@ -79,6 +80,31 @@ def get_home_data():
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Failed to fetch style data from supabase")
     return ids
 
-@app.post("/data/send")
+@app.post("/data/send", include_in_schema=False)
 def save_data(request: DataSave):
     data_save(request.data)
+
+@app.exception_handler(RequestValidationError)
+def validation_exception_handler(request: Request, exception: RequestValidationError):
+    message = (
+        exception.detail
+        if exception.detail
+        else "Validation error in request body."
+    )
+    return JSONResponse(
+        status_code=exception.status_code,
+        content={"detail": message},
+    )
+
+@app.exception_handler(StarletteHTTPException)
+def general_http_exception_handler(request: Request, exception: StarletteHTTPException):
+    message = (
+        exception.detail
+        if exception.detail
+        else "An error occurred. Please check your request and try again."
+    )
+    return JSONResponse(
+        status_code=exception.status_code,
+        content={"detail": message},
+    )
+    
