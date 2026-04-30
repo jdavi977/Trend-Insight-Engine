@@ -75,10 +75,3 @@ if __name__ == "__main__":
     #print(youtube_automatic(test, category, youtubeGameSystemPrompt, GAME_KEYWORDS)) #GAME CAT
     #print(youtube_automatic(test, SCIENCE_TECH_ID, youtubeScienceTechSystemPrompt, SCIENCE_TECH_KEYWORDS)) #SCITECH CAT
     print(youtube_automatic(test, HOW_TO_STYLE_ID, youtubeHowtoStyleSystemPrompt, HOWTO_STYLE_KEYWORDS)) #HOWTOSTYLE CAT
-
-
-
-# TODO:
-# use an AI program to style frontend
-# 8. make weekly cron job
-# 9. add more categories other than just games

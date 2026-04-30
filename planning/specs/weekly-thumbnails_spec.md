@@ -21,7 +21,7 @@ finishes the path: Supabase → `/get/homePage` → `InsightsPage.jsx`.
   - Replace the empty `.insights-detail-thumb` placeholder with an
     `<img>` showing the video thumbnail.
   - Fallback styling when a row has no thumbnail (older pre-feature
-    rows, or future videos missing the `medium` size).
+    rows, or future videos missing the `default` size).
 - Out:
   - Manual `/analyze/youtube` flow (no Supabase persistence, separate
     UI path).
@@ -31,8 +31,8 @@ finishes the path: Supabase → `/get/homePage` → `InsightsPage.jsx`.
 
 ## Current State
 - `app/ingestion/youtubeComments.py:58–63` returns
-  `{"Title", "Id", "Thumbnail": item["snippet"]["thumbnails"]["medium"]}`
-  where `medium` is `{url, width, height}` (320×180).
+  `{"Title", "Id", "Thumbnail": item["snippet"]["thumbnails"]["default"]}`
+  where `default` is `{url, width, height}` (320×180).
 - `app/scripts/automaticYoutube.py:56` writes
   `"thumbnail": id["Thumbnail"]` per row.
 - `app/lib/db.py:get_weekly_ids` does `select()` (all columns) → already
@@ -124,7 +124,7 @@ File: `frontend/src/InsightsPage.css`
 - Do we want a one-shot backfill script for pre-feature rows, or let
   them age out as new Sunday runs replace them? (Default: age out.)
 - Which thumbnail size is right long-term — `medium` (320×180),
-  `high` (480×360), or `maxres` when present? `medium` is what we store
+  `high` (480×360), or `maxres` when present? `default` is what we store
   today; revisit if cards visibly look low-res on wide screens.
 - Should the card become a clickable link to the YouTube video? Out of
   scope here, but the thumbnail is the natural affordance — track as a
