@@ -59,7 +59,7 @@ def getMostPopularVideos(category):
         ids.append({
             "Title": item["snippet"]["title"],
             "Id": item["id"],
-            "Thumbnail": item["snippet"]["thumbnails"]['medium']
+            "Thumbnail": item["snippet"]["thumbnails"]['default']
         })
 
     service.close()

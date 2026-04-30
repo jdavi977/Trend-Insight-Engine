@@ -137,8 +137,17 @@
 }
 
 .insights-detail-thumb {
+  display: block;
   width: 100%;
-  height: 180px;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.insights-detail-thumb--empty {
+  aspect-ratio: 4 / 3;
   background: #e8e8e8;
 }
 

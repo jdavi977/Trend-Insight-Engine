@@ -7,6 +7,16 @@ const CATEGORY_LABELS = {
   26: "How-to & Style",
 };
 
+function parseThumbnail(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function getAllVideoEntries(weeklyData) {
   const all = (weeklyData || []).flat();
   const byKey = Object.groupBy(all, (item) => item.key);
@@ -15,6 +25,7 @@ function getAllVideoEntries(weeklyData) {
     title: items[0].title,
     category: items[0].category,
     categoryLabel: CATEGORY_LABELS[items[0].category] || "Other",
+    thumbnail: parseThumbnail(items[0].thumbnail),
     items,
   }));
 }
@@ -120,11 +131,22 @@ function InsightsPage() {
               return (
                 <div key={entry.key} className="insights-row">
                   <div className="insights-row-title">
+                    {entry.thumbnail?.url ? (
+                      <img
+                        className="insights-detail-thumb"
+                        src={entry.thumbnail.url}
+                        width={entry.thumbnail.width}
+                        height={entry.thumbnail.height}
+                        alt={entry.title}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="insights-detail-thumb insights-detail-thumb--empty" />
+                    )}
                     <h3 className="insights-list-title">{entry.title}</h3>
                     <p className="insights-list-date">{formatDate()}</p>
                   </div>
                   <article className="insights-row-detail">
-                    <div className="insights-detail-thumb" />
                     <div className="insights-detail-body">
                       <h4 className="insights-detail-heading">
                         Common Issues Highlighted
