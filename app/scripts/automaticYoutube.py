@@ -69,9 +69,3 @@ def youtube_automatic(ids: list[str], category: int, categoryPrompt: str, keywor
                     update_automatic_trend(trend_data)
                     page_data.append(trend_data)
     return page_data
-
-if __name__ == "__main__":
-    test = getMostPopularVideos(HOW_TO_STYLE_ID)
-    #print(youtube_automatic(test, category, youtubeGameSystemPrompt, GAME_KEYWORDS)) #GAME CAT
-    #print(youtube_automatic(test, SCIENCE_TECH_ID, youtubeScienceTechSystemPrompt, SCIENCE_TECH_KEYWORDS)) #SCITECH CAT
-    print(youtube_automatic(test, HOW_TO_STYLE_ID, youtubeHowtoStyleSystemPrompt, HOWTO_STYLE_KEYWORDS)) #HOWTOSTYLE CAT
