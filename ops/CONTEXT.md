@@ -16,6 +16,13 @@
 ## Required Env Vars
 YOUTUBE_API, OPENAI_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
+## CI
+- `.github/workflows/test.yml` runs `pytest` on every push to `master` and on
+  pull requests. Env vars are stubbed (real keys are not required since
+  external services are mocked in tests).
+- `.github/workflows/weekly-youtube.yml` runs the weekly pipeline (Sundays
+  08:00 UTC). Real secrets must be configured in repo settings.
+
 ## Deploy Checklist (deploy/checklist.md)
 - [ ] .env populated with all 4 keys
 - [ ] CORS allow_origins updated for production domain
