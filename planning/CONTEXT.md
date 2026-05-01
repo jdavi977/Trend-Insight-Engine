@@ -25,7 +25,6 @@ URL Input → validateUrl.py → Ingestion (YouTube API / iTunes RSS)
 - Config is centralized in app/config/ (keywords, prompts, patterns, IDs)
 
 ## Current Priorities
-- Cron to run the automaticYoutube.py script every sunday
 - Using youtube api thumbnail url to display an image for weekly insights
 
 ## Known Constraints

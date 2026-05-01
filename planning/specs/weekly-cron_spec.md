@@ -191,12 +191,12 @@ real run.
       runner pinned to `ubuntu-24.04`. (Pinned 3.14 not 3.11 to match
       the venv the requirements were frozen from.)
 - [x] Branch dry-run via `workflow_dispatch` produced a green Action.
-- [ ] Per-category failure isolation verified (deliberately break one
+- [x] Per-category failure isolation verified (deliberately break one
       category locally — e.g. invalid prompt or bad category id — and
       confirm the wrapper continues to the next, exits 1 at the end).
-- [ ] Post-merge manual `workflow_dispatch` on `master` succeeds before
+- [x] Post-merge manual `workflow_dispatch` on `master` succeeds before
       the first scheduled Sunday.
 - [ ] First scheduled Sunday at 08:00 UTC lands rows in `automatic_table`
       for all 3 categories.
-- [ ] OpenAI dashboard hard-cap (~$25/month) configured; deploy
+- [x] OpenAI dashboard hard-cap (~$25/month) configured; deploy
       checklist updated to reference it.
