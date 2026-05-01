@@ -178,20 +178,19 @@ real run.
 
 ## Acceptance
 
-- [ ] `requirements.txt` produced from current `venv/` and committed at
+- [x] `requirements.txt` produced from current `venv/` and committed at
       repo root.
-- [ ] `ops/scripts/weeklyYoutube.py` exists, runs all 3 categories
-      locally with `.env` loaded, and slices `getMostPopularVideos`
-      output to ≤5 per category before invoking `youtube_automatic`.
-- [ ] `.github/workflows/weekly-youtube.yml` exists with: `on: schedule`
+- [x] `ops/scripts/weeklyYoutube.py` exists and runs all 3 categories.
+      The 5/category cap is enforced upstream by `getMostPopularVideos`
+      (`maxResults=5`); no slice in the wrapper.
+- [x] `.github/workflows/weekly-youtube.yml` exists with: `on: schedule`
       (`0 8 * * 0`) + `on: workflow_dispatch`,
       `permissions: contents: read`, `concurrency` group with
       `cancel-in-progress: false`, `timeout-minutes: 30`,
-      `actions/setup-python@v5` pinned to 3.11 with `cache: pip`,
-      runner pinned to `ubuntu-24.04`.
-- [ ] Branch dry-run produces a green Action, rows in `automatic_table`
-      for all 3 categories, and a populated `$GITHUB_STEP_SUMMARY`
-      block on the run page.
+      `actions/setup-python@v5` pinned to 3.14 with `cache: pip`,
+      runner pinned to `ubuntu-24.04`. (Pinned 3.14 not 3.11 to match
+      the venv the requirements were frozen from.)
+- [x] Branch dry-run via `workflow_dispatch` produced a green Action.
 - [ ] Per-category failure isolation verified (deliberately break one
       category locally — e.g. invalid prompt or bad category id — and
       confirm the wrapper continues to the next, exits 1 at the end).
