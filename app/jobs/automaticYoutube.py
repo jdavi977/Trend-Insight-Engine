@@ -3,7 +3,7 @@ from app.preprocessing.commentClean import loadAndClean
 from app.llm.extractInsights import extractInsights
 from app.config.prompts import youtubePromptOutput, youtubeGameSystemPrompt, youtubeScienceTechSystemPrompt, youtubeHowtoStyleSystemPrompt
 from app.config.keywords import GAME_KEYWORDS, SCIENCE_TECH_KEYWORDS, HOWTO_STYLE_KEYWORDS
-from app.config.settings import GAME_CATEGORY_ID, SCIENCE_TECH_ID, HOW_TO_STYLE_ID
+from app.config.constants import GAME_CATEGORY_ID, SCIENCE_TECH_ID, HOW_TO_STYLE_ID
 from app.clients.supabase import update_automatic_trend, check_youtube_id, update_automatic_video_date
 from app.utilities.getDate import getCurrentDate
 import json

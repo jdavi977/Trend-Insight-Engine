@@ -1,6 +1,6 @@
 from supabase import create_client, Client
 
-from app.config.config import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+from app.config.secrets import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 from app.utilities.getDate import getSundayDate
 
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:

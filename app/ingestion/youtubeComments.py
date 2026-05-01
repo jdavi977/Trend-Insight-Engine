@@ -1,7 +1,7 @@
 from googleapiclient.discovery import build
 from urllib.parse import urlparse, parse_qs
-from app.config.settings import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
-from app.config.config import YOUTUBE_API
+from app.config.constants import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
+from app.config.secrets import YOUTUBE_API
 
 def getVideoId(url: str) -> str:
     p = urlparse(url)

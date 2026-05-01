@@ -1,6 +1,6 @@
 from app.ingestion.appStoreReviews import getAppId, getAppReviews
 from app.preprocessing.reviewClean import appReviewClean
-from app.config.settings import APP_REVIEW_PAGES
+from app.config.constants import APP_REVIEW_PAGES
 from app.config.prompts import appStoreSystemPrompt, appStorePromptOutput
 from app.llm.extractInsights import extractInsights
 

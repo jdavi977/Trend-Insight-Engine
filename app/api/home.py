@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.config.settings import GAME_CATEGORY_ID, HOW_TO_STYLE_ID, SCIENCE_TECH_ID
+from app.config.constants import GAME_CATEGORY_ID, HOW_TO_STYLE_ID, SCIENCE_TECH_ID
 from app.clients.supabase import get_weekly_ids
 
 router = APIRouter()

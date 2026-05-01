@@ -12,7 +12,7 @@ from app.config.prompts import (
     youtubeHowtoStyleSystemPrompt,
     youtubeScienceTechSystemPrompt,
 )
-from app.config.settings import (
+from app.config.constants import (
     GAME_CATEGORY_ID,
     HOW_TO_STYLE_ID,
     SCIENCE_TECH_ID,
