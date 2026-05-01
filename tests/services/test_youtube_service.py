@@ -7,7 +7,7 @@ check for that PR.
 import json
 
 from app.scripts.youtubePipeline import youtube_manual
-from app.schemas.llm_insights import LLMExtraction
+from app.schemas.llm import LLMExtraction
 
 
 def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):

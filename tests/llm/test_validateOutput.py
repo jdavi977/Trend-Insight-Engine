@@ -1,7 +1,7 @@
 import json
 
 from app.llm.validateOutput import validateOutput
-from app.schemas.llm_insights import LLMExtraction
+from app.schemas.llm import LLMExtraction
 
 
 def _payload(problems):

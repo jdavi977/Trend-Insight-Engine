@@ -1,11 +1,9 @@
-from pydantic import BaseModel
-
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from starlette.exceptions import HTTPException as StarletteHTTPException 
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.scripts.youtubePipeline import youtube_manual
 from app.scripts.appStorePipeline import app_store_manual
@@ -13,6 +11,7 @@ from app.scripts.data_save import data_save
 from app.preprocessing.validateUrl import validateYoutube, validateAppStore
 from app.config.settings import GAME_CATEGORY_ID, SCIENCE_TECH_ID, HOW_TO_STYLE_ID
 from app.lib.db import get_weekly_ids
+from app.schemas.api import AppStoreAnalyzeRequest, DataSave, YoutubeAnalyzeRequest
 
 import logging
 import os
@@ -35,15 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-
-class YoutubeAnalyzeRequest(BaseModel):
-    youtubeURL: str
-
-class AppStoreAnalyzeRequest(BaseModel):
-    appStoreURL: str
-
-class DataSave(BaseModel):
-    data: dict
 
 @app.post("/analyze/youtube")
 def analyze_youtube(request: YoutubeAnalyzeRequest):
