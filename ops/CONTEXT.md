@@ -7,7 +7,7 @@
 - Automation: automaticYoutube.py runs weekly (cron or manual trigger)
 
 ## Weekly Pipeline
-1. Run app/scripts/automaticYoutube.py
+1. Run app/jobs/automaticYoutube.py
 2. Fetches top videos across 3 category IDs (Games, Science & Tech, How-to)
 3. Runs full pipeline on each video
 4. Writes results to Supabase automatic_table keyed by (video_id, date, category)

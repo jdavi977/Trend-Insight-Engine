@@ -18,7 +18,7 @@ from app.config.settings import (
     SCIENCE_TECH_ID,
 )
 from app.ingestion.youtubeComments import getMostPopularVideos
-from app.scripts.automaticYoutube import youtube_automatic
+from app.jobs.automaticYoutube import youtube_automatic
 
 # 5/category cap is enforced upstream by getMostPopularVideos (maxResults=5).
 CATEGORIES = [

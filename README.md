@@ -149,7 +149,7 @@ Frontend will typically run on `http://localhost:5173` (Vite default).
 5. View extracted problems with severity, frequency, and engagement metrics
 
 **Weekly home page (requires Supabase + automated pipeline data):**
-1. Run `app/scripts/automaticYoutube.py` to populate Supabase with weekly data
+1. Run `app/jobs/automaticYoutube.py` to populate Supabase with weekly data
 2. The Home and Insights pages will display this week's top videos and their extracted issues
 
 ---

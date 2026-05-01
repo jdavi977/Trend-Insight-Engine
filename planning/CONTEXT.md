@@ -13,7 +13,7 @@ URL Input → validateUrl.py → Ingestion (YouTube API / iTunes RSS)
 ## Active Features
 - Manual YouTube analysis (/analyze/youtube)
 - Manual App Store analysis (/analyze/appStore)
-- Weekly Youtube pipeline (scripts/automaticYoutube.py)
+- Weekly Youtube pipeline (jobs/automaticYoutube.py)
 - Home page weekly insights from Supabase (/get/homePage)
 - Category filtering: Games, Science & Tech, How-to & Style
 
