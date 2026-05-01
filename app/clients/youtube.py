@@ -1,13 +1,15 @@
 import os
-from googleapiclient.discovery import build
+
 from dotenv import load_dotenv
+from googleapiclient.discovery import build
 
 load_dotenv()
 
 YOUTUBE_API = os.getenv("YOUTUBE_API")
 
+
 def getVideoCategories():
-    service = build('youtube', 'v3', developerKey=YOUTUBE_API)
+    service = build("youtube", "v3", developerKey=YOUTUBE_API)
     request = service.videoCategories().list(
         part="snippet",
         regionCode="US",
@@ -19,10 +21,7 @@ def getVideoCategories():
         snippet = item["snippet"]
         list.append({
             "Id": item["id"],
-            "Title": snippet["title"]
+            "Title": snippet["title"],
         })
     service.close()
     return list
-
-if __name__ == "__main__":
-    print(getVideoCategories())
