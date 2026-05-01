@@ -9,12 +9,12 @@ from __future__ import annotations
 
 import typing
 
-from app import main
+from app.api import errors
 
 
 def test_validation_exception_handler_annotations_resolve():
-    typing.get_type_hints(main.validation_exception_handler)
+    typing.get_type_hints(errors.validation_exception_handler)
 
 
 def test_general_http_exception_handler_annotations_resolve():
-    typing.get_type_hints(main.general_http_exception_handler)
+    typing.get_type_hints(errors.general_http_exception_handler)

@@ -17,7 +17,7 @@ def client():
 
 def test_post_analyze_youtube_valid_url_returns_service_payload(client, mocker):
     mocker.patch(
-        "app.main.youtube_manual",
+        "app.api.youtube.youtube_manual",
         return_value={"source": "youtube", "problems": []},
     )
     response = client.post(
@@ -29,7 +29,7 @@ def test_post_analyze_youtube_valid_url_returns_service_payload(client, mocker):
 
 
 def test_post_analyze_youtube_invalid_url_returns_400(client, mocker):
-    service = mocker.patch("app.main.youtube_manual")
+    service = mocker.patch("app.api.youtube.youtube_manual")
     response = client.post(
         "/analyze/youtube",
         json={"youtubeURL": "https://vimeo.com/123"},
@@ -41,7 +41,7 @@ def test_post_analyze_youtube_invalid_url_returns_400(client, mocker):
 
 def test_post_analyze_appstore_valid_url_returns_service_payload(client, mocker):
     mocker.patch(
-        "app.main.app_store_manual",
+        "app.api.appstore.app_store_manual",
         return_value={"source": "app_store", "problems": []},
     )
     response = client.post(
@@ -53,7 +53,7 @@ def test_post_analyze_appstore_valid_url_returns_service_payload(client, mocker)
 
 
 def test_post_analyze_appstore_invalid_url_returns_400(client, mocker):
-    service = mocker.patch("app.main.app_store_manual")
+    service = mocker.patch("app.api.appstore.app_store_manual")
     response = client.post(
         "/analyze/appStore",
         json={"appStoreURL": "https://play.google.com/foo"},
@@ -64,7 +64,7 @@ def test_post_analyze_appstore_invalid_url_returns_400(client, mocker):
 
 def test_get_home_page_returns_three_category_buckets(client, mocker):
     mocker.patch(
-        "app.main.get_weekly_ids",
+        "app.api.home.get_weekly_ids",
         side_effect=[
             {"category": "game", "ids": [1]},
             {"category": "scitech", "ids": [2]},
@@ -79,7 +79,7 @@ def test_get_home_page_returns_three_category_buckets(client, mocker):
 
 
 def test_post_data_send_invokes_persistence(client, mocker):
-    save = mocker.patch("app.main.data_save")
+    save = mocker.patch("app.api.internal.data_save")
     response = client.post("/data/send", json={"data": {"foo": "bar"}})
     assert response.status_code == 200
     save.assert_called_once_with({"foo": "bar"})
