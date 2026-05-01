@@ -5,9 +5,9 @@ from fastapi.responses import JSONResponse
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.scripts.youtubePipeline import youtube_manual
-from app.scripts.appStorePipeline import app_store_manual
-from app.scripts.data_save import data_save
+from app.services.youtube_service import youtube_manual
+from app.services.appstore_service import app_store_manual
+from app.services.persistence_service import data_save
 from app.preprocessing.validateUrl import validateYoutube, validateAppStore
 from app.config.settings import GAME_CATEGORY_ID, SCIENCE_TECH_ID, HOW_TO_STYLE_ID
 from app.lib.db import get_weekly_ids

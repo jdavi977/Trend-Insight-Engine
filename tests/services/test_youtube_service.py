@@ -1,18 +1,13 @@
-"""Happy-path orchestration test for the YouTube service.
-
-Imports `app.scripts.youtubePipeline` for now. PR 3 moves this to
-`app.services.youtube_service`; updating the import here is the regression
-check for that PR.
-"""
+"""Happy-path orchestration test for the YouTube service."""
 import json
 
-from app.scripts.youtubePipeline import youtube_manual
+from app.services.youtube_service import youtube_manual
 from app.schemas.llm import LLMExtraction
 
 
 def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
     mocker.patch(
-        "app.scripts.youtubePipeline.getVideoId",
+        "app.services.youtube_service.getVideoId",
         return_value="dQw4w9WgXcQ",
     )
 
@@ -24,7 +19,7 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
         {"Title": "Vid", "Likes": 75, "Text": "the bug ruined this 🙃"},
     ]
     fetch = mocker.patch(
-        "app.scripts.youtubePipeline.getYoutubeComments",
+        "app.services.youtube_service.getYoutubeComments",
         side_effect=[relevance_comments, time_comments],
     )
 
@@ -42,7 +37,7 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
         ],
     })
     extract = mocker.patch(
-        "app.scripts.youtubePipeline.extractInsights",
+        "app.services.youtube_service.extractInsights",
         return_value=llm_response,
     )
 
