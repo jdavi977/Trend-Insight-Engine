@@ -26,11 +26,11 @@ and frequency metrics.
 |-----------------------------|-----------|--------------------|---------------------------------------------|
 | Plan a new feature          | /planning | planning/CONTEXT.md| grill-with-docs, to-issues                  |
 | Stress-test a design        | /planning | planning/CONTEXT.md| grill-me                                    |
-| Write backend code          | /app      | app/CONTEXT.md     | tdd                                         |
-| Debug a pipeline failure    | /app      | app/CONTEXT.md     | triage                                      |
-| Refactor a module           | /app      | app/CONTEXT.md     | tdd                                         |
+| Write backend code          | /app      | app/CONTEXT.md     | tdd, python-code-review                          |
+| Debug a pipeline failure    | /app      | app/CONTEXT.md     | triage, python-code-review                          |
+| Refactor a module           | /app      | app/CONTEXT.md     | tdd, python-code-review                          |
 | Modify LLM prompts          | /app/llm  | app/CONTEXT.md     | prompt-engineering                          |
-| Build frontend feature      | /frontend | frontend/CONTEXT.md| react-component                             |
+| Build frontend feature      | /frontend | frontend/CONTEXT.md| frontend-component-standards                |
 | Write API or user docs      | /docs     | docs/CONTEXT.md    | doc-authoring                               |
 | Deploy or run weekly pipeline| /ops     | ops/CONTEXT.md     | —                                           |
 
