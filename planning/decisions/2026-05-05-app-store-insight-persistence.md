@@ -1,6 +1,6 @@
 # ADR: App Store Insight Persistence
 Date: 2026-05-05
-Status: Draft
+Status: Accepted
 
 Related spec: PRD_Trend_Insight_Engine_v2.md (§3.1 RAG Pipeline)
 
@@ -18,37 +18,18 @@ The project only has weekly Youtube job write insights to Supabase, manual `anal
 ## Decision
 > _Which option did you choose, and what is the single primary reason? One sentence. If you need a paragraph to justify it, the reason probably isn't the real reason — keep digging._
 
-Currently choosing, will try to implement option 1 first, depends if we are able to using the iTunes RSS field.
-
-Chose **[Option ?]** because …
-
-Hints to draw from when picking the "single primary reason":
-- Symmetry with YouTube: do both sources benefit from going through the same Supabase → embedder pipeline, or is forcing symmetry premature?
-- Source-of-truth clarity: where does an insight "live" — the relational store, the vector store, or both? Which one is authoritative if they disagree?
-- Re-embeddability: if you change embedding models or chunking later, can you rebuild ChromaDB from Supabase, or is Chroma the only copy?
-- Query shape: what reads do you actually need on App Store insights — relational filters (severity, date) or semantic search? Picking the store that matches the dominant read pattern.
-- Cost of the simpler path now vs. the migration cost later if the simpler path turns out wrong.
+Chose **Option 1 — write App Store insights to Supabase in a new `automatic_apple_table`** because Supabase needs to remain the single relational source of truth for insights so the RAG embedder can re-embed from it without re-running the LLM extraction. A separate table (rather than overloading `automatic_table`) keeps Apple-only fields (`app_id`, `country`, `average_rating`, `example_reviews`) and YouTube-only fields (`thumbnail`, `total_likes`) from collapsing into nullable columns behind a `source` discriminator, and avoids mixing 2-digit YouTube category IDs with 4-digit Apple genre IDs in one column.
 
 ## Tradeoffs Accepted
 > _Every choice gives something up. What did you lose by not picking the other options? What new complexity, discipline, or future cost did you take on? Be specific — "some overhead" is not a tradeoff, "one extra file per endpoint flow" is._
 
-Hints — concrete costs of the chosen option:
-- If Supabase: an extra write on every `/analyze/appStore` call (latency + a Supabase row per run), plus a schema decision about whether App Store insights share `automatic_table` or get their own table.
-- If Supabase: dual-write discipline — every place that creates an App Store insight must remember to write Supabase *and* embed to Chroma, and the two can drift.
-- If ChromaDB-as-truth: no relational query path for App Store insights (no SQL filters, no joins, no Supabase dashboard view) — anything non-semantic has to go through Chroma's metadata filtering.
-- If ChromaDB-as-truth: rebuilding the vector store after an embedding-model change means re-running every original analysis (LLM cost) instead of re-embedding existing rows.
-- Either way: asymmetry between YouTube and App Store paths if you don't also revisit YouTube — two ingestion shapes to maintain.
-
--
--
+1. Extra write on every `/analyze/appstore` call, new schema table for AppStore insights in Supabase
+2. Dual-write discipline: every place that creates an App Store insight must remember to write Supabase and embed to Chroma
+3. Two ingestion shapes to maintain (Youtube and AppStore) 
+4. Duplicated Supabase helpers — `update_automatic_apple_trend` / `check_appstore_id` / `get_weekly_apple_ids` parallel the YouTube versions. We accept the duplication instead of parameterizing the existing helpers because a `table_name` argument hides which table is read at the call site.
 
 ## Consequences
 > _Two halves: what does this **close off** (things the codebase will no longer do, patterns that are now disallowed) and what does this **enable** (things that get easier, seams that now exist). Write at least one of each._
 
-Hints to draw from:
-- Closes off: under Option 1, "ephemeral analyze endpoints" become disallowed — every `/analyze/*` endpoint is expected to persist. Under Option 2, "Supabase as the single relational store of insights" stops being true.
-- Enables: under Option 1, a uniform embedder that reads from Supabase and writes to Chroma works for both sources; the `/insights/similar` endpoint (PRD §3.1) has one backing query path. Under Option 2, App Store can ship without touching the Supabase schema at all, unblocking Week 1 faster.
-- Either way: this decision sets the precedent for any *future* source (Reddit, Amazon reviews) — they'll follow whichever pattern wins here.
-
-- Closes off:
-- Enables:
+- Closes off: ChromaDB-as-source-of-truth for any insight stream. Every `/analyze/*` flow that produces persisted insights is now expected to land them in Supabase first; embedders read Supabase, not the LLM output directly. Also closes off the option of a single shared insights table — future sources (Reddit, Amazon) get their own table with their own helpers, no `source` discriminator column.
+- Enables: a uniform embedder that reads from Supabase and writes to Chroma works for both YouTube and Apple with the same query shape; the `/insights/similar` endpoint (PRD §3.1) has one backing pattern. Re-embedding after an embedding-model change becomes a re-read of `automatic_apple_table` instead of re-running every LLM extraction. Unblocks the spec in [planning/specs/automatic-appstore-supabase_spec.md](../specs/automatic-appstore-supabase_spec.md) to begin implementation.
