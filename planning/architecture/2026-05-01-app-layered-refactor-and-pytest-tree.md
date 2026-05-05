@@ -1,8 +1,11 @@
 # Architecture: app/ Layered Refactor & Pytest Tree
 Date: 2026-05-01
+Last updated: 2026-05-05
 
 ## Overview
 Backend is split into layers — `api/` (HTTP), `services/` (orchestration), pipeline modules (`ingestion/`, `preprocessing/`, `llm/`), `clients/` (external service wrappers), `jobs/` (cron entrypoints), and `schemas/` (Pydantic boundary models). A top-level `tests/` tree mirrors `app/` and mocks every external service.
+
+Decisions captured separately: [api/services/pipeline layering](../decisions/2026-05-01-api-services-pipeline-layering.md), [clients/ wrapper layer](../decisions/2026-05-01-clients-wrapper-layer.md), [schemas split by boundary](../decisions/2026-05-01-schemas-split-by-boundary.md), [test mock strategy](../decisions/2026-05-01-test-mock-strategy.md).
 
 ## Data Flow
 
@@ -10,7 +13,10 @@ Backend is split into layers — `api/` (HTTP), `services/` (orchestration), pip
 HTTP request → [api/](../../app/api/) router → [schemas/api.py](../../app/schemas/api.py) validates body → [preprocessing/validateUrl.py](../../app/preprocessing/validateUrl.py) → [services/](../../app/services/) orchestrator → ingestion client → preprocessing → LLM → [llm/validateOutput.py](../../app/llm/validateOutput.py) → JSON response
 
 ### Weekly job (cron)
-[jobs/automaticYoutube.py](../../app/jobs/automaticYoutube.py) → [clients/supabase.py](../../app/clients/supabase.py) (dedupe) → ingestion → preprocessing → LLM → [clients/supabase.py](../../app/clients/supabase.py) (write `automatic_table`)
+[jobs/automaticYoutube.py](../../app/jobs/automaticYoutube.py) → [clients/supabase.py](../../app/clients/supabase.py) (dedupe) → ingestion (popular videos with thumbnails) → preprocessing → LLM → [clients/supabase.py](../../app/clients/supabase.py) (write `automatic_table` rows including `thumbnail`)
+
+### Home page read
+HTTP `GET /get/homePage` → [api/home.py](../../app/api/home.py) → [clients/supabase.py](../../app/clients/supabase.py) `get_weekly_ids` (per-category) → JSON response (frontend renders thumbnails as links back to the source YouTube video).
 
 ## Components
 
@@ -25,14 +31,15 @@ HTTP request → [api/](../../app/api/) router → [schemas/api.py](../../app/sc
 | YouTube service | [app/services/youtube_service.py](../../app/services/youtube_service.py) | Orchestrates ingest → clean → extract → validate for manual analysis. |
 | App Store service | [app/services/appstore_service.py](../../app/services/appstore_service.py) | Orchestrates iTunes RSS → clean → extract for manual analysis. |
 | Persistence service | [app/services/persistence_service.py](../../app/services/persistence_service.py) | Writes JSON payload to `data/manually_change.json`. |
-| Weekly job | [app/jobs/automaticYoutube.py](../../app/jobs/automaticYoutube.py) | Cron entrypoint; per-category loop with Supabase dedupe and writeback. |
+| Weekly job | [app/jobs/automaticYoutube.py](../../app/jobs/automaticYoutube.py) | Cron entrypoint; per-category loop with Supabase dedupe and writeback. Persists `thumbnail` (largest-available size) per row for the home-page UI. |
 | API schemas | [app/schemas/api.py](../../app/schemas/api.py) | `YoutubeAnalyzeRequest`, `AppStoreAnalyzeRequest`, `DataSave`. |
 | LLM schema | [app/schemas/llm.py](../../app/schemas/llm.py) | Pydantic model for OpenAI insight output (problem/type/severity/frequency/total_likes). |
 | Supabase client | [app/clients/supabase.py](../../app/clients/supabase.py) | Merged old `lib/db.py` + `lib/supabaseClient.py`; reads/writes `automatic_table`. |
 | YouTube client | [app/clients/youtube.py](../../app/clients/youtube.py) | Wraps YouTube Data API v3 helpers (was `utilities/youtubeApiHelper.py`). |
-| OpenAI client | [app/clients/openai.py](../../app/clients/openai.py) | Wraps the OpenAI chat-completion call (extracted post-spec, see deferred list). |
-| YouTube ingestion | [app/ingestion/youtubeComments.py](../../app/ingestion/youtubeComments.py) | Fetches comments + popular videos via `clients/youtube.py`. |
-| App Store ingestion | [app/ingestion/appStoreReviews.py](../../app/ingestion/appStoreReviews.py) | Paginated iTunes RSS scraper. |
+| OpenAI client | [app/clients/openai.py](../../app/clients/openai.py) | Wraps the OpenAI chat-completion call. |
+| App Store client | [app/clients/appstore.py](../../app/clients/appstore.py) | Wraps the iTunes RSS `customerreviews` GET (URL build + `requests.get` + JSON decode). |
+| YouTube ingestion | [app/ingestion/youtubeComments.py](../../app/ingestion/youtubeComments.py) | Fetches comments + popular videos via `clients/youtube.py`; `getMostPopularVideos` selects the largest available thumbnail (`maxres` → `default`) for each video. |
+| App Store ingestion | [app/ingestion/appStoreReviews.py](../../app/ingestion/appStoreReviews.py) | Paginated iTunes RSS scraper; delegates HTTP to `clients/appstore.py`. |
 | Comment cleaner | [app/preprocessing/commentClean.py](../../app/preprocessing/commentClean.py) | Filters YouTube comments by likes + keywords. |
 | Review cleaner | [app/preprocessing/reviewClean.py](../../app/preprocessing/reviewClean.py) | Filters App Store reviews by votes. |
 | URL validator | [app/preprocessing/validateUrl.py](../../app/preprocessing/validateUrl.py) | Regex-checks YouTube + App Store URLs before ingest. |
@@ -45,7 +52,7 @@ HTTP request → [api/](../../app/api/) router → [schemas/api.py](../../app/sc
 | Service | Used For | Wrapper | Failure Impact |
 |---------|----------|---------|----------------|
 | YouTube Data API v3 | Comment + popular-video fetch | [clients/youtube.py](../../app/clients/youtube.py) | `/analyze/youtube` and weekly job halt; quota errors surface as 5xx. |
-| iTunes RSS | App Store reviews | [ingestion/appStoreReviews.py](../../app/ingestion/appStoreReviews.py) (no client wrapper yet) | `/analyze/appStore` halts; no retry on rate-limit. |
+| iTunes RSS | App Store reviews | [clients/appstore.py](../../app/clients/appstore.py) | `/analyze/appStore` halts; no retry on rate-limit. |
 | OpenAI API (gpt-4o) | Insight extraction | [clients/openai.py](../../app/clients/openai.py) | All analysis paths halt; sync call blocks the request. |
 | Supabase (`automatic_table`) | Weekly dedupe + read/write of weekly insights | [clients/supabase.py](../../app/clients/supabase.py) | `/get/homePage` returns 503 per category; weekly job aborts the affected video. |
 | Local filesystem (`data/`) | `/data/send` JSON dump | [services/persistence_service.py](../../app/services/persistence_service.py) | 500 on IOError; only path that writes outside Supabase. |
@@ -57,6 +64,7 @@ HTTP request → [api/](../../app/api/) router → [schemas/api.py](../../app/sc
 - **Exception handlers** — `errors.register_exception_handlers(app)` must run after `include_router()` calls in `create_app()`; reorder breaks 422/HTTP error JSON shape.
 - **`include_in_schema=False`** on `/data/send` and `/` — losing the flag leaks internal routes into OpenAPI.
 - **Weekly job dedupe** — [jobs/automaticYoutube.py](../../app/jobs/automaticYoutube.py) relies on `check_youtube_id`; a Supabase outage silently re-extracts and double-writes.
+- **Thumbnail availability** — `_pick_largest_thumbnail` falls back through five sizes; if YouTube returns none, the row is written with `Thumbnail: None` and the home page link target is empty.
 - **OpenAI output drift** — `extractInsights` returns raw JSON string; `validateOutput` is the only guard against schema drift before response/Supabase write.
 - **Test/code drift** — `tests/` mirrors `app/`; renames in `app/` without matching test moves leave silently-skipped suites.
 
@@ -105,6 +113,7 @@ flowchart TB
     C_YT[youtube.py]
     C_OAI[openai.py]
     C_SB[supabase.py]
+    C_AS[appstore.py]
   end
 
   subgraph EXT[External services]
@@ -126,7 +135,7 @@ flowchart TB
 
   SVC_YT --> ING_YT --> C_YT --> E_YT
   SVC_YT --> CLEAN_C --> EX
-  SVC_AS --> ING_AS --> E_AS
+  SVC_AS --> ING_AS --> C_AS --> E_AS
   SVC_AS --> CLEAN_R --> EX
   EX --> C_OAI --> E_OAI
   SVC_YT --> VOUT --> S_LLM
@@ -136,5 +145,12 @@ flowchart TB
   Job --> CLEAN_C
   Job --> EX
 
+  R_HOME --> E_SB
+
   ERR -. registered on .-> R_YT
 ```
+
+## Changes since 2026-05-01
+- Thumbnail field added end-to-end: `ingestion/youtubeComments.py:_pick_largest_thumbnail` selects the largest available size, the weekly job persists it on each `automatic_table` row, and the frontend renders home-page thumbnails as links back to the source YouTube video.
+- ADRs added to `planning/decisions/` capturing the layering, clients-wrapper, schema-split, and test-mock-strategy choices that this architecture implements.
+- iTunes RSS GET extracted into [clients/appstore.py](../../app/clients/appstore.py); `ingestion/appStoreReviews.py` now delegates HTTP to it, completing the rule that every external service call goes through `clients/`. Tests for the ingestion layer mock the client function instead of `requests.get`.
