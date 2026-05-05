@@ -1,20 +1,15 @@
-import requests
-import json
+from app.clients.appstore import fetch_reviews_page
+
 
 def getAppId(link):
     id = link.split("/id")[1]
     return id
 
+
 def getAppReviews(id, sortBy, max_pages):
     all_reviews = []
     for page in range(1, max_pages + 1):
-        url = f"https://itunes.apple.com/rss/customerreviews/id={id}/sortBy={sortBy}/page={page}/json"
-        response = requests.get(url, timeout=10)
-
-        if response.status_code != 200:
-            print(f"Stopped at page: {page}, status: {response.status_code}")
-
-        data = response.json()
+        data = fetch_reviews_page(id, sortBy, page)
         if not data['feed']:
             break
         feed = data['feed']

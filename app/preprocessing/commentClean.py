@@ -19,14 +19,6 @@ def loadAndClean(data, keywords: list):
                 "Likes": likes,
                 "Content": comment['Text'].lower().strip(),
             })
-
-    # if exclude:
-    #     print("2.1")
-    #     exclude = exclude_keywords(cleaned, exclude)
-    #     filtered = keyword_filtering(exclude, keywords)
-    # else: 
-    #     print("2.2")
-    #     filtered = keyword_filtering(cleaned, keywords)
     
     # Clean out emojis
     emoji_removed = remove_emojis(cleaned)
