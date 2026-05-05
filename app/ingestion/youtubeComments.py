@@ -1,7 +1,8 @@
-from googleapiclient.discovery import build
 from urllib.parse import urlparse, parse_qs
+
+from app.clients.youtube import list_comment_threads, list_most_popular
 from app.config.constants import YOUTUBE_COMMENTS_AMOUNT, YOUTUBE_VIDEO_AMOUNT
-from app.config.secrets import YOUTUBE_API
+
 
 def getVideoId(url: str) -> str:
     p = urlparse(url)
@@ -17,50 +18,28 @@ def getVideoId(url: str) -> str:
 
     return ""
 
-def getYoutubeComments(id, order, title=None,):
-    service = build('youtube', 'v3', developerKey=YOUTUBE_API)
-    request = service.commentThreads().list(
-        part="snippet",
-        videoId= id,
-        maxResults = YOUTUBE_COMMENTS_AMOUNT,
-        order = order,
-        textFormat = "plainText"
-    )
 
+def getYoutubeComments(id, order, title=None):
+    items = list_comment_threads(id, order, YOUTUBE_COMMENTS_AMOUNT)
     comments = []
-    response = request.execute()
-
-    # Fix not appending title for manual links
-
-    for item in response["items"]:
+    for item in items:
         snippet = item["snippet"]["topLevelComment"]["snippet"]
         comments.append({
             "Id": id,
             "Title": title,
             "Likes": snippet["likeCount"],
-            "Text": snippet["textDisplay"]
+            "Text": snippet["textDisplay"],
         })
-
-    service.close()
     return comments
 
+
 def getMostPopularVideos(category):
-    service = build('youtube', 'v3', developerKey=YOUTUBE_API)
-    request = service.videos().list(
-        part="snippet",
-        chart="mostPopular",
-        videoCategoryId=category,
-        maxResults=5
-    )
+    items = list_most_popular(category, YOUTUBE_VIDEO_AMOUNT)
     ids = []
-    response = request.execute()
-    
-    for item in response["items"]:
+    for item in items:
         ids.append({
             "Title": item["snippet"]["title"],
             "Id": item["id"],
-            "Thumbnail": item["snippet"]["thumbnails"]['default']
+            "Thumbnail": item["snippet"]["thumbnails"]["default"],
         })
-
-    service.close()
     return ids

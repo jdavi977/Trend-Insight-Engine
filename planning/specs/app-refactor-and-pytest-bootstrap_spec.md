@@ -91,6 +91,20 @@ app/
 - Move `utilities/youtubeApiHelper.py` → `clients/youtube.py`, drop `__main__` scratch.
 - Delete `app/lib/`.
 
+### PR 5b — Migrate ingestion off direct `googleapiclient` use
+- Goal: enforce the `clients/` ADR by making `clients/youtube.py` the only module that imports `googleapiclient`.
+- Add to `clients/youtube.py` (thin SDK surface, no shaping):
+  - `list_comment_threads(video_id, order, max_results)` — returns raw `response["items"]`.
+  - `list_most_popular(category_id, max_results)` — returns raw `response["items"]`.
+- Rewrite `ingestion/youtubeComments.py`:
+  - `getYoutubeComments(...)` calls `clients.youtube.list_comment_threads(...)` then keeps the `{Id, Title, Likes, Text}` shaping loop.
+  - `getMostPopularVideos(...)` calls `clients.youtube.list_most_popular(...)` then keeps the `{Title, Id, Thumbnail}` shaping loop.
+  - `getVideoId(url)` stays — pure URL parsing, no SDK.
+- Remove from `ingestion/youtubeComments.py`: `from googleapiclient.discovery import build` and the `YOUTUBE_API` import.
+- Update tests to patch `app.clients.youtube.list_comment_threads` / `list_most_popular` instead of `googleapiclient.discovery.build`. Single mock point per vendor — the testability win the ADR was chosen for.
+- Acceptance check: `grep -r "googleapiclient" app/` returns only matches inside `app/clients/`.
+- Out of scope: pulling shaping logic into `clients/` (kept in ingestion to prevent the wrapper from growing into a mini-framework).
+
 ### PR 6 — Rename `scripts/` → `jobs/`
 - Move `scripts/automaticYoutube.py` → `jobs/automaticYoutube.py`.
 - Update cron / Makefile / `ops/` references.
