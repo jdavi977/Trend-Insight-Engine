@@ -1,7 +1,9 @@
 name: Weekly App Store Pipeline
 
 on:
-  workflow_dispatch:
+  schedule:
+    - cron: '30 8 * * 0'    
+  workflow_dispatch:  
 
 permissions:
   contents: read
