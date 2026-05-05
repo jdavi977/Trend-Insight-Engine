@@ -18,13 +18,14 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywo
 
     page_data = []
     for app in apps:
-        check = check_appstore_id(app['Id'])
-        print(app['Id'])
+        app_id = int(app['Id'])
+        check = check_appstore_id(app_id)
+        print(app_id)
 
         if check:
             print("Updating data")
-            print(f"Skipped key: {app['Id']}. Found in Database.")
-            update_automatic_app_date(app['Id'], today)
+            print(f"Skipped key: {app_id}. Found in Database.")
+            update_automatic_app_date(app_id, today)
             page_data.append(check)
             continue
         else:
@@ -32,7 +33,7 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywo
             cleaned_data = appReviewClean(reviews)
 
             if len(cleaned_data) <= 0:
-                print(f"Skipping key: {app['Id']} due to no problems found.")
+                print(f"Skipping key: {app_id} due to no problems found.")
                 continue
 
             insights = extractInsights(cleaned_data, genre_prompt, appStorePromptOutput)
@@ -45,18 +46,17 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywo
                 if len(data) > 0:
                     data = data[0]
                 else:
-                    print(f"Skipping key: {app['Id']} due to no problems found.")
+                    print(f"Skipping key: {app_id} due to no problems found.")
                     continue
 
             if not data["problems"]:
-                print(f"Skipping key: {app['Id']} due to no problems found.")
+                print(f"Skipping key: {app_id} due to no problems found.")
                 continue
 
             for item in data["problems"]:
                 trend_data = []
                 trend_data.append({
-                    "key": app['Id'],
-                    "app_id": app['Id'],
+                    "app_id": app_id,
                     "app_title": app['Title'],
                     "country": APPLE_COUNTRY,
                     "genre_id": genre_id,

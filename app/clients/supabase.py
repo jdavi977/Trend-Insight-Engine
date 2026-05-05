@@ -37,14 +37,14 @@ def update_automatic_apple_trend(data):
     supabase_client.table("automatic_apple_table").insert(data).execute()
 
 
-def update_automatic_app_date(app_id, date):
-    current_app_date = supabase_client.table("automatic_apple_table").select("date").eq("key", app_id).execute()
+def update_automatic_app_date(app_id: int, date):
+    current_app_date = supabase_client.table("automatic_apple_table").select("date").eq("app_id", app_id).execute()
     if current_app_date.data[0] != date:
-        supabase_client.table("automatic_apple_table").update({"date": date}).eq("key", app_id).execute()
+        supabase_client.table("automatic_apple_table").update({"date": date}).eq("app_id", app_id).execute()
 
 
-def check_appstore_id(app_id: str):
-    response = supabase_client.table("automatic_apple_table").select().eq("key", app_id).execute()
+def check_appstore_id(app_id: int):
+    response = supabase_client.table("automatic_apple_table").select().eq("app_id", app_id).execute()
     if response.data:
         return response.data
     else:
