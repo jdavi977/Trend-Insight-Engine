@@ -2,8 +2,8 @@ import os
 import sys
 import traceback
 
-from app.config.keywords import APPLE_KEYWORDS
-from app.config.prompts import appStoreGamesSystemPrompt
+from app.config.keywords import APPLE_KEYWORDS, APPLE_SOCIAL_GENRE_ID
+from app.config.prompts import appStoreGamesSystemPrompt, appStoreSocialSystemPrompt
 from app.config.constants import (
     APPLE_COUNTRY,
     APPLE_GAMES_GENRE_ID,
@@ -15,6 +15,7 @@ from app.jobs.automaticAppStore import appstore_automatic
 # 5/genre cap is enforced upstream by list_top_apps (limit=APPLE_TOP_APPS_LIMIT).
 GENRES = [
     ("Games", APPLE_GAMES_GENRE_ID, appStoreGamesSystemPrompt, APPLE_KEYWORDS),
+    ("Social Networking", APPLE_SOCIAL_GENRE_ID, appStoreSocialSystemPrompt, APPLE_KEYWORDS),
 ]
 
 
