@@ -6,7 +6,7 @@ Related spec: planning/specs/app-refactor-and-pytest-bootstrap_spec.md (§Target
 
 ## Context
 
-Current codebase has a layered structure (api -> services -> pipeline -> clients/schemas). Right now exteral SDK calls (Supabase writes, Youtube data API fetches, OpenAI calls) are reached out in different layers of the code. Without a fixed wrapper layer, new integerations such as helper functions for exteral SDK calls would repeat auth/ config/error handling in different places of the project.
+Current codebase has a layered structure (api -> services -> pipeline -> clients/schemas). Right now external SDK calls (Supabase writes, YouTube Data API fetches, OpenAI calls) are reached out in different layers of the code. Without a fixed wrapper layer, new integrations such as helper functions for external SDK calls would repeat auth/ config/error handling in different places of the project.
 
 ## Options Considered
 
@@ -15,7 +15,7 @@ Current codebase has a layered structure (api -> services -> pipeline -> clients
 
 ## Decision
 
-Chose **Clients/<vendor>.py** because it makes sure external calls are organized in one place and not called in different layers of the code. This also helps with tests.
+Chose **Clients/<vendor>.py** because it confines external calls to a single layer, gives one place to change auth/retries/SDK versions per vendor, and creates a single mock seam per vendor for tests.
 
 
 ## Tradeoffs Accepted
@@ -24,5 +24,11 @@ Creates one extra module per client, also creates one more hop when reading code
 
 ## Consequences
 
-- Closes off: vendor SDK imports outside of clients/, auth/config setup scattered across modules, SDK helpers inside old lib/utilties folder
-- Enables: a single mock point per vendor in tests, a single place to change auth, retries, or SDK versions, a folder specific for all data-source integrations
+- Closes off:
+    1. Vendor SDK imports outside of `clients/`
+    2. Auth/config setup scattered across modules
+    3. SDK helpers inside old lib/utilities folder
+- Enables:
+    1. A single mock point per vendor in tests
+    2. A single place to change auth, retries, or SDK versions
+    3. A folder specific for all data-source integrations

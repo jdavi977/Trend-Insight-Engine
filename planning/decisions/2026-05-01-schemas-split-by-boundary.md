@@ -6,7 +6,7 @@ Related spec: planning/specs/app-refactor-and-pytest-bootstrap_spec.md (§Target
 
 ## Context
 
-Current state: schemas/ hold the LLM output shape only. There are three request models YoutubeAnalyzeRequest, AppstoreAnalyzeRequest, and DataSave inside main.py.
+Current state: schemas/ hold the LLM output shape only. There are three request models YouTubeAnalyzeRequest, AppstoreAnalyzeRequest, and DataSave inside main.py.
 
 ## Options Considered
 
@@ -15,7 +15,7 @@ Current state: schemas/ hold the LLM output shape only. There are three request 
 
 ## Decision
 
-Chose **boundary direction split** easy to reuse the same request model, same LLM output shape is used by both Youtube and App store services, by having the shape in one folder we remove duplication or cross-feature imports.
+Chose **boundary direction split** because the same LLM output shape is reused by both YouTube and App Store services; keeping it in one folder removes duplication and cross-feature imports.
 
 ## Tradeoffs Accepted
 

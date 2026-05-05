@@ -10,7 +10,7 @@ Previous app/ is flat, containing route handlers, ingestion modules, preprocessi
 ## Options Considered
 1. Strict Layering (api -> services -> pipeline stages) - Route handlers can only import from services/ and services orchestrate ingestion/, preprocessing/, llm/, and clients/
 2. Flat layout - Keep app/ flat, routes import whatever module they need directly
-3. Hybrid approach - routes call ingestion directly for "simple" endpoints. Servies layer exists for Youtube analysis flow, but trivial endpoints such as single Youtube or iTunes fetch would skill the service and call ingestion from the handler.
+3. Hybrid approach - routes call ingestion directly for "simple" endpoints. Services layer exists for YouTube analysis flow, but trivial endpoints such as single YouTube or iTunes fetch would skip the service and call ingestion from the handler.
 
 ## Decision
 Chose **Strict Layering** because it provides a cleaner code structure, having each endpoint follow the same shape. It also provides a scalable environment for route tests.
@@ -27,4 +27,4 @@ Chose **Strict Layering** because it provides a cleaner code structure, having e
 - Enables:
     1. Route tests mock a single service function
     2. Reusing the same service from both a HTTP route and a jobs/ cron entry point
-    3. When swapping a client (iTunes to Youtube) the API surface would not be touched, instead only one ingestion module would need to be changed.
+    3. When swapping a vendor SDK the API surface would not be touched, instead only one client module would need to be changed.
