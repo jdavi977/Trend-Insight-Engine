@@ -1,11 +1,9 @@
 """Tests for app/ingestion/appStoreReviews.py.
 
-Pure URL parsing runs for real. `requests.get` is mocked because we don't
-want to hit the iTunes RSS feed in tests.
+Pure URL parsing runs for real. The iTunes RSS client is mocked because we
+don't want to hit the live feed in tests.
 """
 from __future__ import annotations
-
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -37,16 +35,13 @@ def _entry(rating, title, content, votes):
 
 class TestGetAppReviews:
     def test_returns_normalized_reviews_from_single_page(self, mocker):
-        # iTunes RSS uses entry[0] as feed metadata; real reviews start at index 1.
-        # The current implementation does not strip [0], so include 2+ entries.
         entries = [
             _entry("5", "Great", "Love it", "10"),
             _entry("1", "Bad", "Hate it", "2"),
         ]
-        response = MagicMock(status_code=200)
-        response.json.return_value = _rss_page(entries)
         mocker.patch(
-            "app.ingestion.appStoreReviews.requests.get", return_value=response
+            "app.ingestion.appStoreReviews.fetch_reviews_page",
+            return_value=_rss_page(entries),
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=1)
@@ -57,11 +52,9 @@ class TestGetAppReviews:
         ]
 
     def test_breaks_when_page_has_one_or_zero_entries(self, mocker):
-        # Page with a single entry (just feed metadata) signals no real reviews.
-        response = MagicMock(status_code=200)
-        response.json.return_value = _rss_page([_entry("5", "t", "c", "0")])
         mocker.patch(
-            "app.ingestion.appStoreReviews.requests.get", return_value=response
+            "app.ingestion.appStoreReviews.fetch_reviews_page",
+            return_value=_rss_page([_entry("5", "t", "c", "0")]),
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=5)
@@ -69,10 +62,9 @@ class TestGetAppReviews:
         assert result == []
 
     def test_breaks_when_feed_is_empty(self, mocker):
-        response = MagicMock(status_code=200)
-        response.json.return_value = {"feed": {}}
         mocker.patch(
-            "app.ingestion.appStoreReviews.requests.get", return_value=response
+            "app.ingestion.appStoreReviews.fetch_reviews_page",
+            return_value={"feed": {}},
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=5)
@@ -88,28 +80,23 @@ class TestGetAppReviews:
             _entry("3", "T3", "C3", "3"),
             _entry("2", "T4", "C4", "4"),
         ]
-        responses = [
-            MagicMock(status_code=200, **{"json.return_value": _rss_page(entries_p1)}),
-            MagicMock(status_code=200, **{"json.return_value": _rss_page(entries_p2)}),
-        ]
         mocker.patch(
-            "app.ingestion.appStoreReviews.requests.get", side_effect=responses
+            "app.ingestion.appStoreReviews.fetch_reviews_page",
+            side_effect=[_rss_page(entries_p1), _rss_page(entries_p2)],
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=2)
 
         assert [r["title"] for r in result] == ["T1", "T2", "T3", "T4"]
 
-    def test_builds_correct_url(self, mocker):
-        response = MagicMock(status_code=200)
-        response.json.return_value = {"feed": {}}
-        get = mocker.patch(
-            "app.ingestion.appStoreReviews.requests.get", return_value=response
+    def test_passes_id_sort_and_page_to_client(self, mocker):
+        fetch = mocker.patch(
+            "app.ingestion.appStoreReviews.fetch_reviews_page",
+            return_value={"feed": {}},
         )
 
         getAppReviews("999", "mostHelpful", max_pages=1)
 
-        called_url = get.call_args.args[0]
-        assert "id=999" in called_url
-        assert "sortBy=mostHelpful" in called_url
-        assert "page=1" in called_url
+        assert fetch.call_args.args[0] == "999"
+        assert fetch.call_args.args[1] == "mostHelpful"
+        assert fetch.call_args.args[2] == 1
