@@ -177,7 +177,16 @@
 }
 
 .top-video-card-thumb {
-  height: 140px;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.top-video-card-thumb--empty {
   background: #e8e8e8;
 }
 

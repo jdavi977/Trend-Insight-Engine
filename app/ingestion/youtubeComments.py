@@ -33,6 +33,13 @@ def getYoutubeComments(id, order, title=None):
     return comments
 
 
+def _pick_largest_thumbnail(thumbs):
+    for size in ("maxres", "standard", "high", "medium", "default"):
+        if size in thumbs:
+            return thumbs[size]
+    return None
+
+
 def getMostPopularVideos(category):
     items = list_most_popular(category, YOUTUBE_VIDEO_AMOUNT)
     ids = []
@@ -40,6 +47,6 @@ def getMostPopularVideos(category):
         ids.append({
             "Title": item["snippet"]["title"],
             "Id": item["id"],
-            "Thumbnail": item["snippet"]["thumbnails"]["default"],
+            "Thumbnail": _pick_largest_thumbnail(item["snippet"]["thumbnails"]),
         })
     return ids

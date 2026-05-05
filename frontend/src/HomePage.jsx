@@ -35,6 +35,16 @@ const CATEGORIES = [
 //   return Object.groupBy(category, (item) => item.key);
 // }
 
+function parseThumbnail(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function getTopVideoEntries(weeklyData) {
   const all = weeklyData.flat();
   const byKey = Object.groupBy(all, (item) => item.key);
@@ -44,6 +54,7 @@ function getTopVideoEntries(weeklyData) {
       key,
       title: items[0].title,
       category: items[0].category,
+      thumbnail: parseThumbnail(items[0].thumbnail),
       items,
     }));
 }
@@ -133,13 +144,24 @@ function HomePage() {
 
         {!loading && !error && topVideos.length > 0 && (
           <div className="top-videos-grid">
-            {topVideos.map(({ key, title, items }) => (
+            {topVideos.map(({ key, title, thumbnail, items }) => (
               <article key={key} className="top-video-card">
                 <a
                   href={`https://www.youtube.com/watch?v=${key}`}
                   target="_blank"
                 >
-                  <div className="top-video-card-thumb" />
+                  {thumbnail?.url ? (
+                    <img
+                      className="top-video-card-thumb"
+                      src={thumbnail.url}
+                      width={thumbnail.width}
+                      height={thumbnail.height}
+                      alt={title}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="top-video-card-thumb top-video-card-thumb--empty" />
+                  )}
                   <h3 className="top-video-card-title">{title}</h3>
                 </a>
                 <p className="top-video-card-meta">
@@ -169,6 +191,5 @@ export default HomePage;
 
 /*
  * TODO:
- * Add thumbnails
  * Show Top videos for other categories
  */
