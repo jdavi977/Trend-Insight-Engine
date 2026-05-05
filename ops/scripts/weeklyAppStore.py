@@ -2,13 +2,15 @@ import os
 import sys
 import traceback
 
-from app.config.keywords import APPLE_KEYWORDS, APPLE_SOCIAL_GENRE_ID, APPLE_UTILITIES_GENRE_ID
+from app.config.keywords import APPLE_KEYWORDS
 from app.config.prompts import appStoreGamesSystemPrompt, appStoreSocialSystemPrompt, appStoreUtilitiesSystemPrompt
 from app.config.constants import (
     APPLE_COUNTRY,
     APPLE_GAMES_GENRE_ID,
     APPLE_TOP_APPS_LIMIT,
     APPLE_UTILITIES_GENRE_ID,
+    APPLE_SOCIAL_GENRE_ID, 
+    APPLE_UTILITIES_GENRE_ID
 )
 from app.clients.appstore import list_top_apps
 from app.jobs.automaticAppStore import appstore_automatic
