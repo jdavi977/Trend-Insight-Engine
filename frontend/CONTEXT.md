@@ -9,7 +9,7 @@
 
 ## Patterns (Follow These)
 - State management via React hooks (useState, useEffect) — no Redux
-- All API calls use Fetch API to http://localhost:8000
+- All API calls use Fetch API; backend base URL comes from a config constant (e.g. `import.meta.env.VITE_API_BASE`), never hardcoded
 - Components are PascalCase.jsx
 - Each page is a top-level component, shared UI in components/
 
