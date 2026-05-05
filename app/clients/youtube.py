@@ -1,11 +1,8 @@
-import os
-
-from dotenv import load_dotenv
 from googleapiclient.discovery import build
 
-load_dotenv()
+from app.config.secrets import keyChecker
 
-YOUTUBE_API = os.getenv("YOUTUBE_API")
+YOUTUBE_API = keyChecker("YOUTUBE_API")
 
 
 def _service():

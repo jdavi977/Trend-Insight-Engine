@@ -12,7 +12,6 @@ def keyChecker(name: str) -> str:
     return val
 
 OPENAI_KEY = keyChecker("OPENAI_KEY")
-YOUTUBE_API = keyChecker("YOUTUBE_API")
 
 SUPABASE_URL = keyChecker("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = keyChecker("SUPABASE_SERVICE_ROLE_KEY")
