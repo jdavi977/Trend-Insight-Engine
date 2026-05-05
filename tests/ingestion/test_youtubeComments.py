@@ -1,13 +1,9 @@
 """Tests for app/ingestion/youtubeComments.py.
 
-Pure URL parsing runs for real. The googleapiclient `build()` is mocked because
-we don't want to hit the YouTube Data API in tests.
+Pure URL parsing runs for real. The clients/youtube.py wrappers are mocked —
+ingestion no longer touches googleapiclient directly.
 """
 from __future__ import annotations
-
-from unittest.mock import MagicMock
-
-import pytest
 
 from app.ingestion.youtubeComments import (
     getMostPopularVideos,
@@ -35,30 +31,25 @@ class TestGetVideoId:
 
 class TestGetYoutubeComments:
     def test_returns_normalized_comment_records(self, mocker):
-        fake_response = {
-            "items": [
-                {
-                    "snippet": {
-                        "topLevelComment": {
-                            "snippet": {"likeCount": 12, "textDisplay": "great vid"}
-                        }
+        items = [
+            {
+                "snippet": {
+                    "topLevelComment": {
+                        "snippet": {"likeCount": 12, "textDisplay": "great vid"}
                     }
-                },
-                {
-                    "snippet": {
-                        "topLevelComment": {
-                            "snippet": {"likeCount": 0, "textDisplay": "meh"}
-                        }
+                }
+            },
+            {
+                "snippet": {
+                    "topLevelComment": {
+                        "snippet": {"likeCount": 0, "textDisplay": "meh"}
                     }
-                },
-            ]
-        }
-        service = MagicMock()
-        service.commentThreads.return_value.list.return_value.execute.return_value = (
-            fake_response
-        )
+                }
+            },
+        ]
         mocker.patch(
-            "app.ingestion.youtubeComments.build", return_value=service
+            "app.ingestion.youtubeComments.list_comment_threads",
+            return_value=items,
         )
 
         result = getYoutubeComments("vid123", "relevance", title="My Video")
@@ -67,52 +58,43 @@ class TestGetYoutubeComments:
             {"Id": "vid123", "Title": "My Video", "Likes": 12, "Text": "great vid"},
             {"Id": "vid123", "Title": "My Video", "Likes": 0, "Text": "meh"},
         ]
-        service.close.assert_called_once()
 
-    def test_passes_video_id_and_order_to_api(self, mocker):
-        service = MagicMock()
-        service.commentThreads.return_value.list.return_value.execute.return_value = {
-            "items": []
-        }
-        mocker.patch(
-            "app.ingestion.youtubeComments.build", return_value=service
+    def test_passes_video_id_and_order_to_client(self, mocker):
+        spy = mocker.patch(
+            "app.ingestion.youtubeComments.list_comment_threads",
+            return_value=[],
         )
 
         getYoutubeComments("xyz789", "time")
 
-        kwargs = service.commentThreads.return_value.list.call_args.kwargs
-        assert kwargs["videoId"] == "xyz789"
-        assert kwargs["order"] == "time"
-        assert kwargs["part"] == "snippet"
-        assert kwargs["textFormat"] == "plainText"
+        spy.assert_called_once()
+        args, kwargs = spy.call_args
+        called_with = (*args, *kwargs.values())
+        assert "xyz789" in called_with
+        assert "time" in called_with
 
 
 class TestGetMostPopularVideos:
     def test_returns_video_summaries(self, mocker):
-        fake_response = {
-            "items": [
-                {
-                    "id": "v1",
-                    "snippet": {
-                        "title": "First",
-                        "thumbnails": {"default": {"url": "thumb1"}},
-                    },
+        items = [
+            {
+                "id": "v1",
+                "snippet": {
+                    "title": "First",
+                    "thumbnails": {"default": {"url": "thumb1"}},
                 },
-                {
-                    "id": "v2",
-                    "snippet": {
-                        "title": "Second",
-                        "thumbnails": {"default": {"url": "thumb2"}},
-                    },
+            },
+            {
+                "id": "v2",
+                "snippet": {
+                    "title": "Second",
+                    "thumbnails": {"default": {"url": "thumb2"}},
                 },
-            ]
-        }
-        service = MagicMock()
-        service.videos.return_value.list.return_value.execute.return_value = (
-            fake_response
-        )
+            },
+        ]
         mocker.patch(
-            "app.ingestion.youtubeComments.build", return_value=service
+            "app.ingestion.youtubeComments.list_most_popular",
+            return_value=items,
         )
 
         result = getMostPopularVideos(20)
@@ -121,17 +103,16 @@ class TestGetMostPopularVideos:
             {"Title": "First", "Id": "v1", "Thumbnail": {"url": "thumb1"}},
             {"Title": "Second", "Id": "v2", "Thumbnail": {"url": "thumb2"}},
         ]
-        service.close.assert_called_once()
 
-    def test_passes_category_id_to_api(self, mocker):
-        service = MagicMock()
-        service.videos.return_value.list.return_value.execute.return_value = {"items": []}
-        mocker.patch(
-            "app.ingestion.youtubeComments.build", return_value=service
+    def test_passes_category_id_to_client(self, mocker):
+        spy = mocker.patch(
+            "app.ingestion.youtubeComments.list_most_popular",
+            return_value=[],
         )
 
         getMostPopularVideos(28)
 
-        kwargs = service.videos.return_value.list.call_args.kwargs
-        assert kwargs["videoCategoryId"] == 28
-        assert kwargs["chart"] == "mostPopular"
+        spy.assert_called_once()
+        args, kwargs = spy.call_args
+        called_with = (*args, *kwargs.values())
+        assert 28 in called_with
