@@ -131,18 +131,23 @@ function InsightsPage() {
               return (
                 <div key={entry.key} className="insights-row">
                   <div className="insights-row-title">
-                    {entry.thumbnail?.url ? (
-                      <img
-                        className="insights-detail-thumb"
-                        src={entry.thumbnail.url}
-                        width={entry.thumbnail.width}
-                        height={entry.thumbnail.height}
-                        alt={entry.title}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="insights-detail-thumb insights-detail-thumb--empty" />
-                    )}
+                    <a
+                      href={`https://www.youtube.com/watch?v=${entry.key}`}
+                      target="_blank"
+                    >
+                      {entry.thumbnail?.url ? (
+                        <img
+                          className="insights-detail-thumb"
+                          src={entry.thumbnail.url}
+                          width={entry.thumbnail.width}
+                          height={entry.thumbnail.height}
+                          alt={entry.title}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="insights-detail-thumb insights-detail-thumb--empty" />
+                      )}
+                    </a>
                     <h3 className="insights-list-title">{entry.title}</h3>
                     <p className="insights-list-date">{formatDate()}</p>
                   </div>
