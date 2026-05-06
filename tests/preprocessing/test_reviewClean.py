@@ -1,9 +1,9 @@
-from app.preprocessing.reviewClean import appReviewClean
+from app.preprocessing.reviewPipeline import appstore_rows_for_llm
 
 _TEST_KEYWORDS = ("crash", "bug", "crashes", "frequent")
 
 
-def test_appReviewClean_keeps_high_vote_keyword_matches_and_strips_emojis():
+def test_appstore_rows_for_llm_keeps_high_vote_keyword_matches_and_strips_emojis():
     raw = [
         {"vote_count": 10, "content": "  The app CRASHES on launch 🔥  "},
         {"vote_count": "8", "content": "Frequent bug after update"},
@@ -12,7 +12,7 @@ def test_appReviewClean_keeps_high_vote_keyword_matches_and_strips_emojis():
         {"vote_count": 50, "content": "the app crashes on launch"},
     ]
 
-    result = appReviewClean(raw, keywords=_TEST_KEYWORDS)
+    result = appstore_rows_for_llm(raw, keywords=_TEST_KEYWORDS)
 
     contents = [row["Content"] for row in result]
     assert "the app crashes on launch" in contents
@@ -20,15 +20,16 @@ def test_appReviewClean_keeps_high_vote_keyword_matches_and_strips_emojis():
     assert all("love the colour scheme" not in c for c in contents)
     assert all("crashes for me too" not in c for c in contents)
     assert contents.count("the app crashes on launch") == 1
+    assert all("Votes" in r and "Content" in r for r in result)
 
 
-def test_appReviewClean_drops_reviews_with_vote_count_at_or_below_five():
+def test_appstore_rows_for_llm_drops_reviews_with_vote_count_at_or_below_five():
     raw = [
         {"vote_count": 5, "content": "app crashes constantly"},
         {"vote_count": 0, "content": "crash bug"},
     ]
-    assert appReviewClean(raw, keywords=_TEST_KEYWORDS) == []
+    assert appstore_rows_for_llm(raw, keywords=_TEST_KEYWORDS) == []
 
 
-def test_appReviewClean_returns_empty_for_empty_input():
-    assert appReviewClean([], keywords=()) == []
+def test_appstore_rows_for_llm_returns_empty_for_empty_input():
+    assert appstore_rows_for_llm([], keywords=()) == []

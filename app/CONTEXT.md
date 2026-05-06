@@ -9,7 +9,7 @@
 | config/        | Keywords, prompts, regex, API settings, category IDs |
 | clients/       | One file per external service we wrap — `supabase.py`, `youtube.py`, (future) `openai.py` |
 | ingestion/     | YouTube comment fetch + iTunes RSS scraper        |
-| preprocessing/ | reviewPipeline.py, reviewClean.py, validateUrl.py   |
+| preprocessing/ | reviewPipeline.py, validateUrl.py                  |
 | llm/           | extractInsights.py (OpenAI call), validateOutput.py |
 | schemas/       | All Pydantic boundary models — `api.py` (HTTP request bodies), `llm.py` (LLM output) |
 | api/           | One router per resource (youtube, appstore, home, internal) + request schemas + exception handlers |

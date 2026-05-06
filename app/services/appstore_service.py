@@ -1,5 +1,5 @@
 from app.ingestion.appStoreReviews import getAppId, getAppReviews
-from app.preprocessing.reviewClean import appReviewClean
+from app.preprocessing.reviewPipeline import appstore_rows_for_llm
 from app.config.constants import APP_REVIEW_PAGES
 from app.config.promptTemplates import build_appstore_prompt, appStorePromptOutput
 from app.config.genres import get_default_genre
@@ -12,6 +12,6 @@ def app_store_manual(link):
     mostRecent = getAppReviews(id, "mostRecent", APP_REVIEW_PAGES)
     mostHelpful = getAppReviews(id, "mostHelpful", APP_REVIEW_PAGES)
     all_items = mostRecent + mostHelpful
-    cleaned_data = appReviewClean(all_items, default.keywords)
+    cleaned_data = appstore_rows_for_llm(all_items, default.keywords)
     insights = extractInsights(cleaned_data, build_appstore_prompt(default), appStorePromptOutput)
     return insights

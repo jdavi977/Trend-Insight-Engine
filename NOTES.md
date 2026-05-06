@@ -12,3 +12,4 @@ Regarding using abstraction to manage complexity, through improve-codebase-archi
 
 Found out that Sonnet 4.6 is great for implementing code. 
 Use Opus 4.6 to create create specs, break down tasks (to-issues), and traige. But use Sonnet 4.6 for code implementation, as it uses up less tokens.
+Can even use auto model in cursor when tasks are simple and well documented (saves the most tokens)
