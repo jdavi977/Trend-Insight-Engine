@@ -2,7 +2,7 @@
 import json
 
 from app.services.youtube_service import youtube_manual
-from app.schemas.llm import LLMExtraction
+from app.schemas.llm import LLMExtraction, YoutubeProblemItem
 
 
 def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
@@ -46,7 +46,8 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
     assert isinstance(result, LLMExtraction)
     assert result.source == "youtube"
     assert len(result.problems) == 1
-    assert result.problems[0]["problem"] == "battery dies quickly"
+    assert isinstance(result.problems[0], YoutubeProblemItem)
+    assert result.problems[0].problem == "battery dies quickly"
 
     assert fetch.call_count == 2
     assert fetch.call_args_list[0].args == ("dQw4w9WgXcQ", "relevance")

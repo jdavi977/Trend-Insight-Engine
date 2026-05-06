@@ -8,7 +8,8 @@ from __future__ import annotations
 
 
 def test_llm_schema_module_exposes_models():
-    from app.schemas.llm import LLMExtraction, ProblemItem
+    from app.schemas.llm import LLMExtraction, YoutubeProblemItem, AppStoreProblemItem
 
     assert LLMExtraction.__name__ == "LLMExtraction"
-    assert ProblemItem.__name__ == "ProblemItem"
+    assert YoutubeProblemItem.__name__ == "YoutubeProblemItem"
+    assert AppStoreProblemItem.__name__ == "AppStoreProblemItem"

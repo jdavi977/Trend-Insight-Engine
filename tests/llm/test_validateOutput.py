@@ -1,7 +1,7 @@
 import json
 
 from app.llm.validateOutput import validateOutput
-from app.schemas.llm import LLMExtraction
+from app.schemas.llm import LLMExtraction, YoutubeProblemItem
 
 
 def _payload(problems):
@@ -24,8 +24,9 @@ def test_validateOutput_returns_LLMExtraction_for_well_formed_payload(tmp_path, 
 
     assert isinstance(result, LLMExtraction)
     assert len(result.problems) == 1
-    assert result.problems[0]["problem"] == "battery drains fast"
-    assert result.problems[0]["severity"] == 4
+    assert isinstance(result.problems[0], YoutubeProblemItem)
+    assert result.problems[0].problem == "battery drains fast"
+    assert result.problems[0].severity == 4
 
 
 def test_validateOutput_drops_malformed_problem_items_and_keeps_valid_ones(tmp_path, monkeypatch):
@@ -51,7 +52,7 @@ def test_validateOutput_drops_malformed_problem_items_and_keeps_valid_ones(tmp_p
 
     assert isinstance(result, LLMExtraction)
     assert len(result.problems) == 1
-    assert result.problems[0]["problem"] == "good problem here"
+    assert result.problems[0].problem == "good problem here"
     assert (tmp_path / "data" / "invalid_data").exists()
 
 

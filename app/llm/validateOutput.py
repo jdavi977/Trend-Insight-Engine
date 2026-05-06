@@ -1,36 +1,40 @@
 import json
 import time
-from app.schemas.llm import LLMExtraction, ProblemItem
 from pathlib import Path
+from pydantic import ValidationError
+from app.schemas.llm import LLMExtraction, YoutubeProblemItem, AppStoreProblemItem
+
 
 def validateOutput(data):
     data = json.loads(data)
 
-    check = True
-    dead_data = []
+    if not data.get("problems"):
+        return data
 
     run_id = time.strftime("%Y%m%d_%H%M%S")
     run_dir = Path("data") / "invalid_data" / run_id
 
-    if data['problems']:
+    source = data.get("source", "youtube")
+    item_type = YoutubeProblemItem if source == "youtube" else AppStoreProblemItem
+
+    dead_data = []
+    valid_problems = []
+    for item in data["problems"]:
         try:
-            validated = LLMExtraction.model_validate(data)
-        except:
-            check = False
-            print("Please try again")
+            valid_problems.append(item_type.model_validate(item).model_dump())
+        except ValidationError:
+            dead_data.append(item)
 
-        if check == True:
-            for i in range(len(validated.problems) -1, -1, -1):
-                try:
-                    problem_validation = ProblemItem.model_validate(validated.problems[i])
-                except:
-                    dead_data.append(validated.problems[i])
-                    validated.problems.pop(i)
+    if dead_data:
+        run_dir.mkdir(parents=True, exist_ok=True)
+        (run_dir / "run.json").write_text(json.dumps(dead_data, indent=2))
 
-        if dead_data:
-            run_dir.mkdir(parents=True, exist_ok=False)
-            (run_dir / "run.json").write_text(json.dumps(dead_data, indent=2))
+    if not valid_problems:
+        return data
 
-        return validated
-    else:
+    data["problems"] = valid_problems
+    try:
+        return LLMExtraction.model_validate(data)
+    except ValidationError:
+        print("Please try again")
         return data
