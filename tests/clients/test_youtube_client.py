@@ -48,3 +48,143 @@ def test_get_video_categories_requests_us_region_snippets(mocker):
         part="snippet",
         regionCode="US",
     )
+
+
+def _build_comment_threads_service(mocker, raw_items):
+    response = {"items": raw_items}
+    request = mocker.Mock()
+    request.execute.return_value = response
+    service = mocker.Mock()
+    service.commentThreads.return_value.list.return_value = request
+    return service
+
+
+def test_list_comment_threads_maps_vendor_json_to_domain_rows(mocker):
+    from app.clients import youtube as yt
+
+    raw = [
+        {
+            "snippet": {
+                "topLevelComment": {
+                    "snippet": {"likeCount": 12, "textDisplay": "great vid"},
+                },
+            },
+        },
+        {
+            "snippet": {
+                "topLevelComment": {
+                    "snippet": {"likeCount": 0, "textDisplay": "meh"},
+                },
+            },
+        },
+    ]
+    service = _build_comment_threads_service(mocker, raw)
+    mocker.patch.object(yt, "build", return_value=service)
+
+    result = yt.list_comment_threads("vid123", "relevance", 100)
+
+    assert result == [
+        {"Likes": 12, "Text": "great vid"},
+        {"Likes": 0, "Text": "meh"},
+    ]
+    service.commentThreads.return_value.list.assert_called_once_with(
+        part="snippet",
+        videoId="vid123",
+        maxResults=100,
+        order="relevance",
+        textFormat="plainText",
+    )
+    service.close.assert_called_once_with()
+
+
+def _build_videos_list_service(mocker, raw_items):
+    response = {"items": raw_items}
+    request = mocker.Mock()
+    request.execute.return_value = response
+    service = mocker.Mock()
+    service.videos.return_value.list.return_value = request
+    return service
+
+
+def test_list_most_popular_picks_maxres_when_available(mocker):
+    from app.clients import youtube as yt
+
+    raw = [
+        {
+            "id": "v1",
+            "snippet": {
+                "title": "First",
+                "thumbnails": {
+                    "default": {"url": "d", "width": 120, "height": 90},
+                    "medium": {"url": "m", "width": 320, "height": 180},
+                    "high": {"url": "h", "width": 480, "height": 360},
+                    "standard": {"url": "s", "width": 640, "height": 480},
+                    "maxres": {"url": "mx", "width": 1280, "height": 720},
+                },
+            },
+        },
+    ]
+    service = _build_videos_list_service(mocker, raw)
+    mocker.patch.object(yt, "build", return_value=service)
+
+    result = yt.list_most_popular(20, 5)
+
+    assert result == [
+        {
+            "Id": "v1",
+            "Title": "First",
+            "Thumbnail": {"url": "mx", "width": 1280, "height": 720},
+        },
+    ]
+    service.videos.return_value.list.assert_called_once_with(
+        part="snippet",
+        chart="mostPopular",
+        videoCategoryId=20,
+        maxResults=5,
+    )
+    service.close.assert_called_once_with()
+
+
+def test_list_most_popular_falls_back_through_priority_when_maxres_missing(mocker):
+    from app.clients import youtube as yt
+
+    raw = [
+        {
+            "id": "v2",
+            "snippet": {
+                "title": "Second",
+                "thumbnails": {
+                    "default": {"url": "d"},
+                    "medium": {"url": "m"},
+                    "high": {"url": "h"},
+                },
+            },
+        },
+    ]
+    service = _build_videos_list_service(mocker, raw)
+    mocker.patch.object(yt, "build", return_value=service)
+
+    result = yt.list_most_popular(20, 10)
+
+    assert result == [
+        {"Id": "v2", "Title": "Second", "Thumbnail": {"url": "h"}},
+    ]
+
+
+def test_list_most_popular_returns_none_thumbnail_when_no_sizes_present(mocker):
+    from app.clients import youtube as yt
+
+    raw = [
+        {
+            "id": "v3",
+            "snippet": {"title": "Third", "thumbnails": {}},
+        },
+    ]
+    service = _build_videos_list_service(mocker, raw)
+    mocker.patch.object(yt, "build", return_value=service)
+
+    result = yt.list_most_popular(20, 10)
+
+    assert result == [
+        {"Id": "v3", "Title": "Third", "Thumbnail": None},
+    ]

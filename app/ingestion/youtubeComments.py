@@ -20,33 +20,9 @@ def getVideoId(url: str) -> str:
 
 
 def getYoutubeComments(id, order, title=None):
-    items = list_comment_threads(id, order, YOUTUBE_COMMENTS_AMOUNT)
-    comments = []
-    for item in items:
-        snippet = item["snippet"]["topLevelComment"]["snippet"]
-        comments.append({
-            "Id": id,
-            "Title": title,
-            "Likes": snippet["likeCount"],
-            "Text": snippet["textDisplay"],
-        })
-    return comments
-
-
-def _pick_largest_thumbnail(thumbs):
-    for size in ("maxres", "standard", "high", "medium", "default"):
-        if size in thumbs:
-            return thumbs[size]
-    return None
+    rows = list_comment_threads(id, order, YOUTUBE_COMMENTS_AMOUNT)
+    return [{"Id": id, "Title": title, **row} for row in rows]
 
 
 def getMostPopularVideos(category):
-    items = list_most_popular(category, YOUTUBE_VIDEO_AMOUNT)
-    ids = []
-    for item in items:
-        ids.append({
-            "Title": item["snippet"]["title"],
-            "Id": item["id"],
-            "Thumbnail": _pick_largest_thumbnail(item["snippet"]["thumbnails"]),
-        })
-    return ids
+    return list_most_popular(category, YOUTUBE_VIDEO_AMOUNT)

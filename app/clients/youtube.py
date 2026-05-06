@@ -9,6 +9,13 @@ def _service():
     return build("youtube", "v3", developerKey=YOUTUBE_API)
 
 
+def _pick_largest_thumbnail(thumbs: dict) -> dict | None:
+    for size in ("maxres", "standard", "high", "medium", "default"):
+        if size in thumbs:
+            return thumbs[size]
+    return None
+
+
 def list_comment_threads(video_id, order, max_results):
     service = _service()
     try:
@@ -19,7 +26,15 @@ def list_comment_threads(video_id, order, max_results):
             order=order,
             textFormat="plainText",
         )
-        return request.execute()["items"]
+        raw_items = request.execute()["items"]
+        rows = []
+        for item in raw_items:
+            snippet = item["snippet"]["topLevelComment"]["snippet"]
+            rows.append({
+                "Likes": snippet["likeCount"],
+                "Text": snippet["textDisplay"],
+            })
+        return rows
     finally:
         service.close()
 
@@ -33,7 +48,17 @@ def list_most_popular(category_id, max_results):
             videoCategoryId=category_id,
             maxResults=max_results,
         )
-        return request.execute()["items"]
+        raw_items = request.execute()["items"]
+        rows = []
+        for item in raw_items:
+            snippet = item["snippet"]
+            thumbs = snippet.get("thumbnails") or {}
+            rows.append({
+                "Id": item["id"],
+                "Title": snippet["title"],
+                "Thumbnail": _pick_largest_thumbnail(thumbs),
+            })
+        return rows
     finally:
         service.close()
 
