@@ -1,0 +1,102 @@
+"""Shared automatic pipeline loop for all data sources.
+
+Owns the per-item loop, empty-data guards, list/dict normalization,
+and per-problem fan-out. Source-specific behaviour is injected via
+a SourceAdapter frozen dataclass — see the class docstring for the
+contract each field must satisfy.
+"""
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from typing import Any, Callable
+
+from app.llm.extractInsights import extractInsights
+from app.utilities.getDate import getCurrentDate
+
+
+@dataclass(frozen=True)
+class SourceAdapter:
+    """Per-source seams injected into run_automatic_pipeline.
+
+    Fields
+    ------
+    item_id       : item -> identifier used for DB look-up and logging
+    check_existing: id -> existing rows (truthy) or empty/falsy if absent
+    bump_date     : (id, today) -> update the persisted date; no return value
+    ingest        : item -> list of raw comments / reviews
+    clean         : (raw_list, keywords) -> list of cleaned text strings
+    system_prompt : per-source / per-category system prompt string
+    output_prompt : per-source output-shape reminder string
+    build_row     : (item, problem, today, data) -> single trend-data dict
+    persist_row   : rows_list -> write to the appropriate Supabase table
+    """
+
+    item_id: Callable[[dict], Any]
+    check_existing: Callable[[Any], list | dict | None]
+    bump_date: Callable[[Any, str], None]
+    ingest: Callable[[dict], list]
+    clean: Callable[[list, list[str]], list]
+    system_prompt: str
+    output_prompt: str
+    build_row: Callable[[dict, dict, str, dict], dict]
+    persist_row: Callable[[list[dict]], None]
+
+
+def run_automatic_pipeline(
+    items: list[dict],
+    keywords: list[str],
+    adapter: SourceAdapter,
+) -> list[dict]:
+    """Run the full automatic pipeline for a list of items.
+
+    For each item:
+    - Short-circuit if already persisted: bump its date and carry it forward.
+    - Ingest → clean; skip if cleaned data is empty.
+    - Extract insights via LLM; normalise list-vs-dict response shape.
+    - Skip if problems list is absent or empty.
+    - Fan out one row per problem: build → persist → collect.
+
+    Returns a list of all collected rows in processing order.
+    """
+    today = str(getCurrentDate())
+    page_data = []
+
+    for item in items:
+        item_id = adapter.item_id(item)
+        existing = adapter.check_existing(item_id)
+
+        if existing:
+            print(f"Skipped key: {item_id}. Found in Database.")
+            adapter.bump_date(item_id, today)
+            page_data.append(existing)
+            continue
+
+        raw = adapter.ingest(item)
+        cleaned = adapter.clean(raw, keywords)
+
+        if not cleaned:
+            print(f"Skipping key: {item_id} due to empty cleaned data.")
+            continue
+
+        insights = extractInsights(cleaned, adapter.system_prompt, adapter.output_prompt)
+        data = json.loads(insights)
+
+        print(data)
+
+        if isinstance(data, list):
+            if not data:
+                print(f"Skipping key: {item_id} due to empty LLM response list.")
+                continue
+            data = data[0]
+
+        if not data.get("problems"):
+            print(f"Skipping key: {item_id} due to no problems found.")
+            continue
+
+        for problem in data["problems"]:
+            row = [adapter.build_row(item, problem, today, data)]
+            adapter.persist_row(row)
+            page_data.append(row)
+
+    return page_data
