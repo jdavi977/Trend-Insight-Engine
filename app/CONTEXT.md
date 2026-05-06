@@ -10,7 +10,7 @@
 | clients/       | One file per external service we wrap — `supabase.py`, `youtube.py`, (future) `openai.py` |
 | ingestion/     | YouTube comment fetch + iTunes RSS scraper        |
 | preprocessing/ | reviewPipeline.py, validateUrl.py                  |
-| llm/           | extractInsights.py (OpenAI call), validateOutput.py |
+| llm/           | extractInsights.py (OpenAI call + per-problem validation) |
 | schemas/       | All Pydantic boundary models — `api.py` (HTTP request bodies), `llm.py` (LLM output) |
 | api/           | One router per resource (youtube, appstore, home, internal) + request schemas + exception handlers |
 | services/      | Orchestration called by API/jobs (youtube, appstore, persistence) |
@@ -40,16 +40,16 @@
 - Do NOT add business logic to main.py — it only routes
 - Do NOT write to Supabase from manual analysis endpoints
 - Do NOT add new dependencies without updating requirements/setup docs
-- Do NOT skip validateOutput.py after LLM calls
+- Do NOT bypass extract_insights — validation is embedded; callers consume LLMExtraction directly
 
 ## Testing
 - Test tree lives at top-level `/tests/`, mirroring `app/` (`tests/api/`, `tests/services/`, `tests/preprocessing/`, `tests/llm/`). The empty `app/tests/` is removed.
 - Tooling: `pytest` + `pytest-mock` + `httpx.TestClient`.
-- Mock external services: YouTube Data API, iTunes RSS, OpenAI, Supabase. Hit pure modules (preprocessing, validateUrl, validateOutput, schemas) for real — mocking deterministic functions tests nothing.
+- Mock external services: YouTube Data API, iTunes RSS, OpenAI, Supabase. Hit pure modules (preprocessing, validateUrl, schemas) for real — mocking deterministic functions tests nothing.
 - Pre-refactor safety net (write these BEFORE moving files):
   1. `tests/preprocessing/test_validateUrl.py`
   2. `tests/preprocessing/test_reviewPipeline.py` + `test_reviewClean.py`
-  3. `tests/llm/test_validateOutput.py`
+  3. `tests/llm/test_extractInsights.py`
   4. `tests/services/test_youtube_service.py` (happy path, all clients mocked)
   5. `tests/api/test_routes.py` (TestClient smoke tests, services mocked)
 
