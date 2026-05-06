@@ -12,10 +12,11 @@ import traceback
 
 from app.config.genres import YOUTUBE_GENRES
 from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
+from app.config.preprocessing import YOUTUBE_PREPROCESS
 from app.ingestion.youtubeComments import getMostPopularVideos, getYoutubeComments
 from app.llm.extractInsights import extractInsights
 from app.llm.validateOutput import validateOutput
-from app.preprocessing.commentClean import loadAndClean
+from app.preprocessing.reviewPipeline import clean
 
 _GAMES_GENRE = next(g for g in YOUTUBE_GENRES if g.name == "Games")
 
@@ -27,7 +28,8 @@ def run_video(video):
     relevance = getYoutubeComments(video["Id"], "relevance", video["Title"])
     print(f"fetched comments: {len(relevance)}")
 
-    cleaned = loadAndClean(relevance, _GAMES_GENRE.keywords)
+    rows = [{**item, "Content": item["Text"]} for item in relevance]
+    cleaned = clean(rows, **YOUTUBE_PREPROCESS)
     print(f"after clean: {len(cleaned)}")
 
     if not cleaned:

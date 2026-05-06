@@ -5,8 +5,7 @@ stages; callers supply source-specific config via keyword arguments.
 
 Callers are expected to present rows with a ``Content`` key already set
 (mapping their source's raw text field to ``Content`` before calling).
-Migration from the old ``commentClean.loadAndClean`` / ``reviewClean.appReviewClean``
-call sites happens in separate slices (#18, #19).
+App Store still migrates from ``reviewClean.appReviewClean`` in a follow-up slice (#19).
 """
 from __future__ import annotations
 
@@ -33,7 +32,7 @@ def clean(
 
        Threshold semantics across the two call sites:
 
-       - YouTube (``commentClean.py`` line 16): ``likes >= 50``
+       - YouTube: ``likes >= 50``
          → pass ``threshold=50``.
        - App Store (``reviewClean.py`` line 13): ``vote_count > 5``
          → pass ``threshold=6``.
