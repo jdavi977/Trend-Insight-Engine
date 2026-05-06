@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.config.constants import GAME_CATEGORY_ID, HOW_TO_STYLE_ID, SCIENCE_TECH_ID
-from app.clients.supabase import get_weekly_ids
+from app.config.constants import APPLE_GAMES_GENRE_ID, APPLE_SOCIAL_GENRE_ID, APPLE_UTILITIES_GENRE_ID, GAME_CATEGORY_ID, HOW_TO_STYLE_ID, SCIENCE_TECH_ID
+from app.clients.supabase import get_weekly_apple_ids, get_weekly_ids
 
 router = APIRouter()
 
@@ -26,6 +26,32 @@ def get_home_data():
         )
     try:
         ids.append(get_weekly_ids(HOW_TO_STYLE_ID))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to fetch style data from supabase",
+        )
+    return ids
+
+@router.get("/get/homePageAppStore")
+def get_home_appstore_data():
+    ids = []
+    try:
+        ids.append(get_weekly_apple_ids(APPLE_GAMES_GENRE_ID))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to fetch game data from supabase",
+        )
+    try:
+        ids.append(get_weekly_apple_ids(APPLE_SOCIAL_GENRE_ID))
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to fetch scitech data from supabase",
+        )
+    try:
+        ids.append(get_weekly_apple_ids(APPLE_UTILITIES_GENRE_ID))
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
