@@ -1,8 +1,21 @@
-"""Happy-path orchestration test for the YouTube service."""
-import json
-
+"""Orchestration tests for the YouTube manual service."""
 from app.services.youtube_service import youtube_manual
 from app.schemas.llm import LLMExtraction, YoutubeProblemItem
+
+
+_LLM_RESULT = LLMExtraction(
+    source="youtube",
+    title="Vid",
+    problems=[
+        YoutubeProblemItem(
+            problem="battery dies quickly",
+            type="complaint",
+            total_likes=200,
+            severity=4,
+            frequency=3,
+        )
+    ],
+)
 
 
 def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
@@ -23,22 +36,9 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
         side_effect=[relevance_comments, time_comments],
     )
 
-    llm_response = json.dumps({
-        "source": "youtube",
-        "title": "Vid",
-        "problems": [
-            {
-                "problem": "battery dies quickly",
-                "type": "complaint",
-                "total_likes": 200,
-                "severity": 4,
-                "frequency": 3,
-            }
-        ],
-    })
     extract = mocker.patch(
-        "app.services.youtube_service.extractInsights",
-        return_value=llm_response,
+        "app.services.youtube_service.extract_insights",
+        return_value=_LLM_RESULT,
     )
 
     result = youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
@@ -58,3 +58,16 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
     assert "battery problem on the device" in contents
     assert "the bug ruined this " in contents
     assert all("below threshold" not in c for c in contents)
+
+
+def test_youtube_manual_returns_none_when_extract_insights_returns_none(mocker):
+    mocker.patch("app.services.youtube_service.getVideoId", return_value="abc123")
+    mocker.patch(
+        "app.services.youtube_service.getYoutubeComments",
+        side_effect=[[], []],
+    )
+    mocker.patch("app.services.youtube_service.extract_insights", return_value=None)
+
+    result = youtube_manual("https://www.youtube.com/watch?v=abc123")
+
+    assert result is None

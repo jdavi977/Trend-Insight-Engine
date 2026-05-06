@@ -3,7 +3,7 @@ from app.preprocessing.reviewPipeline import appstore_rows_for_llm
 from app.config.constants import APP_REVIEW_PAGES
 from app.config.promptTemplates import build_appstore_prompt, appStorePromptOutput
 from app.config.genres import get_default_genre
-from app.llm.extractInsights import extractInsights
+from app.llm.extractInsights import extract_insights
 
 
 def app_store_manual(link):
@@ -13,5 +13,4 @@ def app_store_manual(link):
     mostHelpful = getAppReviews(id, "mostHelpful", APP_REVIEW_PAGES)
     all_items = mostRecent + mostHelpful
     cleaned_data = appstore_rows_for_llm(all_items, default.keywords)
-    insights = extractInsights(cleaned_data, build_appstore_prompt(default), appStorePromptOutput)
-    return insights
+    return extract_insights(cleaned_data, build_appstore_prompt(default), appStorePromptOutput)

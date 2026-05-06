@@ -1,17 +1,15 @@
 """Shared automatic pipeline loop for all data sources.
 
-Owns the per-item loop, empty-data guards, list/dict normalization,
-and per-problem fan-out. Source-specific behaviour is injected via
-a SourceAdapter frozen dataclass — see the class docstring for the
-contract each field must satisfy.
+Owns the per-item loop, empty-data guards, and per-problem fan-out.
+Source-specific behaviour is injected via a SourceAdapter frozen dataclass
+— see the class docstring for the contract each field must satisfy.
 """
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from app.llm.extractInsights import extractInsights
+from app.llm.extractInsights import extract_insights
 from app.utilities.getDate import getCurrentDate
 
 
@@ -53,8 +51,7 @@ def run_automatic_pipeline(
     For each item:
     - Short-circuit if already persisted: bump its date and carry it forward.
     - Ingest → clean; skip if cleaned data is empty.
-    - Extract insights via LLM; normalise list-vs-dict response shape.
-    - Skip if problems list is absent or empty.
+    - Extract insights via LLM; skip if None (no usable problems).
     - Fan out one row per problem: build → persist → collect.
 
     Returns a list of all collected rows in processing order.
@@ -79,23 +76,14 @@ def run_automatic_pipeline(
             print(f"Skipping key: {item_id} due to empty cleaned data.")
             continue
 
-        insights = extractInsights(cleaned, adapter.system_prompt, adapter.output_prompt)
-        data = json.loads(insights)
+        result = extract_insights(cleaned, adapter.system_prompt, adapter.output_prompt)
 
-        print(data)
-
-        if isinstance(data, list):
-            if not data:
-                print(f"Skipping key: {item_id} due to empty LLM response list.")
-                continue
-            data = data[0]
-
-        if not data.get("problems"):
+        if result is None:
             print(f"Skipping key: {item_id} due to no problems found.")
             continue
 
-        for problem in data["problems"]:
-            row = [adapter.build_row(item, problem, today, data)]
+        for problem in result.problems:
+            row = [adapter.build_row(item, problem, today, result)]
             adapter.persist_row(row)
             page_data.append(row)
 

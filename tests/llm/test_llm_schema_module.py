@@ -1,8 +1,7 @@
 """`schemas/llm_insights.py` is renamed to `schemas/llm.py` to mirror the
 direction-based split (`api.py` for inbound, `llm.py` for LLM output).
 
-This test pins the new path. The richer behavior of these models is covered
-by `tests/llm/test_validateOutput.py`.
+This test pins the new path. Richer behavior is covered by test_extract_insights.py.
 """
 from __future__ import annotations
 

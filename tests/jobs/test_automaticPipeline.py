@@ -2,15 +2,15 @@
 
 All tests use a fake SourceAdapter built from MagicMocks so no
 external services (Supabase, YouTube, OpenAI) are touched.
-extractInsights is patched at the module boundary where the pipeline
+extract_insights is patched at the module boundary where the pipeline
 imports it.
 """
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from app.jobs.automaticPipeline import SourceAdapter, run_automatic_pipeline
+from app.schemas.llm import LLMExtraction, YoutubeProblemItem
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -18,32 +18,29 @@ from app.jobs.automaticPipeline import SourceAdapter, run_automatic_pipeline
 
 ITEM = {"id": "vid1"}
 
-_ONE_PROBLEM = [
-    {
-        "problem": "app crashes on launch",
-        "type": "complaint",
-        "total_likes": 10,
-        "severity": 4,
-        "frequency": 3,
-    }
-]
+_PROBLEM_ONE = YoutubeProblemItem(
+    problem="app crashes on launch",
+    type="complaint",
+    total_likes=10,
+    severity=4,
+    frequency=3,
+)
 
-_TWO_PROBLEMS = [
-    {
-        "problem": "app crashes on launch",
-        "type": "complaint",
-        "total_likes": 10,
-        "severity": 4,
-        "frequency": 3,
-    },
-    {
-        "problem": "loading is too slow",
-        "type": "performance",
-        "total_likes": 5,
-        "severity": 2,
-        "frequency": 2,
-    },
-]
+_PROBLEM_TWO = YoutubeProblemItem(
+    problem="loading is too slow",
+    type="performance",
+    total_likes=5,
+    severity=2,
+    frequency=2,
+)
+
+
+def _make_extraction(problems=None, title="Cool Video") -> LLMExtraction:
+    return LLMExtraction(
+        source="youtube",
+        title=title,
+        problems=problems if problems is not None else [_PROBLEM_ONE],
+    )
 
 
 def _make_adapter(**overrides) -> SourceAdapter:
@@ -63,11 +60,7 @@ def _make_adapter(**overrides) -> SourceAdapter:
     return SourceAdapter(**defaults)
 
 
-def _good_insights(problems=_ONE_PROBLEM, title="Cool Video") -> str:
-    return json.dumps({"title": title, "problems": problems})
-
-
-PATCH_TARGET = "app.jobs.automaticPipeline.extractInsights"
+PATCH_TARGET = "app.jobs.automaticPipeline.extract_insights"
 
 # ---------------------------------------------------------------------------
 # Existing-id short-circuit
@@ -129,54 +122,27 @@ class TestEmptyCleanSkip:
 
 
 # ---------------------------------------------------------------------------
-# list / dict normalisation
+# No problems (extract_insights returns None)
 # ---------------------------------------------------------------------------
 
 
-class TestListNormalization:
-    def test_single_element_list_is_normalized_to_first_element(self):
-        data_obj = {"title": "T", "problems": _ONE_PROBLEM}
+class TestNoneResultSkip:
+    def test_skips_item_when_extract_insights_returns_none(self):
         adapter = _make_adapter()
 
-        with patch(PATCH_TARGET, return_value=json.dumps([data_obj])):
-            result = run_automatic_pipeline([ITEM], [], adapter)
-
-        assert adapter.build_row.called
-        assert len(result) == 1
-
-    def test_empty_list_response_skips_item(self):
-        adapter = _make_adapter()
-
-        with patch(PATCH_TARGET, return_value=json.dumps([])):
+        with patch(PATCH_TARGET, return_value=None):
             result = run_automatic_pipeline([ITEM], [], adapter)
 
         adapter.build_row.assert_not_called()
         assert result == []
 
-
-# ---------------------------------------------------------------------------
-# Empty / missing problems
-# ---------------------------------------------------------------------------
-
-
-class TestEmptyProblemsSkip:
-    def test_empty_problems_list_skips_item(self):
+    def test_persist_row_not_called_when_result_is_none(self):
         adapter = _make_adapter()
 
-        with patch(PATCH_TARGET, return_value=json.dumps({"title": "T", "problems": []})):
-            result = run_automatic_pipeline([ITEM], [], adapter)
+        with patch(PATCH_TARGET, return_value=None):
+            run_automatic_pipeline([ITEM], [], adapter)
 
-        adapter.build_row.assert_not_called()
-        assert result == []
-
-    def test_missing_problems_key_skips_item(self):
-        adapter = _make_adapter()
-
-        with patch(PATCH_TARGET, return_value=json.dumps({"title": "T"})):
-            result = run_automatic_pipeline([ITEM], [], adapter)
-
-        adapter.build_row.assert_not_called()
-        assert result == []
+        adapter.persist_row.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +154,7 @@ class TestPerProblemFanOut:
     def test_one_build_row_call_per_problem(self):
         adapter = _make_adapter()
 
-        with patch(PATCH_TARGET, return_value=_good_insights(problems=_TWO_PROBLEMS)):
+        with patch(PATCH_TARGET, return_value=_make_extraction(problems=[_PROBLEM_ONE, _PROBLEM_TWO])):
             run_automatic_pipeline([ITEM], [], adapter)
 
         assert adapter.build_row.call_count == 2
@@ -196,7 +162,7 @@ class TestPerProblemFanOut:
     def test_one_persist_row_call_per_problem(self):
         adapter = _make_adapter()
 
-        with patch(PATCH_TARGET, return_value=_good_insights(problems=_TWO_PROBLEMS)):
+        with patch(PATCH_TARGET, return_value=_make_extraction(problems=[_PROBLEM_ONE, _PROBLEM_TWO])):
             run_automatic_pipeline([ITEM], [], adapter)
 
         assert adapter.persist_row.call_count == 2
@@ -204,7 +170,7 @@ class TestPerProblemFanOut:
     def test_return_value_contains_one_entry_per_problem(self):
         adapter = _make_adapter()
 
-        with patch(PATCH_TARGET, return_value=_good_insights(problems=_TWO_PROBLEMS)):
+        with patch(PATCH_TARGET, return_value=_make_extraction(problems=[_PROBLEM_ONE, _PROBLEM_TWO])):
             result = run_automatic_pipeline([ITEM], [], adapter)
 
         assert len(result) == 2
@@ -213,21 +179,23 @@ class TestPerProblemFanOut:
         built_row = {"built": "row"}
         adapter = _make_adapter(build_row=MagicMock(return_value=built_row))
 
-        with patch(PATCH_TARGET, return_value=_good_insights(problems=_ONE_PROBLEM)):
+        with patch(PATCH_TARGET, return_value=_make_extraction()):
             result = run_automatic_pipeline([ITEM], [], adapter)
 
         assert result == [[built_row]]
 
-    def test_build_row_receives_item_problem_today_and_data(self):
+    def test_build_row_receives_item_typed_problem_today_and_extraction(self):
         adapter = _make_adapter()
-        data_obj = {"title": "Vid", "problems": _ONE_PROBLEM}
+        extraction = _make_extraction(title="Vid")
 
-        with patch(PATCH_TARGET, return_value=json.dumps(data_obj)):
+        with patch(PATCH_TARGET, return_value=extraction):
             run_automatic_pipeline([ITEM], [], adapter)
 
         call_args = adapter.build_row.call_args
         item_arg, problem_arg, today_arg, data_arg = call_args.args
         assert item_arg is ITEM
-        assert problem_arg == _ONE_PROBLEM[0]
+        assert isinstance(problem_arg, YoutubeProblemItem)
+        assert problem_arg.problem == _PROBLEM_ONE.problem
         assert isinstance(today_arg, str)
-        assert data_arg == data_obj
+        assert isinstance(data_arg, LLMExtraction)
+        assert data_arg.title == "Vid"

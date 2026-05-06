@@ -14,8 +14,7 @@ from app.config.genres import YOUTUBE_GENRES
 from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
 from app.config.preprocessing import YOUTUBE_PREPROCESS
 from app.ingestion.youtubeComments import getMostPopularVideos, getYoutubeComments
-from app.llm.extractInsights import extractInsights
-from app.llm.validateOutput import validateOutput
+from app.llm.extractInsights import extract_insights
 from app.preprocessing.reviewPipeline import clean
 
 _GAMES_GENRE = next(g for g in YOUTUBE_GENRES if g.name == "Games")
@@ -36,21 +35,13 @@ def run_video(video):
         print("skip: no comments survived cleaning")
         return None
 
-    raw = extractInsights(cleaned, build_youtube_prompt(_GAMES_GENRE), youtubePromptOutput)
+    result = extract_insights(cleaned, build_youtube_prompt(_GAMES_GENRE), youtubePromptOutput)
 
-    try:
-        validated = validateOutput(raw)
-    except Exception as exc:
-        print(f"validateOutput failed: {exc!r}")
-        print("raw LLM output:")
-        print(raw)
+    if result is None:
+        print("skip: LLM returned no usable problems")
         return None
 
-    if hasattr(validated, "model_dump"):
-        payload = validated.model_dump()
-    else:
-        payload = dict(validated)
-
+    payload = result.model_dump()
     payload["thumbnail"] = video.get("Thumbnail")
 
     print(json.dumps(payload, indent=2, default=str))

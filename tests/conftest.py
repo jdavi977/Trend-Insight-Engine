@@ -1,7 +1,7 @@
-"""Shared fixtures for the pre-refactor safety net.
+"""Shared fixtures for the test suite.
 
 External services (YouTube Data API, iTunes RSS, OpenAI, Supabase) are mocked
-here. Pure modules (preprocessing, validateUrl, validateOutput, schemas) run
+at their call sites. Pure modules (preprocessing, validateUrl, schemas) run
 for real — mocking deterministic functions tests nothing.
 """
 from __future__ import annotations
