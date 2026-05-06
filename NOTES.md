@@ -9,3 +9,6 @@ Fix to-issues skill, taking out the need for triage for simple tasks (resulting 
 Learn for possible ways we can use abstraction to manage complexity and keep the project simple. 
 
 Regarding using abstraction to manage complexity, through improve-codebase-architecture I learned that removing abstraction (shallow modules) and turning them into deep modules such as collpasing several thin wrappers into a bigger module would help with simplicity by not introducing too many layers. One pattern to remember is that if understanding one concept requires the need to bounce between many small modules then those modules are shallow (interface is nearly as complex as the implementation). Keep structure simple, fewer pass-throughs, and have complexity concentrated where it belongs.
+
+Found out that Sonnet 4.6 is great for implementing code. 
+Use Opus 4.6 to create create specs, break down tasks (to-issues), and traige. But use Sonnet 4.6 for code implementation, as it uses up less tokens.
