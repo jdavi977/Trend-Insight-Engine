@@ -5,8 +5,6 @@ don't want to hit the live feed in tests.
 """
 from __future__ import annotations
 
-import pytest
-
 from app.ingestion.appStoreReviews import getAppId, getAppReviews
 
 
@@ -20,28 +18,24 @@ class TestGetAppId:
         assert getAppId(url) == "987654321?mt=8"
 
 
-def _rss_page(entries):
-    return {"feed": {"entry": entries}}
-
-
-def _entry(rating, title, content, votes):
+def _domain_row(rating, title, content, votes):
     return {
-        "im:rating": {"label": rating},
-        "title": {"label": title},
-        "content": {"label": content},
-        "im:voteCount": {"label": votes},
+        "rating": rating,
+        "title": title,
+        "content": content,
+        "vote_count": votes,
     }
 
 
 class TestGetAppReviews:
     def test_returns_normalized_reviews_from_single_page(self, mocker):
-        entries = [
-            _entry("5", "Great", "Love it", "10"),
-            _entry("1", "Bad", "Hate it", "2"),
+        rows = [
+            _domain_row("5", "Great", "Love it", "10"),
+            _domain_row("1", "Bad", "Hate it", "2"),
         ]
         mocker.patch(
-            "app.ingestion.appStoreReviews.fetch_reviews_page",
-            return_value=_rss_page(entries),
+            "app.ingestion.appStoreReviews.list_reviews",
+            return_value=rows,
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=1)
@@ -53,8 +47,8 @@ class TestGetAppReviews:
 
     def test_breaks_when_page_has_one_or_zero_entries(self, mocker):
         mocker.patch(
-            "app.ingestion.appStoreReviews.fetch_reviews_page",
-            return_value=_rss_page([_entry("5", "t", "c", "0")]),
+            "app.ingestion.appStoreReviews.list_reviews",
+            return_value=[],
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=5)
@@ -63,8 +57,8 @@ class TestGetAppReviews:
 
     def test_breaks_when_feed_is_empty(self, mocker):
         mocker.patch(
-            "app.ingestion.appStoreReviews.fetch_reviews_page",
-            return_value={"feed": {}},
+            "app.ingestion.appStoreReviews.list_reviews",
+            return_value=[],
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=5)
@@ -72,17 +66,17 @@ class TestGetAppReviews:
         assert result == []
 
     def test_iterates_multiple_pages(self, mocker):
-        entries_p1 = [
-            _entry("5", "T1", "C1", "1"),
-            _entry("4", "T2", "C2", "2"),
+        rows_p1 = [
+            _domain_row("5", "T1", "C1", "1"),
+            _domain_row("4", "T2", "C2", "2"),
         ]
-        entries_p2 = [
-            _entry("3", "T3", "C3", "3"),
-            _entry("2", "T4", "C4", "4"),
+        rows_p2 = [
+            _domain_row("3", "T3", "C3", "3"),
+            _domain_row("2", "T4", "C4", "4"),
         ]
         mocker.patch(
-            "app.ingestion.appStoreReviews.fetch_reviews_page",
-            side_effect=[_rss_page(entries_p1), _rss_page(entries_p2)],
+            "app.ingestion.appStoreReviews.list_reviews",
+            side_effect=[rows_p1, rows_p2],
         )
 
         result = getAppReviews("123", "mostRecent", max_pages=2)
@@ -91,8 +85,8 @@ class TestGetAppReviews:
 
     def test_passes_id_sort_and_page_to_client(self, mocker):
         fetch = mocker.patch(
-            "app.ingestion.appStoreReviews.fetch_reviews_page",
-            return_value={"feed": {}},
+            "app.ingestion.appStoreReviews.list_reviews",
+            return_value=[],
         )
 
         getAppReviews("999", "mostHelpful", max_pages=1)

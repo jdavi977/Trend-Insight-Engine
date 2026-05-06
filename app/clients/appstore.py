@@ -1,7 +1,7 @@
 import requests
 
 
-def fetch_reviews_page(app_id: str, sort_by: str, page: int, timeout: int = 10) -> dict:
+def _fetch_reviews_page(app_id: str, sort_by: str, page: int, timeout: int = 10) -> dict:
     url = (
         f"https://itunes.apple.com/rss/customerreviews/id={app_id}/"
         f"sortBy={sort_by}/page={page}/json"
@@ -10,6 +10,39 @@ def fetch_reviews_page(app_id: str, sort_by: str, page: int, timeout: int = 10) 
     if response.status_code != 200:
         print(f"Stopped at page: {page}, status: {response.status_code}")
     return response.json()
+
+
+def list_reviews(
+    app_id: str, sort_by: str, page: int, timeout: int = 10
+) -> list[dict]:
+    """Return App Store review rows from one iTunes RSS page.
+
+    Each row is ``{"rating", "title", "content", "vote_count"}`` (string values).
+    Returns ``[]`` when the feed is empty, missing, or has at most one entry
+    (iTunes RSS uses the last page as a single metadata row).
+    """
+    data = _fetch_reviews_page(app_id, sort_by, page, timeout=timeout)
+    feed = data.get("feed") or {}
+    if not feed:
+        return []
+
+    entry = feed.get("entry", [])
+    if isinstance(entry, dict):
+        entry = [entry]
+    if len(entry) <= 1:
+        return []
+
+    rows: list[dict] = []
+    for item in entry:
+        rows.append(
+            {
+                "rating": (item.get("im:rating") or {}).get("label"),
+                "title": (item.get("title") or {}).get("label"),
+                "content": (item.get("content") or {}).get("label"),
+                "vote_count": (item.get("im:voteCount") or {}).get("label"),
+            }
+        )
+    return rows
 
 
 def list_top_apps(genre_id: int, country: str = "us", limit: int = 5, timeout: int = 10) -> list[dict]:
