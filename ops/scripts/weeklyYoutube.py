@@ -2,30 +2,10 @@ import os
 import sys
 import traceback
 
-from app.config.keywords import (
-    GAME_KEYWORDS,
-    HOWTO_STYLE_KEYWORDS,
-    SCIENCE_TECH_KEYWORDS,
-)
-from app.config.prompts import (
-    youtubeGameSystemPrompt,
-    youtubeHowtoStyleSystemPrompt,
-    youtubeScienceTechSystemPrompt,
-)
-from app.config.constants import (
-    GAME_CATEGORY_ID,
-    HOW_TO_STYLE_ID,
-    SCIENCE_TECH_ID,
-)
+from app.config.genres import YOUTUBE_GENRES
+from app.config.promptTemplates import build_youtube_prompt
 from app.ingestion.youtubeComments import getMostPopularVideos
 from app.jobs.automaticYoutube import youtube_automatic
-
-# 5/category cap is enforced upstream by getMostPopularVideos (maxResults=5).
-CATEGORIES = [
-    ("Games", GAME_CATEGORY_ID, youtubeGameSystemPrompt, GAME_KEYWORDS),
-    ("Science & Tech", SCIENCE_TECH_ID, youtubeScienceTechSystemPrompt, SCIENCE_TECH_KEYWORDS),
-    ("How-to & Style", HOW_TO_STYLE_ID, youtubeHowtoStyleSystemPrompt, HOWTO_STYLE_KEYWORDS),
-]
 
 
 def run_category(category_id, prompt, keywords):
@@ -50,16 +30,16 @@ def write_summary(results):
 
 def main():
     results = []
-    for name, category_id, prompt, keywords in CATEGORIES:
-        print(f"=== Running category: {name} ({category_id}) ===")
+    for genre in YOUTUBE_GENRES:
+        print(f"=== Running category: {genre.name} ({genre.id}) ===")
         try:
-            video_count, row_count = run_category(category_id, prompt, keywords)
-            results.append((name, True, video_count, row_count, None))
-            print(f"=== {name}: ok ({video_count} videos, {row_count} rows) ===")
+            video_count, row_count = run_category(genre.id, build_youtube_prompt(genre), genre.keywords)
+            results.append((genre.name, True, video_count, row_count, None))
+            print(f"=== {genre.name}: ok ({video_count} videos, {row_count} rows) ===")
         except Exception as exc:
             traceback.print_exc()
-            results.append((name, False, 0, 0, repr(exc)))
-            print(f"=== {name}: FAILED ===")
+            results.append((genre.name, False, 0, 0, repr(exc)))
+            print(f"=== {genre.name}: FAILED ===")
 
     write_summary(results)
 
