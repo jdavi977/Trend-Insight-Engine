@@ -1,5 +1,7 @@
 from app.preprocessing.reviewClean import appReviewClean
 
+_TEST_KEYWORDS = ("crash", "bug", "crashes", "frequent")
+
 
 def test_appReviewClean_keeps_high_vote_keyword_matches_and_strips_emojis():
     raw = [
@@ -10,7 +12,7 @@ def test_appReviewClean_keeps_high_vote_keyword_matches_and_strips_emojis():
         {"vote_count": 50, "content": "the app crashes on launch"},
     ]
 
-    result = appReviewClean(raw)
+    result = appReviewClean(raw, keywords=_TEST_KEYWORDS)
 
     contents = [row["Content"] for row in result]
     assert "the app crashes on launch" in contents
@@ -25,8 +27,8 @@ def test_appReviewClean_drops_reviews_with_vote_count_at_or_below_five():
         {"vote_count": 5, "content": "app crashes constantly"},
         {"vote_count": 0, "content": "crash bug"},
     ]
-    assert appReviewClean(raw) == []
+    assert appReviewClean(raw, keywords=_TEST_KEYWORDS) == []
 
 
 def test_appReviewClean_returns_empty_for_empty_input():
-    assert appReviewClean([]) == []
+    assert appReviewClean([], keywords=()) == []

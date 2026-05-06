@@ -1,5 +1,4 @@
 import re
-from app.config.keywords import YOUTUBE_KEYWORDS
 from app.utilities.textCleaning import keyword_filtering, exclude_keywords, remove_emojis, remove_duplicates
 
 #TODO: stopword removal? remove urls?

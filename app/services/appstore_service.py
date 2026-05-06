@@ -12,6 +12,6 @@ def app_store_manual(link):
     mostRecent = getAppReviews(id, "mostRecent", APP_REVIEW_PAGES)
     mostHelpful = getAppReviews(id, "mostHelpful", APP_REVIEW_PAGES)
     all_items = mostRecent + mostHelpful
-    cleaned_data = appReviewClean(all_items)
+    cleaned_data = appReviewClean(all_items, default.keywords)
     insights = extractInsights(cleaned_data, build_appstore_prompt(default), appStorePromptOutput)
     return insights

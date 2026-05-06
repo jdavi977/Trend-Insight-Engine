@@ -1,8 +1,8 @@
 import re
-from app.config.keywords import APPLE_KEYWORDS
 from app.utilities.textCleaning import keyword_filtering, remove_emojis, remove_duplicates
 
-def appReviewClean(data):
+
+def appReviewClean(data, keywords: tuple | list = ()):
     cleaned = []
 
     for review in data:
@@ -15,8 +15,8 @@ def appReviewClean(data):
                 "Votes": vote_count,
                 "Content": review['content'].lower().strip(),
             })
-    
-    filtered = keyword_filtering(cleaned, APPLE_KEYWORDS)
+
+    filtered = keyword_filtering(cleaned, keywords)
 
     emoji_removed = remove_emojis(filtered)
 

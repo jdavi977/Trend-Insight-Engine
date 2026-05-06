@@ -10,13 +10,14 @@ import json
 import sys
 import traceback
 
-from app.config.constants import GAME_CATEGORY_ID
-from app.config.keywords import GAME_KEYWORDS
-from app.config.prompts import youtubeGameSystemPrompt, youtubePromptOutput
+from app.config.genres import YOUTUBE_GENRES
+from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
 from app.ingestion.youtubeComments import getMostPopularVideos, getYoutubeComments
 from app.llm.extractInsights import extractInsights
 from app.llm.validateOutput import validateOutput
 from app.preprocessing.commentClean import loadAndClean
+
+_GAMES_GENRE = next(g for g in YOUTUBE_GENRES if g.name == "Games")
 
 
 def run_video(video):
@@ -26,14 +27,14 @@ def run_video(video):
     relevance = getYoutubeComments(video["Id"], "relevance", video["Title"])
     print(f"fetched comments: {len(relevance)}")
 
-    cleaned = loadAndClean(relevance, GAME_KEYWORDS)
+    cleaned = loadAndClean(relevance, _GAMES_GENRE.keywords)
     print(f"after clean: {len(cleaned)}")
 
     if not cleaned:
         print("skip: no comments survived cleaning")
         return None
 
-    raw = extractInsights(cleaned, youtubeGameSystemPrompt, youtubePromptOutput)
+    raw = extractInsights(cleaned, build_youtube_prompt(_GAMES_GENRE), youtubePromptOutput)
 
     try:
         validated = validateOutput(raw)
@@ -55,8 +56,8 @@ def run_video(video):
 
 
 def main():
-    print(f"=== DRY RUN: Games category ({GAME_CATEGORY_ID}) ===")
-    videos = getMostPopularVideos(GAME_CATEGORY_ID)
+    print(f"=== DRY RUN: Games category ({_GAMES_GENRE.id}) ===")
+    videos = getMostPopularVideos(_GAMES_GENRE.id)
     print(f"videos fetched: {len(videos)}")
 
     ok = 0

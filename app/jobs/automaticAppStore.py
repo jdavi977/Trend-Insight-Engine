@@ -1,7 +1,7 @@
 from app.ingestion.appStoreReviews import getAppReviews
 from app.preprocessing.reviewClean import appReviewClean
 from app.llm.extractInsights import extractInsights
-from app.config.prompts import appStorePromptOutput
+from app.config.promptTemplates import appStorePromptOutput
 from app.config.constants import APP_REVIEW_PAGES, APPLE_COUNTRY
 from app.clients.supabase import (
     update_automatic_apple_trend,
@@ -30,7 +30,7 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywo
             continue
         else:
             reviews = getAppReviews(app['Id'], "mostrecent", APP_REVIEW_PAGES)
-            cleaned_data = appReviewClean(reviews)
+            cleaned_data = appReviewClean(reviews, keywords)
 
             if len(cleaned_data) <= 0:
                 print(f"Skipping key: {app_id} due to no problems found.")
