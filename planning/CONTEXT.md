@@ -22,7 +22,7 @@ URL Input → validateUrl.py → Ingestion (YouTube API / iTunes RSS)
 - No stage knows about the other — data flows top to bottom
 - Pydantic validates all input (API requests) and all output (LLM responses)
 - Supabase is ONLY used for automated/weekly data, not manual analysis
-- Config is centralized in app/config/ (keywords, prompts, patterns, IDs)
+- Config is centralized in app/config/ via the genre registry (genres.py + constants.py); adding a new category requires editing only those two files
 
 ## Current Priorities
 - Using youtube api thumbnail url to display an image for weekly insights
