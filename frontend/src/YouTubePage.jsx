@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RetrievedContextAccordion from "./components/RetrievedContextAccordion";
 
 function YouTubePage() {
   const [url, setUrl] = useState("");
@@ -21,7 +22,7 @@ function YouTubePage() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/analyze/youtube", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE}/analyze/youtube`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -49,7 +50,7 @@ function YouTubePage() {
       const payload = {
         data: analytics,
       };
-      const response = await fetch("http://localhost:8000/data/send", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE}/data/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -68,6 +69,7 @@ function YouTubePage() {
   };
 
   const problems = analytics?.problems || analytics?.["problems:"] || [];
+  const retrievedContext = analytics?.retrieved_context || [];
 
   return (
     <div className="app-shell">
@@ -126,6 +128,8 @@ function YouTubePage() {
           <p className="empty-state">No problems found in the comments.</p>
         </div>
       )}
+
+      {analytics && <RetrievedContextAccordion items={retrievedContext} />}
     </div>
   );
 }
