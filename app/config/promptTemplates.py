@@ -115,7 +115,10 @@ def build_appstore_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsi
 
 
 appStorePromptOutput = """
+- Return ONLY valid JSON in this format:
+
 {
+  "source": "app_store",
   "problems": [
     {
       "problem": "string",
