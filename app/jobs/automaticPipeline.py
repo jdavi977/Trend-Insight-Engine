@@ -37,7 +37,7 @@ class SourceAdapter:
     bump_date: Callable[[Any, str], None]
     ingest: Callable[[dict], list]
     clean: Callable[[list, list[str]], list]
-    system_prompt: str
+    system_prompt: str | Callable[[dict], str]
     output_prompt: str
     build_row: Callable[[dict, dict, str, dict], dict]
     persist_row: Callable[[list[dict]], None]
@@ -79,7 +79,8 @@ def run_automatic_pipeline(
             print(f"Skipping key: {item_id} due to empty cleaned data.")
             continue
 
-        result = extract_insights(cleaned, adapter.system_prompt, adapter.output_prompt)
+        prompt = adapter.system_prompt(item) if callable(adapter.system_prompt) else adapter.system_prompt
+        result = extract_insights(cleaned, prompt, adapter.output_prompt)
 
         if result is None:
             print(f"Skipping key: {item_id} due to no problems found.")

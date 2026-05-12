@@ -1,15 +1,16 @@
 from app.jobs.automaticPipeline import run_automatic_pipeline, SourceAdapter
+from app.config.genres import GenreConfig
 from app.ingestion.appStoreReviews import getAppReviews
 from app.preprocessing.reviewPipeline import appstore_rows_for_llm
-from app.config.promptTemplates import appStorePromptOutput
+from app.config.promptTemplates import build_appstore_prompt, appStorePromptOutput
 from app.config.constants import APP_REVIEW_PAGES, APPLE_COUNTRY
 from app.clients.supabase import (
     update_automatic_apple_trend,
     update_automatic_app_date,
     check_appstore_id,
 )
-from app.config.secrets import RAG_WRITE_ENABLED
-from app.rag.rag import embed_and_store
+from app.config.secrets import RAG_WRITE_ENABLED, RAG_READ_ENABLED
+from app.rag.rag import embed_and_store, retrieve_similar
 
 
 def _appstore_clean(raw: list, keywords: list) -> list:
@@ -22,14 +23,18 @@ def _appstore_post_extract(result, item):
         embed_and_store(result, source_url)
 
 
-def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywords: list) -> list[dict]:
+def appstore_automatic(apps: list[dict], genre_id: int, genre: GenreConfig, keywords: list) -> list[dict]:
+    def _build_prompt(item: dict) -> str:
+        prior = retrieve_similar(item["Title"]) if RAG_READ_ENABLED and item.get("Title") else []
+        return build_appstore_prompt(genre, prior)
+
     adapter = SourceAdapter(
         item_id=lambda item: int(item["Id"]),
         check_existing=check_appstore_id,
         bump_date=update_automatic_app_date,
         ingest=lambda item: getAppReviews(item["Id"], "mostrecent", APP_REVIEW_PAGES),
         clean=_appstore_clean,
-        system_prompt=genre_prompt,
+        system_prompt=_build_prompt,
         output_prompt=appStorePromptOutput,
         build_row=lambda item, problem, today, data: {
             "app_id": int(item["Id"]),

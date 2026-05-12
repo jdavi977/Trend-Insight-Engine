@@ -3,14 +3,13 @@ import sys
 import traceback
 
 from app.config.genres import YOUTUBE_GENRES
-from app.config.promptTemplates import build_youtube_prompt
 from app.ingestion.youtubeComments import getMostPopularVideos
 from app.jobs.automaticYoutube import youtube_automatic
 
 
-def run_category(category_id, prompt, keywords):
+def run_category(category_id, genre, keywords):
     videos = getMostPopularVideos(category_id)
-    rows = youtube_automatic(videos, category_id, prompt, keywords) or []
+    rows = youtube_automatic(videos, category_id, genre, keywords) or []
     return len(videos), len(rows)
 
 
@@ -33,7 +32,7 @@ def main():
     for genre in YOUTUBE_GENRES:
         print(f"=== Running category: {genre.name} ({genre.id}) ===")
         try:
-            video_count, row_count = run_category(genre.id, build_youtube_prompt(genre), genre.keywords)
+            video_count, row_count = run_category(genre.id, genre, genre.keywords)
             results.append((genre.name, True, video_count, row_count, None))
             print(f"=== {genre.name}: ok ({video_count} videos, {row_count} rows) ===")
         except Exception as exc:

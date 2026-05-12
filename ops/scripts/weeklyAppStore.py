@@ -3,15 +3,14 @@ import sys
 import traceback
 
 from app.config.genres import APPSTORE_GENRES
-from app.config.promptTemplates import build_appstore_prompt
 from app.config.constants import APPLE_COUNTRY, APPLE_TOP_APPS_LIMIT
 from app.clients.appstore import list_top_apps
 from app.jobs.automaticAppStore import appstore_automatic
 
 
-def run_genre(genre_id, prompt, keywords):
+def run_genre(genre_id, genre, keywords):
     apps = list_top_apps(genre_id, country=APPLE_COUNTRY, limit=APPLE_TOP_APPS_LIMIT)
-    rows = appstore_automatic(apps, genre_id, prompt, keywords) or []
+    rows = appstore_automatic(apps, genre_id, genre, keywords) or []
     return len(apps), len(rows)
 
 
@@ -34,7 +33,7 @@ def main():
     for genre in APPSTORE_GENRES:
         print(f"=== Running genre: {genre.name} ({genre.id}) ===")
         try:
-            app_count, row_count = run_genre(genre.id, build_appstore_prompt(genre), genre.keywords)
+            app_count, row_count = run_genre(genre.id, genre, genre.keywords)
             results.append((genre.name, True, app_count, row_count, None))
             print(f"=== {genre.name}: ok ({app_count} apps, {row_count} rows) ===")
         except Exception as exc:
