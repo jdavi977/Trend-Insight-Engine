@@ -13,3 +13,11 @@ Regarding using abstraction to manage complexity, through improve-codebase-archi
 Found out that Sonnet 4.6 is great for implementing code. 
 Use Opus 4.6 to create create specs, break down tasks (to-issues), and traige. But use Sonnet 4.6 for code implementation, as it uses up less tokens.
 Can even use auto model in cursor when tasks are simple and well documented (saves the most tokens)
+
+May 11: When implementing core features, ask these questions:
+1. - Why are we building this feature? (anchor the feature to business value)
+2. - What are we actually building? (functional requirements)
+3. - How well should it work? (non-functional requirements)
+4. - How do the systems tal to each other? (integration complexity)
+5. - What data is involved? (data decisions are one of the heardest to reverse)
+6. - Should this feature be built? (is this solving a user need or just a engineering problem?)

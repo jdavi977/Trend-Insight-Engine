@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RetrievedContextAccordion from "./components/RetrievedContextAccordion";
 
 function AppStorePage() {
   const [url, setUrl] = useState("");
@@ -21,7 +22,7 @@ function AppStorePage() {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/analyze/appStore", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE}/analyze/appStore`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -49,7 +50,7 @@ function AppStorePage() {
       const payload = {
         data: analytics,
       };
-      const response = await fetch("http://localhost:8000/data/send", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE}/data/send`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -68,6 +69,7 @@ function AppStorePage() {
   };
 
   const problems = analytics?.problems || analytics?.["problems:"] || [];
+  const retrievedContext = analytics?.retrieved_context || [];
 
   return (
     <div className="app-shell">
@@ -132,6 +134,8 @@ function AppStorePage() {
           <p className="empty-state">No problems found in the reviews.</p>
         </div>
       )}
+
+      {analytics && <RetrievedContextAccordion items={retrievedContext} />}
     </div>
   );
 }

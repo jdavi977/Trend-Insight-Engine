@@ -15,3 +15,6 @@ OPENAI_KEY = keyChecker("OPENAI_KEY")
 
 SUPABASE_URL = keyChecker("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = keyChecker("SUPABASE_SERVICE_ROLE_KEY")
+
+RAG_WRITE_ENABLED: bool = os.getenv("RAG_WRITE_ENABLED", "false").lower() == "true"
+RAG_READ_ENABLED: bool = os.getenv("RAG_READ_ENABLED", "false").lower() == "true"
