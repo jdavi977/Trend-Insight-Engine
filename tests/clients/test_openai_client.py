@@ -14,8 +14,14 @@ class TestCreateResponse:
     def test_returns_model_output_text(self, mocker):
         from app.clients import openai as openai_client
 
+        fake_message = MagicMock()
+        fake_message.content = "hello world"
+        fake_choice = MagicMock()
+        fake_choice.message = fake_message
+        fake_completion = MagicMock()
+        fake_completion.choices = [fake_choice]
         fake_client = MagicMock()
-        fake_client.responses.create.return_value = MagicMock(output_text="hello world")
+        fake_client.chat.completions.create.return_value = fake_completion
         mocker.patch.object(openai_client, "get_openai_client", return_value=fake_client)
 
         result = openai_client.create_response(
@@ -30,7 +36,9 @@ class TestCreateResponse:
         from app.clients import openai as openai_client
 
         fake_client = MagicMock()
-        fake_client.responses.create.return_value = MagicMock(output_text="x")
+        fake_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="x"))]
+        )
         mocker.patch.object(openai_client, "get_openai_client", return_value=fake_client)
 
         openai_client.create_response(
@@ -39,10 +47,10 @@ class TestCreateResponse:
             assistant_prompt="ASSIST",
         )
 
-        kwargs = fake_client.responses.create.call_args.kwargs
-        roles = [m["role"] for m in kwargs["input"]]
-        assert roles == ["developer", "user", "assistant"]
-        contents = [m["content"] for m in kwargs["input"]]
+        kwargs = fake_client.chat.completions.create.call_args.kwargs
+        roles = [m["role"] for m in kwargs["messages"]]
+        assert roles == ["system", "user", "assistant"]
+        contents = [m["content"] for m in kwargs["messages"]]
         assert contents[0] == "SYS"
         assert "USER" in contents[1]
         assert contents[2] == "ASSIST"
@@ -51,12 +59,14 @@ class TestCreateResponse:
         from app.clients import openai as openai_client
 
         fake_client = MagicMock()
-        fake_client.responses.create.return_value = MagicMock(output_text="x")
+        fake_client.chat.completions.create.return_value = MagicMock(
+            choices=[MagicMock(message=MagicMock(content="x"))]
+        )
         mocker.patch.object(openai_client, "get_openai_client", return_value=fake_client)
 
         openai_client.create_response(system_prompt="s", user_data="d", assistant_prompt="a")
 
-        kwargs = fake_client.responses.create.call_args.kwargs
+        kwargs = fake_client.chat.completions.create.call_args.kwargs
         assert kwargs["model"] == "gpt-5-mini"
 
 

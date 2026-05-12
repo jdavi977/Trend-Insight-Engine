@@ -34,7 +34,8 @@ def extract_insights(
     if not parsed.get("problems"):
         return None
 
-    item_type = YoutubeProblemItem if source == "youtube" else AppStoreProblemItem
+    detected_source = parsed.get("source", source)
+    item_type = YoutubeProblemItem if detected_source == "youtube" else AppStoreProblemItem
 
     run_id = time.strftime("%Y%m%d_%H%M%S")
     base_dir = Path("data") / "invalid_data" / run_id

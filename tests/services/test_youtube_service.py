@@ -81,6 +81,7 @@ def test_youtube_manual_returns_none_when_extract_insights_returns_none(mocker):
 class TestYoutubeManualRAGWritePath:
     def _setup(self, mocker):
         mocker.patch("app.services.youtube_service.getVideoId", return_value="dQw4w9WgXcQ")
+        mocker.patch("app.services.youtube_service.get_video_title", return_value="Test Video")
         mocker.patch(
             "app.services.youtube_service.getYoutubeComments",
             side_effect=[[{"Likes": 10, "Text": "good video"}], []],
@@ -120,6 +121,7 @@ class TestYoutubeManualRAGWritePath:
 
     def test_embed_and_store_not_called_when_extract_returns_none(self, mocker):
         mocker.patch("app.services.youtube_service.getVideoId", return_value="abc")
+        mocker.patch("app.services.youtube_service.get_video_title", return_value="Test Video")
         mocker.patch("app.services.youtube_service.getYoutubeComments", side_effect=[[], []])
         mocker.patch("app.services.youtube_service.extract_insights", return_value=None)
         mocker.patch.object(_svc_mod, "RAG_WRITE_ENABLED", True)
