@@ -4,6 +4,8 @@ from app.preprocessing.reviewPipeline import clean
 from app.llm.extractInsights import extract_insights
 from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
 from app.config.genres import get_default_genre
+from app.config.secrets import RAG_WRITE_ENABLED
+from app.rag.rag import embed_and_store
 
 
 def youtube_manual(link: str):
@@ -14,4 +16,7 @@ def youtube_manual(link: str):
     all_items = relevance + time
     rows = [{**item, "Content": item["Text"]} for item in all_items]
     cleaned_data = clean(rows, **YOUTUBE_PREPROCESS)
-    return extract_insights(cleaned_data, build_youtube_prompt(default), youtubePromptOutput)
+    result = extract_insights(cleaned_data, build_youtube_prompt(default), youtubePromptOutput)
+    if RAG_WRITE_ENABLED and result is not None:
+        embed_and_store(result, link)
+    return result

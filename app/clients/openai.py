@@ -3,6 +3,7 @@ from openai import OpenAI
 from app.config.secrets import OPENAI_KEY
 
 _MODEL = "gpt-5-mini"
+_EMBEDDING_MODEL = "text-embedding-3-small"
 _client: OpenAI | None = None
 
 
@@ -24,3 +25,9 @@ def create_response(system_prompt: str, user_data: str, assistant_prompt: str) -
         ],
     )
     return response.output_text
+
+
+def create_embedding(text: str) -> list[float]:
+    client = get_openai_client()
+    response = client.embeddings.create(model=_EMBEDDING_MODEL, input=text)
+    return response.data[0].embedding

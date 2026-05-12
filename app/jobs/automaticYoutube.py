@@ -8,11 +8,19 @@ from app.clients.supabase import (
     update_automatic_trend,
     update_automatic_video_date,
 )
+from app.config.secrets import RAG_WRITE_ENABLED
+from app.rag.rag import embed_and_store
 
 
 def _youtube_clean(raw: list, _keywords: list) -> list:
     rows = [{**item, "Content": item["Text"]} for item in raw]
     return clean(rows, **YOUTUBE_PREPROCESS)
+
+
+def _youtube_post_extract(result, item):
+    if RAG_WRITE_ENABLED:
+        source_url = f"https://www.youtube.com/watch?v={item['Id']}"
+        embed_and_store(result, source_url)
 
 
 def youtube_automatic(ids: list[dict], category: int, categoryPrompt: str, keywords: list) -> list[dict]:
@@ -39,5 +47,6 @@ def youtube_automatic(ids: list[dict], category: int, categoryPrompt: str, keywo
             },
         },
         persist_row=update_automatic_trend,
+        post_extract=_youtube_post_extract,
     )
     return run_automatic_pipeline(ids, keywords, adapter)

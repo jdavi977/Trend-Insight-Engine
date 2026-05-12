@@ -1,6 +1,17 @@
 import requests
 
 
+def get_app_name(app_id: str, timeout: int = 10) -> str:
+    url = f"https://itunes.apple.com/lookup?id={app_id}"
+    response = requests.get(url, timeout=timeout)
+    if response.status_code != 200:
+        return app_id
+    results = response.json().get("results", [])
+    if not results:
+        return app_id
+    return results[0].get("trackName", app_id)
+
+
 def _fetch_reviews_page(app_id: str, sort_by: str, page: int, timeout: int = 10) -> dict:
     url = (
         f"https://itunes.apple.com/rss/customerreviews/id={app_id}/"

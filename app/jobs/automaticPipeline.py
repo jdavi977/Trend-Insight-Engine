@@ -28,6 +28,8 @@ class SourceAdapter:
     output_prompt : per-source output-shape reminder string
     build_row     : (item, problem, today, data) -> single trend-data dict
     persist_row   : rows_list -> write to the appropriate Supabase table
+    post_extract  : optional (extraction, item) -> None; called after a
+                    successful extract_insights before per-problem fan-out
     """
 
     item_id: Callable[[dict], Any]
@@ -39,6 +41,7 @@ class SourceAdapter:
     output_prompt: str
     build_row: Callable[[dict, dict, str, dict], dict]
     persist_row: Callable[[list[dict]], None]
+    post_extract: Callable[[Any, dict], None] | None = None
 
 
 def run_automatic_pipeline(
@@ -81,6 +84,9 @@ def run_automatic_pipeline(
         if result is None:
             print(f"Skipping key: {item_id} due to no problems found.")
             continue
+
+        if adapter.post_extract is not None:
+            adapter.post_extract(result, item)
 
         for problem in result.problems:
             row = [adapter.build_row(item, problem, today, result)]

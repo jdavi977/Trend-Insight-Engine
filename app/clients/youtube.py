@@ -80,3 +80,15 @@ def getVideoCategories():
         })
     service.close()
     return list
+
+
+def get_video_title(video_id: str) -> str:
+    service = _service()
+    try:
+        response = service.videos().list(part="snippet", id=video_id).execute()
+        items = response.get("items", [])
+        if not items:
+            return video_id
+        return items[0]["snippet"]["title"]
+    finally:
+        service.close()

@@ -4,6 +4,8 @@ from app.config.constants import APP_REVIEW_PAGES
 from app.config.promptTemplates import build_appstore_prompt, appStorePromptOutput
 from app.config.genres import get_default_genre
 from app.llm.extractInsights import extract_insights
+from app.config.secrets import RAG_WRITE_ENABLED
+from app.rag.rag import embed_and_store
 
 
 def app_store_manual(link):
@@ -13,4 +15,7 @@ def app_store_manual(link):
     mostHelpful = getAppReviews(id, "mostHelpful", APP_REVIEW_PAGES)
     all_items = mostRecent + mostHelpful
     cleaned_data = appstore_rows_for_llm(all_items, default.keywords)
-    return extract_insights(cleaned_data, build_appstore_prompt(default), appStorePromptOutput)
+    result = extract_insights(cleaned_data, build_appstore_prompt(default), appStorePromptOutput)
+    if RAG_WRITE_ENABLED and result is not None:
+        embed_and_store(result, link)
+    return result

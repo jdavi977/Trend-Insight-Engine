@@ -60,6 +60,50 @@ class TestCreateResponse:
         assert kwargs["model"] == "gpt-5-mini"
 
 
+class TestCreateEmbedding:
+    def test_returns_embedding_as_list_of_floats(self, mocker):
+        from app.clients import openai as openai_client
+
+        fake_embedding = [0.1, 0.2, 0.3]
+        fake_client = MagicMock()
+        fake_client.embeddings.create.return_value = MagicMock(
+            data=[MagicMock(embedding=fake_embedding)]
+        )
+        mocker.patch.object(openai_client, "get_openai_client", return_value=fake_client)
+
+        result = openai_client.create_embedding("some text")
+
+        assert result == fake_embedding
+
+    def test_uses_correct_embedding_model(self, mocker):
+        from app.clients import openai as openai_client
+
+        fake_client = MagicMock()
+        fake_client.embeddings.create.return_value = MagicMock(
+            data=[MagicMock(embedding=[0.0])]
+        )
+        mocker.patch.object(openai_client, "get_openai_client", return_value=fake_client)
+
+        openai_client.create_embedding("text")
+
+        kwargs = fake_client.embeddings.create.call_args.kwargs
+        assert kwargs["model"] == "text-embedding-3-small"
+
+    def test_passes_text_as_input(self, mocker):
+        from app.clients import openai as openai_client
+
+        fake_client = MagicMock()
+        fake_client.embeddings.create.return_value = MagicMock(
+            data=[MagicMock(embedding=[0.0])]
+        )
+        mocker.patch.object(openai_client, "get_openai_client", return_value=fake_client)
+
+        openai_client.create_embedding("battery dies fast")
+
+        kwargs = fake_client.embeddings.create.call_args.kwargs
+        assert kwargs["input"] == "battery dies fast"
+
+
 class TestGetOpenAIClient:
     def test_returns_a_client_instance(self, mocker):
         from app.clients import openai as openai_client

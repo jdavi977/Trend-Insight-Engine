@@ -8,10 +8,18 @@ from app.clients.supabase import (
     update_automatic_app_date,
     check_appstore_id,
 )
+from app.config.secrets import RAG_WRITE_ENABLED
+from app.rag.rag import embed_and_store
 
 
 def _appstore_clean(raw: list, keywords: list) -> list:
     return appstore_rows_for_llm(raw, keywords)
+
+
+def _appstore_post_extract(result, item):
+    if RAG_WRITE_ENABLED:
+        source_url = f"https://apps.apple.com/app/id{item['Id']}"
+        embed_and_store(result, source_url)
 
 
 def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywords: list) -> list[dict]:
@@ -40,5 +48,6 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre_prompt: str, keywo
             },
         },
         persist_row=update_automatic_apple_trend,
+        post_extract=_appstore_post_extract,
     )
     return run_automatic_pipeline(apps, keywords, adapter)

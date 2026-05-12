@@ -1,4 +1,5 @@
 """Orchestration tests for the YouTube manual service."""
+import app.services.youtube_service as _svc_mod
 from app.services.youtube_service import youtube_manual
 from app.schemas.llm import LLMExtraction, YoutubeProblemItem
 
@@ -71,3 +72,55 @@ def test_youtube_manual_returns_none_when_extract_insights_returns_none(mocker):
     result = youtube_manual("https://www.youtube.com/watch?v=abc123")
 
     assert result is None
+
+
+class TestYoutubeManualRAGWritePath:
+    def _setup(self, mocker):
+        mocker.patch("app.services.youtube_service.getVideoId", return_value="dQw4w9WgXcQ")
+        mocker.patch(
+            "app.services.youtube_service.getYoutubeComments",
+            side_effect=[[{"Likes": 10, "Text": "good video"}], []],
+        )
+        mocker.patch("app.services.youtube_service.extract_insights", return_value=_LLM_RESULT)
+
+    def test_embed_and_store_called_when_write_enabled(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_WRITE_ENABLED", True)
+        embed = mocker.patch("app.services.youtube_service.embed_and_store")
+
+        youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        embed.assert_called_once()
+        call_args = embed.call_args
+        assert call_args.args[0] is _LLM_RESULT
+        assert "dQw4w9WgXcQ" in call_args.args[1]
+
+    def test_embed_and_store_not_called_when_write_disabled(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_WRITE_ENABLED", False)
+        embed = mocker.patch("app.services.youtube_service.embed_and_store")
+
+        youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        embed.assert_not_called()
+
+    def test_retrieve_similar_not_called(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_WRITE_ENABLED", False)
+        mocker.patch("app.services.youtube_service.embed_and_store")
+        retrieve = mocker.patch("app.rag.rag.retrieve_similar")
+
+        youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        retrieve.assert_not_called()
+
+    def test_embed_and_store_not_called_when_extract_returns_none(self, mocker):
+        mocker.patch("app.services.youtube_service.getVideoId", return_value="abc")
+        mocker.patch("app.services.youtube_service.getYoutubeComments", side_effect=[[], []])
+        mocker.patch("app.services.youtube_service.extract_insights", return_value=None)
+        mocker.patch.object(_svc_mod, "RAG_WRITE_ENABLED", True)
+        embed = mocker.patch("app.services.youtube_service.embed_and_store")
+
+        youtube_manual("https://www.youtube.com/watch?v=abc")
+
+        embed.assert_not_called()
