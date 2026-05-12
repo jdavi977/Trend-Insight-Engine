@@ -27,15 +27,7 @@ def _backfill_youtube() -> int:
             extraction = LLMExtraction(
                 source="youtube",
                 title=row.get("title"),
-                problems=[
-                    YoutubeProblemItem(
-                        problem=problems_data["problem"],
-                        type=problems_data["type"],
-                        total_likes=problems_data.get("total_likes", 0),
-                        severity=problems_data["severity"],
-                        frequency=problems_data["frequency"],
-                    )
-                ],
+                problems=[YoutubeProblemItem(**problems_data)],
             )
             source_url = f"https://www.youtube.com/watch?v={row['key']}"
             embed_and_store(extraction, source_url)
@@ -54,16 +46,7 @@ def _backfill_appstore() -> int:
             extraction = LLMExtraction(
                 source="app_store",
                 title=row.get("app_title"),
-                problems=[
-                    AppStoreProblemItem(
-                        problem=problems_data["problem"],
-                        type=problems_data["type"],
-                        average_rating=problems_data.get("average_rating", 0.0),
-                        severity=problems_data["severity"],
-                        frequency=problems_data["frequency"],
-                        example_reviews=problems_data.get("example_reviews", [""]),
-                    )
-                ],
+                problems=[AppStoreProblemItem(**problems_data)],
             )
             source_url = f"https://apps.apple.com/app/id{row['app_id']}"
             embed_and_store(extraction, source_url)
