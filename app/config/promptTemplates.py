@@ -23,6 +23,17 @@ live here so the new wiring is self-contained.
 from __future__ import annotations
 
 from app.config.genres import GenreConfig
+from app.schemas.rag import RetrievedInsight
+
+
+def _prior_insights_block(prior_insights: list[RetrievedInsight]) -> str:
+    if not prior_insights:
+        return ""
+    lines = "\n".join(
+        f'- [{i.type}] severity:{i.severity} freq:{i.frequency} — "{i.problem}"'
+        for i in prior_insights
+    )
+    return f"\n\nPreviously observed problems (use as context, do not repeat verbatim):\n{lines}"
 
 # ---------------------------------------------------------------------------
 # YouTube
@@ -44,14 +55,15 @@ Your task:
 """
 
 
-def build_youtube_prompt(genre: GenreConfig) -> str:
+def build_youtube_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsight] = []) -> str:
     """Render a full YouTube system prompt for *genre*."""
-    return YOUTUBE_PROMPT_TEMPLATE.format(
+    base = YOUTUBE_PROMPT_TEMPLATE.format(
         intro=genre.intro,
         themes=genre.theme_bullets,
         exclusion=genre.exclusion_hint,
         severity_anchor=genre.severity_hint,
     )
+    return base + _prior_insights_block(prior_insights)
 
 
 youtubePromptOutput = """
@@ -91,14 +103,15 @@ Your task:
 """
 
 
-def build_appstore_prompt(genre: GenreConfig) -> str:
+def build_appstore_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsight] = []) -> str:
     """Render a full App Store system prompt for *genre*."""
-    return APPSTORE_PROMPT_TEMPLATE.format(
+    base = APPSTORE_PROMPT_TEMPLATE.format(
         intro=genre.intro,
         themes=genre.theme_bullets,
         exclusion=genre.exclusion_hint,
         severity_anchor=genre.severity_hint,
     )
+    return base + _prior_insights_block(prior_insights)
 
 
 appStorePromptOutput = """
