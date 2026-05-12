@@ -14,9 +14,11 @@ def youtube_manual(link: str):
     default = get_default_genre("youtube")
     id = getVideoId(link)
 
+    title = None
     prior_insights = []
-    if RAG_READ_ENABLED:
+    if RAG_READ_ENABLED or RAG_WRITE_ENABLED:
         title = get_video_title(id)
+    if RAG_READ_ENABLED and title:
         prior_insights = retrieve_similar(query=title)
 
     relevance = getYoutubeComments(id, "relevance")
@@ -24,8 +26,9 @@ def youtube_manual(link: str):
     all_items = relevance + time
     rows = [{**item, "Content": item["Text"]} for item in all_items]
     cleaned_data = clean(rows, **YOUTUBE_PREPROCESS)
-    result = extract_insights(cleaned_data, build_youtube_prompt(default, prior_insights), youtubePromptOutput)
+    result = extract_insights(cleaned_data, build_youtube_prompt(default, prior_insights), youtubePromptOutput, source="youtube")
     if RAG_WRITE_ENABLED and result is not None:
+        result.title = title
         embed_and_store(result, link)
     if result is None:
         return None

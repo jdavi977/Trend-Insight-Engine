@@ -16,15 +16,15 @@ def get_openai_client() -> OpenAI:
 
 def create_response(system_prompt: str, user_data: str, assistant_prompt: str) -> str:
     client = get_openai_client()
-    response = client.responses.create(
+    response = client.chat.completions.create(
         model=_MODEL,
-        input=[
-            {"role": "developer", "content": system_prompt},
+        messages=[
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"\n    Here is the data found {user_data}\n    "},
             {"role": "assistant", "content": assistant_prompt},
         ],
     )
-    return response.output_text
+    return response.choices[0].message.content
 
 
 def create_embedding(text: str) -> list[float]:
