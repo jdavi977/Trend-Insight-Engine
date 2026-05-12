@@ -14,9 +14,11 @@ def app_store_manual(link):
     default = get_default_genre("appstore")
     id = getAppId(link)
 
+    app_name = None
     prior_insights = []
-    if RAG_READ_ENABLED:
+    if RAG_READ_ENABLED or RAG_WRITE_ENABLED:
         app_name = get_app_name(id)
+    if RAG_READ_ENABLED and app_name:
         prior_insights = retrieve_similar(query=app_name)
 
     mostRecent = getAppReviews(id, "mostRecent", MANUAL_REVIEW_PAGES)
@@ -25,6 +27,7 @@ def app_store_manual(link):
     cleaned_data = appstore_rows_for_llm(all_items, default.keywords)
     result = extract_insights(cleaned_data, build_appstore_prompt(default, prior_insights), appStorePromptOutput, source="app_store")
     if RAG_WRITE_ENABLED and result is not None:
+        result.title = app_name
         embed_and_store(result, link)
     if result is None:
         return None
