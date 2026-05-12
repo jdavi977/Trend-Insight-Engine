@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import appstore, errors, home, internal, youtube
+from app.api import appstore, errors, home, insights, internal, youtube
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -31,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(appstore.router)
     app.include_router(home.router)
     app.include_router(internal.router)
+    app.include_router(insights.router)
 
     errors.register_exception_handlers(app)
 

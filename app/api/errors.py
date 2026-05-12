@@ -5,8 +5,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 def validation_exception_handler(request: Request, exception: RequestValidationError):
-    message = exception.detail if exception.detail else "Validation error in request body."
-    return JSONResponse(status_code=exception.status_code, content={"detail": message})
+    return JSONResponse(status_code=422, content={"detail": exception.errors()})
 
 
 def general_http_exception_handler(request: Request, exception: StarletteHTTPException):
