@@ -10,3 +10,4 @@ node_modules/
 .agents/
 
 ops/deploy/
+data/invalid_data/*
