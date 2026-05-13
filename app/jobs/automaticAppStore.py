@@ -35,6 +35,7 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre: GenreConfig, keyw
         clean=_appstore_clean,
         system_prompt=_build_prompt,
         output_prompt=appStorePromptOutput,
+        source="appstore",
         build_row=lambda item, problem, today, data: {
             "app_id": int(item["Id"]),
             "app_title": item["Title"],

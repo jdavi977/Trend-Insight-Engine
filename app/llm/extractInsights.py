@@ -12,7 +12,7 @@ def extract_insights(
     data: list,
     system_prompt: str,
     output_prompt: str,
-    source: str = "youtube",
+    source: str,
 ) -> LLMExtraction | None:
     """
     Returns a validated LLMExtraction, or None if the model returned
@@ -34,8 +34,7 @@ def extract_insights(
     if not parsed.get("problems"):
         return None
 
-    detected_source = parsed.get("source", source)
-    item_type = YoutubeProblemItem if detected_source == "youtube" else AppStoreProblemItem
+    item_type = YoutubeProblemItem if source == "youtube" else AppStoreProblemItem
 
     run_id = time.strftime("%Y%m%d_%H%M%S")
     base_dir = Path("data") / "invalid_data" / run_id

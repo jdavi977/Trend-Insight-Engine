@@ -80,7 +80,7 @@ def run_automatic_pipeline(
             continue
 
         prompt = adapter.system_prompt(item) if callable(adapter.system_prompt) else adapter.system_prompt
-        result = extract_insights(cleaned, prompt, adapter.output_prompt)
+        result = extract_insights(cleaned, prompt, adapter.output_prompt, adapter.source)
 
         if result is None:
             print(f"Skipping key: {item_id} due to no problems found.")

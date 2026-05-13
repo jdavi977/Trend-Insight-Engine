@@ -36,6 +36,7 @@ def youtube_automatic(ids: list[dict], category: int, genre: GenreConfig, keywor
         clean=_youtube_clean,
         system_prompt=_build_prompt,
         output_prompt=youtubePromptOutput,
+        source="youtube",
         build_row=lambda item, problem, today, data: {
             "key": item["Id"],
             "thumbnail": item["Thumbnail"],

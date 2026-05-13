@@ -26,3 +26,10 @@ May 12: Issues -
 1. inconsistent severity and frequency, need to use actual metrics instead of relying on LLM
 2. similar problems are being flagged as new instead of known
 3. duplicate issues are being stored in insights database
+4. incomplete rag, currently have generate -> retrieve -> store. rag is retrieve -> augment -> generate. need to implement pre-extraction prompt injection 
+5. vector similaries are not as accurate as expected.
+
+May 13: Issues - 
+1. automatic app/youtube pipelines dont write to supabase insights table
+2. automatic app does not provide much information, usually has no issues. (compare with manual)
+

@@ -32,4 +32,6 @@ jobs:
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RAG_WRITE_ENABLED: ${{ secrets.RAG_WRITE_ENABLED }}
+          RAG_READ_ENABLED: ${{ secrets.RAG_READ_ENABLED }}
         run: python -m ops.scripts.weeklyAppStore
