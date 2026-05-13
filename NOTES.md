@@ -21,3 +21,8 @@ May 11: When implementing core features, ask these questions:
 4. - How do the systems tal to each other? (integration complexity)
 5. - What data is involved? (data decisions are one of the heardest to reverse)
 6. - Should this feature be built? (is this solving a user need or just a engineering problem?)
+
+May 12: Issues -
+1. inconsistent severity and frequency, need to use actual metrics instead of relying on LLM
+2. similar problems are being flagged as new instead of known
+3. duplicate issues are being stored in insights database
