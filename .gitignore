@@ -11,3 +11,5 @@ node_modules/
 
 ops/deploy/
 data/invalid_data/*
+
+trend-v2/*

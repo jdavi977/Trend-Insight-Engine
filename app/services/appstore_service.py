@@ -6,7 +6,7 @@ from app.config.genres import get_default_genre
 from app.llm.extractInsights import extract_insights
 from app.config.secrets import RAG_WRITE_ENABLED, RAG_READ_ENABLED
 from app.rag.rag import embed_and_store, retrieve_similar
-from app.clients.appstore import get_app_name
+from app.clients.appstore import get_app_metadata
 from app.schemas.api import AppStoreAnalysisResponse
 
 
@@ -14,10 +14,9 @@ def app_store_manual(link):
     default = get_default_genre("appstore")
     id = getAppId(link)
 
-    app_name = None
+    meta = get_app_metadata(id)
+    app_name = meta["name"]
     prior_insights = []
-    if RAG_READ_ENABLED or RAG_WRITE_ENABLED:
-        app_name = get_app_name(id)
     if RAG_READ_ENABLED and app_name:
         prior_insights = retrieve_similar(query=app_name)
 
@@ -31,4 +30,13 @@ def app_store_manual(link):
         embed_and_store(result, link)
     if result is None:
         return None
-    return AppStoreAnalysisResponse(**result.model_dump(), retrieved_context=prior_insights)
+    return AppStoreAnalysisResponse(
+        **result.model_dump(),
+        retrieved_context=prior_insights,
+        thumbnail=meta.get("thumbnail"),
+        seller=meta.get("seller"),
+        genre=meta.get("genre"),
+        age_rating=meta.get("age_rating"),
+        average_rating=meta.get("average_rating"),
+        rating_count=meta.get("rating_count"),
+    )

@@ -1,15 +1,29 @@
 import requests
 
 
-def get_app_name(app_id: str, timeout: int = 10) -> str:
+def get_app_metadata(app_id: str, timeout: int = 10) -> dict:
+    """Return ``{"name": str, "thumbnail": str | None}`` for an App Store app."""
     url = f"https://itunes.apple.com/lookup?id={app_id}"
     response = requests.get(url, timeout=timeout)
     if response.status_code != 200:
-        return app_id
+        return {"name": app_id, "thumbnail": None}
     results = response.json().get("results", [])
     if not results:
-        return app_id
-    return results[0].get("trackName", app_id)
+        return {"name": app_id, "thumbnail": None}
+    item = results[0]
+    return {
+        "name": item.get("trackName", app_id),
+        "thumbnail": item.get("artworkUrl100"),
+        "seller": item.get("sellerName"),
+        "genre": item.get("primaryGenreName"),
+        "age_rating": item.get("contentAdvisoryRating"),
+        "average_rating": item.get("averageUserRating"),
+        "rating_count": item.get("userRatingCount"),
+    }
+
+
+def get_app_name(app_id: str, timeout: int = 10) -> str:
+    return get_app_metadata(app_id, timeout)["name"]
 
 
 def _fetch_reviews_page(app_id: str, sort_by: str, page: int, timeout: int = 10) -> dict:
