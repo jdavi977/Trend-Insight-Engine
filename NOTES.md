@@ -30,6 +30,5 @@ May 12: Issues -
 5. vector similaries are not as accurate as expected.
 
 May 13: Issues - 
-1. automatic app/youtube pipelines dont write to supabase insights table
+1. automatic app/youtube pipelines dont write to supabase insights table (fixed)
 2. automatic app does not provide much information, usually has no issues. (compare with manual)
-

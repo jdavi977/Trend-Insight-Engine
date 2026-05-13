@@ -39,6 +39,7 @@ class SourceAdapter:
     clean: Callable[[list, list[str]], list]
     system_prompt: str | Callable[[dict], str]
     output_prompt: str
+    source: str
     build_row: Callable[[dict, dict, str, dict], dict]
     persist_row: Callable[[list[dict]], None]
     post_extract: Callable[[Any, dict], None] | None = None
