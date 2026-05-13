@@ -1,4 +1,5 @@
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from app.config.secrets import keyChecker
 
@@ -26,9 +27,14 @@ def list_comment_threads(video_id, order, max_results):
             order=order,
             textFormat="plainText",
         )
-        raw_items = request.execute()["items"]
+        try:
+            response = request.execute()
+        except HttpError as e:
+            if e.status_code in (403, 404):
+                return []
+            raise
         rows = []
-        for item in raw_items:
+        for item in response.get("items", []):
             snippet = item["snippet"]["topLevelComment"]["snippet"]
             rows.append({
                 "Likes": snippet["likeCount"],
@@ -82,13 +88,56 @@ def getVideoCategories():
     return list
 
 
-def get_video_title(video_id: str) -> str:
+def _parse_duration(iso: str) -> str:
+    """Convert ISO 8601 duration (PT14M22S) to mm:ss / h:mm:ss."""
+    import re
+    m = re.fullmatch(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", iso or "")
+    if not m:
+        return ""
+    h, mn, s = (int(x or 0) for x in m.groups())
+    if h:
+        return f"{h}:{mn:02d}:{s:02d}"
+    return f"{mn}:{s:02d}"
+
+
+def get_video_metadata(video_id: str) -> dict:
     service = _service()
     try:
-        response = service.videos().list(part="snippet", id=video_id).execute()
-        items = response.get("items", [])
+        resp = service.videos().list(
+            part="snippet,statistics,contentDetails",
+            id=video_id,
+        ).execute()
+        items = resp.get("items", [])
         if not items:
-            return video_id
-        return items[0]["snippet"]["title"]
+            return {"title": video_id}
+        item = items[0]
+        snippet = item["snippet"]
+        stats = item.get("statistics", {})
+        duration_raw = item.get("contentDetails", {}).get("duration", "")
+
+        channel_id = snippet.get("channelId")
+        subscribers = None
+        if channel_id:
+            ch_resp = service.channels().list(
+                part="statistics", id=channel_id
+            ).execute()
+            ch_items = ch_resp.get("items", [])
+            if ch_items:
+                sub_raw = ch_items[0].get("statistics", {}).get("subscriberCount")
+                if sub_raw is not None:
+                    subscribers = int(sub_raw)
+
+        likes = stats.get("likeCount")
+        views = stats.get("viewCount")
+        return {
+            "title": snippet.get("title", video_id),
+            "channel_name": snippet.get("channelTitle"),
+            "published_at": snippet.get("publishedAt"),
+            "view_count": int(views) if views is not None else None,
+            "like_count": int(likes) if likes is not None else None,
+            "comment_count": int(stats["commentCount"]) if "commentCount" in stats else None,
+            "subscriber_count": subscribers,
+            "duration": _parse_duration(duration_raw),
+        }
     finally:
         service.close()

@@ -6,7 +6,7 @@ from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
 from app.config.genres import get_default_genre
 from app.config.secrets import RAG_WRITE_ENABLED, RAG_READ_ENABLED
 from app.rag.rag import embed_and_store, retrieve_similar
-from app.clients.youtube import get_video_title
+from app.clients.youtube import get_video_metadata
 from app.schemas.api import YoutubeAnalysisResponse
 
 
@@ -14,12 +14,12 @@ def youtube_manual(link: str):
     default = get_default_genre("youtube")
     id = getVideoId(link)
 
-    title = None
+    meta = {}
     prior_insights = []
     if RAG_READ_ENABLED or RAG_WRITE_ENABLED:
-        title = get_video_title(id)
-    if RAG_READ_ENABLED and title:
-        prior_insights = retrieve_similar(query=title)
+        meta = get_video_metadata(id)
+    if RAG_READ_ENABLED and meta.get("title"):
+        prior_insights = retrieve_similar(query=meta["title"])
 
     relevance = getYoutubeComments(id, "relevance")
     time = getYoutubeComments(id, "time")
@@ -28,8 +28,18 @@ def youtube_manual(link: str):
     cleaned_data = clean(rows, **YOUTUBE_PREPROCESS)
     result = extract_insights(cleaned_data, build_youtube_prompt(default, prior_insights), youtubePromptOutput, source="youtube")
     if RAG_WRITE_ENABLED and result is not None:
-        result.title = title
+        result.title = meta.get("title")
         embed_and_store(result, link)
     if result is None:
         return None
-    return YoutubeAnalysisResponse(**result.model_dump(), retrieved_context=prior_insights)
+    return YoutubeAnalysisResponse(
+        **result.model_dump(),
+        retrieved_context=prior_insights,
+        channel_name=meta.get("channel_name"),
+        published_at=meta.get("published_at"),
+        view_count=meta.get("view_count"),
+        like_count=meta.get("like_count"),
+        comment_count=meta.get("comment_count"),
+        subscriber_count=meta.get("subscriber_count"),
+        duration=meta.get("duration"),
+    )
