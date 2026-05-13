@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Union
 
+from app.schemas.rag import RetrievedInsight
+
 
 class YoutubeProblemItem(BaseModel):
     problem: str = Field(min_length=5)
@@ -8,6 +10,8 @@ class YoutubeProblemItem(BaseModel):
     total_likes: int = Field(ge=0)
     severity: int = Field(ge=1, le=5)
     frequency: int = Field(ge=1, le=5)
+    similar_insights: List[RetrievedInsight] = []
+    recurrence: Literal["new", "known"] = "new"
 
 
 class AppStoreProblemItem(BaseModel):
@@ -17,6 +21,8 @@ class AppStoreProblemItem(BaseModel):
     severity: int = Field(ge=1, le=5)
     frequency: int = Field(ge=1, le=5)
     example_reviews: List[str] = Field(min_length=1)
+    similar_insights: List[RetrievedInsight] = []
+    recurrence: Literal["new", "known"] = "new"
 
 
 ProblemItem = Union[YoutubeProblemItem, AppStoreProblemItem]

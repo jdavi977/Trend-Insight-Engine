@@ -3,7 +3,6 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.schemas.llm import LLMExtraction
-from app.schemas.rag import RetrievedInsight
 
 
 class YoutubeAnalyzeRequest(BaseModel):
@@ -19,7 +18,6 @@ class DataSave(BaseModel):
 
 
 class YoutubeAnalysisResponse(LLMExtraction):
-    retrieved_context: list[RetrievedInsight] = []
     channel_name: Optional[str] = None
     published_at: Optional[str] = None
     view_count: Optional[int] = None
@@ -30,7 +28,6 @@ class YoutubeAnalysisResponse(LLMExtraction):
 
 
 class AppStoreAnalysisResponse(LLMExtraction):
-    retrieved_context: list[RetrievedInsight] = []
     thumbnail: Optional[str] = None
     seller: Optional[str] = None
     genre: Optional[str] = None

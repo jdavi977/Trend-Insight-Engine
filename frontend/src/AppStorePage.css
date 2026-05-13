@@ -359,6 +359,10 @@
   align-items: center;
 }
 
+.insight-card .retrieved-accordion--nested {
+  margin-top: 0;
+}
+
 /* Severity bar */
 .sev-bar { display: inline-flex; gap: 2px; vertical-align: middle; }
 

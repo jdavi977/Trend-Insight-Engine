@@ -21,19 +21,22 @@ function ScaleDots({ value, max = 5 }) {
   );
 }
 
-function RetrievedContextAccordion({ items }) {
+function RetrievedContextAccordion({ items, title = "Similar past insights", className = "" }) {
   const [open, setOpen] = useState(false);
 
   if (!items || items.length === 0) return null;
 
+  const rootClass = ["retrieved-accordion", className].filter(Boolean).join(" ");
+
   return (
-    <div className="retrieved-accordion">
+    <div className={rootClass}>
       <button
+        type="button"
         className="retrieved-accordion__toggle"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <span>Retrieved context</span>
+        <span>{title}</span>
         <span className="retrieved-accordion__meta">
           <span className="pill">{items.length}</span>
           <span className={`retrieved-accordion__chevron ${open ? "retrieved-accordion__chevron--open" : ""}`}>

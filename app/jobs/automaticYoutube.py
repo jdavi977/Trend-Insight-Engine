@@ -9,8 +9,8 @@ from app.clients.supabase import (
     update_automatic_trend,
     update_automatic_video_date,
 )
-from app.config.secrets import RAG_WRITE_ENABLED, RAG_READ_ENABLED
-from app.rag.rag import embed_and_store, retrieve_similar
+from app.config.secrets import RAG_WRITE_ENABLED
+from app.rag.rag import embed_and_store
 
 
 def _youtube_clean(raw: list, _keywords: list) -> list:
@@ -26,8 +26,7 @@ def _youtube_post_extract(result, item):
 
 def youtube_automatic(ids: list[dict], category: int, genre: GenreConfig, keywords: list) -> list[dict]:
     def _build_prompt(item: dict) -> str:
-        prior = retrieve_similar(item["Title"]) if RAG_READ_ENABLED and item.get("Title") else []
-        return build_youtube_prompt(genre, prior)
+        return build_youtube_prompt(genre)
 
     adapter = SourceAdapter(
         item_id=lambda item: item["Id"],
