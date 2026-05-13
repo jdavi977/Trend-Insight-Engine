@@ -55,3 +55,18 @@ def get_weekly_apple_ids(genre_id: int):
     date = getSundayDate()
     response = supabase_client.table("automatic_apple_table").select().eq("date", date).eq("genre_id", genre_id).execute()
     return response.data
+
+
+def get_all_ids(category: int):
+    response = supabase_client.table("automatic_table").select().eq("category", category).execute()
+    return response.data
+
+
+def get_all_apple_ids(genre_id: int):
+    response = supabase_client.table("automatic_apple_table").select().eq("genre_id", genre_id).execute()
+    return response.data
+
+
+def get_insights_count() -> int:
+    response = supabase_client.table("insights").select("id", count="exact").limit(0).execute()
+    return response.count or 0
