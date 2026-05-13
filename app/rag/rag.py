@@ -47,6 +47,20 @@ def embed_and_store(extraction: LLMExtraction, source_url: str) -> None:
         logger.exception("embed_and_store failed; skipping RAG write")
 
 
+def enrich_problems(extraction: LLMExtraction) -> LLMExtraction:
+    """Attach similar past insights and recurrence tag to each problem in-place."""
+    for problem in extraction.problems:
+        try:
+            matches = retrieve_similar(problem.problem)
+            problem.similar_insights = matches
+            problem.recurrence = "known" if matches else "new"
+        except Exception:
+            logger.exception("enrich_problems failed for problem %r; skipping", problem.problem)
+            problem.similar_insights = []
+            problem.recurrence = "new"
+    return extraction
+
+
 def retrieve_similar(query: str, k: int = RAG_TOP_K) -> list[RetrievedInsight]:
     """Return up to k past insights with similarity >= RAG_MIN_SIMILARITY."""
     embedding = create_embedding(query)

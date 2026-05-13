@@ -9,8 +9,8 @@ from app.clients.supabase import (
     update_automatic_app_date,
     check_appstore_id,
 )
-from app.config.secrets import RAG_WRITE_ENABLED, RAG_READ_ENABLED
-from app.rag.rag import embed_and_store, retrieve_similar
+from app.config.secrets import RAG_WRITE_ENABLED
+from app.rag.rag import embed_and_store
 
 
 def _appstore_clean(raw: list, keywords: list) -> list:
@@ -25,8 +25,7 @@ def _appstore_post_extract(result, item):
 
 def appstore_automatic(apps: list[dict], genre_id: int, genre: GenreConfig, keywords: list) -> list[dict]:
     def _build_prompt(item: dict) -> str:
-        prior = retrieve_similar(item["Title"]) if RAG_READ_ENABLED and item.get("Title") else []
-        return build_appstore_prompt(genre, prior)
+        return build_appstore_prompt(genre)
 
     adapter = SourceAdapter(
         item_id=lambda item: int(item["Id"]),
