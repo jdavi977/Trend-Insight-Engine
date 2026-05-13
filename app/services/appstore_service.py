@@ -24,10 +24,10 @@ def app_store_manual(link):
     result = extract_insights(cleaned_data, build_appstore_prompt(default, []), appStorePromptOutput, source="app_store")
     if result is None:
         return None
+    result.title = app_name
     if RAG_READ_ENABLED:
         enrich_problems(result)
     if RAG_WRITE_ENABLED:
-        result.title = app_name
         embed_and_store(result, link)
     return AppStoreAnalysisResponse(
         **result.model_dump(),

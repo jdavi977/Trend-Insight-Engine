@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from app.clients.openai import create_embedding
 from app.clients.pgvector import query_similar, upsert_embedding
-from app.config.constants import RAG_MIN_SIMILARITY, RAG_TOP_K
+from app.config.constants import RAG_DEDUP_SIMILARITY, RAG_MIN_SIMILARITY, RAG_TOP_K
 from app.schemas.llm import LLMExtraction
 from app.schemas.rag import RetrievedInsight
 
@@ -31,6 +31,13 @@ def embed_and_store(extraction: LLMExtraction, source_url: str) -> None:
             text = f"{problem.problem}\n(type: {problem.type})"
             embedding = create_embedding(text)
             row_id = _make_id(source_url, problem.problem)
+            dedup_rows = query_similar(embedding, RAG_DEDUP_SIMILARITY, k=RAG_TOP_K)
+            same_source = next(
+                (r for r in dedup_rows if r["source_url"] == source_url and r.get("title") == extraction.title),
+                None,
+            )
+            if same_source:
+                row_id = _make_id(same_source["source_url"], same_source["problem"])
             upsert_embedding(
                 id=row_id,
                 embedding=embedding,

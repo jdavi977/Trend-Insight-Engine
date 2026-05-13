@@ -26,10 +26,10 @@ def youtube_manual(link: str):
     result = extract_insights(cleaned_data, build_youtube_prompt(default, []), youtubePromptOutput, source="youtube")
     if result is None:
         return None
+    result.title = meta.get("title")
     if RAG_READ_ENABLED:
         enrich_problems(result)
     if RAG_WRITE_ENABLED:
-        result.title = meta.get("title")
         embed_and_store(result, link)
     return YoutubeAnalysisResponse(
         **result.model_dump(),
