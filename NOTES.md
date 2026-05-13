@@ -32,3 +32,4 @@ May 12: Issues -
 May 13: Issues - 
 1. automatic app/youtube pipelines dont write to supabase insights table (fixed)
 2. automatic app does not provide much information, usually has no issues. (compare with manual)
+3. automatic pipeline does not update keys if already found in the database (fixed)

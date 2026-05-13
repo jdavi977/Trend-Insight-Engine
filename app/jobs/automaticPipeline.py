@@ -21,7 +21,7 @@ class SourceAdapter:
     ------
     item_id       : item -> identifier used for DB look-up and logging
     check_existing: id -> existing rows (truthy) or empty/falsy if absent
-    bump_date     : (id, today) -> update the persisted date; no return value
+    delete_existing: id -> delete all rows for that id; no return value
     ingest        : item -> list of raw comments / reviews
     clean         : (raw_list, keywords) -> list of cleaned text strings
     system_prompt : per-source / per-category system prompt string
@@ -34,7 +34,7 @@ class SourceAdapter:
 
     item_id: Callable[[dict], Any]
     check_existing: Callable[[Any], list | dict | None]
-    bump_date: Callable[[Any, str], None]
+    delete_existing: Callable[[Any], None]
     ingest: Callable[[dict], list]
     clean: Callable[[list, list[str]], list]
     system_prompt: str | Callable[[dict], str]
@@ -53,7 +53,7 @@ def run_automatic_pipeline(
     """Run the full automatic pipeline for a list of items.
 
     For each item:
-    - Short-circuit if already persisted: bump its date and carry it forward.
+    - If already persisted: delete stale rows, then re-ingest for fresh data.
     - Ingest → clean; skip if cleaned data is empty.
     - Extract insights via LLM; skip if None (no usable problems).
     - Fan out one row per problem: build → persist → collect.
@@ -68,10 +68,8 @@ def run_automatic_pipeline(
         existing = adapter.check_existing(item_id)
 
         if existing:
-            print(f"Skipped key: {item_id}. Found in Database.")
-            adapter.bump_date(item_id, today)
-            page_data.append(existing)
-            continue
+            print(f"Overwriting key: {item_id}. Deleting stale data and re-ingesting.")
+            adapter.delete_existing(item_id)
 
         raw = adapter.ingest(item)
         cleaned = adapter.clean(raw, keywords)

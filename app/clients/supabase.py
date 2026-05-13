@@ -57,6 +57,14 @@ def get_weekly_apple_ids(genre_id: int):
     return response.data
 
 
+def delete_youtube_id(key: str) -> None:
+    supabase_client.table("automatic_table").delete().eq("key", key).execute()
+
+
+def delete_appstore_id(app_id: int) -> None:
+    supabase_client.table("automatic_apple_table").delete().eq("app_id", app_id).execute()
+
+
 def get_all_ids(category: int):
     response = supabase_client.table("automatic_table").select().eq("category", category).execute()
     return response.data

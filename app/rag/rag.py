@@ -30,14 +30,23 @@ def embed_and_store(extraction: LLMExtraction, source_url: str) -> None:
         for problem in extraction.problems:
             text = f"{problem.problem}\n(type: {problem.type})"
             embedding = create_embedding(text)
+            # Default: treat this as a new row; ID is derived from URL + problem text.
             row_id = _make_id(source_url, problem.problem)
+            # Search for semantically similar rows above the dedup threshold.
             dedup_rows = query_similar(embedding, RAG_DEDUP_SIMILARITY, k=RAG_TOP_K)
+            # A match from the same source URL and title means we've seen this problem
+            # before — reuse its ID so the upsert overwrites (UPDATE) instead of inserting.
             same_source = next(
                 (r for r in dedup_rows if r["source_url"] == source_url and r.get("title") == extraction.title),
                 None,
             )
             if same_source:
+                # Existing record found: upsert will UPDATE the row in place.
                 row_id = _make_id(same_source["source_url"], same_source["problem"])
+                logger.debug("RAG update: existing problem matched for %r (id=%s)", problem.problem, row_id)
+            else:
+                # No match: upsert will INSERT a new row.
+                logger.debug("RAG insert: new problem stored for %r (id=%s)", problem.problem, row_id)
             upsert_embedding(
                 id=row_id,
                 embedding=embedding,

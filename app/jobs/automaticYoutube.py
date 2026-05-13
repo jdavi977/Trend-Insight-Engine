@@ -6,8 +6,8 @@ from app.preprocessing.reviewPipeline import clean
 from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
 from app.clients.supabase import (
     check_youtube_id,
+    delete_youtube_id,
     update_automatic_trend,
-    update_automatic_video_date,
 )
 from app.config.secrets import RAG_WRITE_ENABLED
 from app.rag.rag import embed_and_store
@@ -31,7 +31,7 @@ def youtube_automatic(ids: list[dict], category: int, genre: GenreConfig, keywor
     adapter = SourceAdapter(
         item_id=lambda item: item["Id"],
         check_existing=check_youtube_id,
-        bump_date=update_automatic_video_date,
+        delete_existing=delete_youtube_id,
         ingest=lambda item: getYoutubeComments(item["Id"], "relevance", item["Title"]),
         clean=_youtube_clean,
         system_prompt=_build_prompt,

@@ -6,8 +6,8 @@ from app.config.promptTemplates import build_appstore_prompt, appStorePromptOutp
 from app.config.constants import APP_REVIEW_PAGES, APPLE_COUNTRY
 from app.clients.supabase import (
     update_automatic_apple_trend,
-    update_automatic_app_date,
     check_appstore_id,
+    delete_appstore_id,
 )
 from app.config.secrets import RAG_WRITE_ENABLED
 from app.rag.rag import embed_and_store
@@ -30,7 +30,7 @@ def appstore_automatic(apps: list[dict], genre_id: int, genre: GenreConfig, keyw
     adapter = SourceAdapter(
         item_id=lambda item: int(item["Id"]),
         check_existing=check_appstore_id,
-        bump_date=update_automatic_app_date,
+        delete_existing=delete_appstore_id,
         ingest=lambda item: getAppReviews(item["Id"], "mostrecent", APP_REVIEW_PAGES),
         clean=_appstore_clean,
         system_prompt=_build_prompt,
