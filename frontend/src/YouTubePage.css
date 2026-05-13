@@ -494,6 +494,21 @@
 .yt-table tr:last-child td { border-bottom: 0; }
 .yt-table tr:hover td { background: var(--surface); }
 
+.yt-table-similar-cell {
+  min-width: 180px;
+  max-width: 280px;
+  vertical-align: top;
+}
+
+.yt-similar-empty {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.yt-insight .retrieved-accordion--nested {
+  margin-top: 0;
+}
+
 /* ── JSON view ── */
 .yt-json-wrap {
   background: var(--surface);

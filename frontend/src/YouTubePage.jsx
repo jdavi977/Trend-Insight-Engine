@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RecurrenceTag from "./components/RecurrenceTag";
 import RetrievedContextAccordion from "./components/RetrievedContextAccordion";
 import "./YouTubePage.css";
 
@@ -39,13 +40,22 @@ function TypeTag({ type }) {
   );
 }
 
+function problemSimilarInsights(p) {
+  const raw = p?.similar_insights;
+  return Array.isArray(raw) ? raw : [];
+}
+
 function InsightCard({ problem }) {
+  const similar = problemSimilarInsights(problem);
+
   return (
     <article className="yt-insight">
       <div className="yt-insight-head">
         <TypeTag type={problem.type} />
+        <RecurrenceTag recurrence={problem.recurrence} />
       </div>
       <p className="yt-insight-title">{problem.problem}</p>
+      <RetrievedContextAccordion items={similar} className="retrieved-accordion--nested" />
       <div className="yt-insight-foot">
         <span>{problem.total_likes.toLocaleString()} likes · freq {problem.frequency}/5</span>
         <span className="yt-insight-foot-right">
@@ -68,23 +78,36 @@ function InsightTable({ problems }) {
             <th>Likes</th>
             <th>Severity</th>
             <th>Frequency</th>
+            <th>Recurrence</th>
+            <th>Similar</th>
           </tr>
         </thead>
         <tbody>
-          {problems.map((p, i) => (
-            <tr key={i}>
-              <td><TypeTag type={p.type} /></td>
-              <td>{p.problem}</td>
-              <td>{p.total_likes.toLocaleString()}</td>
-              <td>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                  <SeverityBar value={p.severity} />
-                  <span style={{ fontSize: 12, color: "var(--ink-2)" }}>{p.severity}/5</span>
-                </span>
-              </td>
-              <td>{p.frequency}/5</td>
-            </tr>
-          ))}
+          {problems.map((p, i) => {
+            const similar = problemSimilarInsights(p);
+            return (
+              <tr key={i}>
+                <td><TypeTag type={p.type} /></td>
+                <td>{p.problem}</td>
+                <td>{p.total_likes.toLocaleString()}</td>
+                <td>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    <SeverityBar value={p.severity} />
+                    <span style={{ fontSize: 12, color: "var(--ink-2)" }}>{p.severity}/5</span>
+                  </span>
+                </td>
+                <td>{p.frequency}/5</td>
+                <td><RecurrenceTag recurrence={p.recurrence} /></td>
+                <td className="yt-table-similar-cell">
+                  {similar.length === 0 ? (
+                    <span className="yt-similar-empty">—</span>
+                  ) : (
+                    <RetrievedContextAccordion items={similar} className="retrieved-accordion--nested" />
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -157,7 +180,6 @@ function YouTubePage() {
   };
 
   const problems = analytics?.problems || analytics?.["problems:"] || [];
-  const retrievedContext = analytics?.retrieved_context || [];
 
   return (
     <div className="yt-page">
@@ -312,9 +334,6 @@ function YouTubePage() {
 
             </>
           )}
-
-          {/* RAG context */}
-          <RetrievedContextAccordion items={retrievedContext} />
         </>
       )}
 

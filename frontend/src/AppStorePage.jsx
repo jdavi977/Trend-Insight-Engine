@@ -1,4 +1,5 @@
 import { useState } from "react";
+import RecurrenceTag from "./components/RecurrenceTag";
 import RetrievedContextAccordion from "./components/RetrievedContextAccordion";
 import "./AppStorePage.css";
 
@@ -32,6 +33,11 @@ function tagClass(type = "") {
   return TYPE_TAG[type.toLowerCase()] ?? "tag-blue";
 }
 
+function problemSimilarInsights(p) {
+  const raw = p?.similar_insights;
+  return Array.isArray(raw) ? raw : [];
+}
+
 function sevClass(sev) {
   if (sev >= 4) return "high";
   if (sev >= 3) return "med";
@@ -61,6 +67,7 @@ function InsightCard({ problem }) {
   const tc = tagClass(problem.type);
   const quote = problem.example_reviews?.[0] ?? "";
   const quote2 = problem.example_reviews?.[1] ?? "";
+  const similar = problemSimilarInsights(problem);
 
   return (
     <article className="insight-card">
@@ -69,6 +76,7 @@ function InsightCard({ problem }) {
           <span className="dot" />
           {problem.type}
         </span>
+        <RecurrenceTag recurrence={problem.recurrence} />
         {problem.average_rating != null && (
           <span className="review-avg">
             <StarIcon />
@@ -85,6 +93,8 @@ function InsightCard({ problem }) {
           {quote2 && <cite>{quote2}</cite>}
         </blockquote>
       )}
+
+      <RetrievedContextAccordion items={similar} className="retrieved-accordion--nested" />
 
       <div className="insight-foot">
         <span>
@@ -142,7 +152,6 @@ function AppStorePage() {
   };
 
   const problems = analytics?.problems ?? analytics?.["problems:"] ?? [];
-  const retrievedContext = analytics?.retrieved_context ?? [];
   const thumbnail = analytics?.thumbnail ?? null;
 
   const types = ["All", ...new Set(problems.map((p) => p.type).filter(Boolean))];
@@ -306,9 +315,6 @@ function AppStorePage() {
               <pre>{JSON.stringify(problems, null, 2)}</pre>
             </div>
           )}
-
-          {/* Retrieved context */}
-          <RetrievedContextAccordion items={retrievedContext} />
         </>
       )}
 
