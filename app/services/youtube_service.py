@@ -14,9 +14,7 @@ def youtube_manual(link: str):
     default = get_default_genre("youtube")
     id = getVideoId(link)
 
-    meta = {}
-    if RAG_READ_ENABLED or RAG_WRITE_ENABLED:
-        meta = get_video_metadata(id)
+    meta = get_video_metadata(id)
 
     relevance = getYoutubeComments(id, "relevance")
     time = getYoutubeComments(id, "time")

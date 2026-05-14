@@ -1,5 +1,6 @@
 from app.ingestion.appStoreReviews import getAppId, getAppReviews
-from app.preprocessing.reviewPipeline import appstore_rows_for_llm
+from app.preprocessing.reviewPipeline import clean
+from app.config.preprocessing import APPSTORE_PREPROCESS
 from app.config.constants import MANUAL_REVIEW_PAGES
 from app.config.promptTemplates import build_appstore_prompt, appStorePromptOutput
 from app.config.genres import get_default_genre
@@ -17,10 +18,11 @@ def app_store_manual(link):
     meta = get_app_metadata(id)
     app_name = meta["name"]
 
-    mostRecent = getAppReviews(id, "mostRecent", MANUAL_REVIEW_PAGES)
-    mostHelpful = getAppReviews(id, "mostHelpful", MANUAL_REVIEW_PAGES)
+    mostRecent = getAppReviews(id, "mostRecent", MANUAL_REVIEW_PAGES, title=app_name)
+    mostHelpful = getAppReviews(id, "mostHelpful", MANUAL_REVIEW_PAGES, title=app_name)
     all_items = mostRecent + mostHelpful
-    cleaned_data = appstore_rows_for_llm(all_items, default.keywords)
+    rows = [{**item, "Content": item["content"]} for item in all_items]
+    cleaned_data = clean(rows, **APPSTORE_PREPROCESS)
     result = extract_insights(cleaned_data, build_appstore_prompt(default, []), appStorePromptOutput, source="app_store")
     if result is None:
         return None

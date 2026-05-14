@@ -19,6 +19,7 @@ def _youtube_clean(raw: list, _keywords: list) -> list:
 
 
 def _youtube_post_extract(result, item):
+    result.title = item.get("Title")
     if RAG_WRITE_ENABLED:
         source_url = f"https://www.youtube.com/watch?v={item['Id']}"
         embed_and_store(result, source_url)

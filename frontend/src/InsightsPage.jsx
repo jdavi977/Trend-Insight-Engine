@@ -41,7 +41,7 @@ function getAllAppEntries(appStoreData) {
   const byAppId = Object.groupBy(all, (item) => item.app_id);
   return Object.entries(byAppId).map(([app_id, items]) => ({
     app_id,
-    app_title: items[0].app_title,
+    title: items[0].title,
     genre_id: items[0].genre_id,
     genreLabel: GENRE_LABELS[items[0].genre_id] || "Other",
     thumbnail: items[0].thumbnail,
@@ -311,14 +311,14 @@ function InsightsPage() {
                         <img
                           className="insights-detail-thumb"
                           src={entry.thumbnail}
-                          alt={entry.app_title}
+                          alt={entry.title}
                           loading="lazy"
                         />
                       ) : (
                         <div className="insights-detail-thumb insights-detail-thumb--empty" />
                       )}
                     </a>
-                    <h3 className="insights-list-title">{entry.app_title}</h3>
+                    <h3 className="insights-list-title">{entry.title}</h3>
                     <p className="insights-list-date">{entry.genreLabel}</p>
                   </div>
                   <article className="insights-row-detail">

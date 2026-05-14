@@ -34,6 +34,7 @@ def _fetch_reviews_page(app_id: str, sort_by: str, page: int, timeout: int = 10)
     response = requests.get(url, timeout=timeout)
     if response.status_code != 200:
         print(f"Stopped at page: {page}, status: {response.status_code}")
+        return {}
     return response.json()
 
 

@@ -45,7 +45,7 @@ def _backfill_appstore() -> int:
             problems_data = row.get("problems") or {}
             extraction = LLMExtraction(
                 source="app_store",
-                title=row.get("app_title"),
+                title=row.get("title"),
                 problems=[AppStoreProblemItem(**problems_data)],
             )
             source_url = f"https://apps.apple.com/app/id{row['app_id']}"

@@ -71,7 +71,6 @@ youtubePromptOutput = """
 
 {
   "source": "youtube",
-  "title": "Title"
   "problems": [
     {
       "problem": "string",
@@ -92,6 +91,12 @@ youtubePromptOutput = """
 
 APPSTORE_PROMPT_TEMPLATE = """
 {intro}
+
+You will receive a JSON array of App Store reviews, each with:
+- "Title": name of the app
+- "rating": star rating (1–5)
+- "vote_count": number of helpful votes
+- "Content": the review text
 
 Your task:
 
@@ -124,6 +129,7 @@ appStorePromptOutput = """
       "problem": "string",
       "type": "feature_request | complaint | usability | performance | pricing | other",
       "average_rating": 0,
+      "vote_count": 0,
       "frequency": 1,
       "severity": 1,
       "example_reviews": [

@@ -5,16 +5,12 @@ stages; callers supply source-specific config via keyword arguments.
 
 Callers are expected to present rows with a ``Content`` key already set
 (mapping their source's raw text field to ``Content`` before calling).
-Use :func:`appstore_rows_for_llm` for App Store ingestion dicts (``content``,
-``vote_count``) destined for the LLM; it maps to legacy ``Votes`` / ``Content``
-records after :func:`clean`.
 """
 from __future__ import annotations
 
 import re
 from typing import Optional
 
-from app.config.preprocessing import APPSTORE_PREPROCESS
 from app.config.regex import EMOJI_REGEX
 
 
@@ -74,26 +70,6 @@ def clean(
     after_emoji = _strip_emojis(normalised)
     after_keywords = _apply_keyword_filter(after_emoji, keyword_filter)
     return _dedup(after_keywords)
-
-
-def appstore_rows_for_llm(
-    raw: list[dict],
-    keywords: list[str] | tuple[str, ...],
-) -> list[dict]:
-    """Run :func:`clean` on App Store review dicts and shape rows for the LLM.
-
-    Ingestion uses lowercase ``content`` / ``vote_count``; prompts expect
-    ``Content`` and ``Votes`` (shape expected by App Store prompts).
-    """
-    rows = [{**item, "Content": item["content"]} for item in raw]
-    kw = tuple(keywords) if keywords else None
-    cleaned = clean(
-        rows,
-        engagement_field=APPSTORE_PREPROCESS["engagement_field"],
-        threshold=APPSTORE_PREPROCESS["threshold"],
-        keyword_filter=kw,
-    )
-    return [{"Votes": r.get("vote_count", 0), "Content": r["Content"]} for r in cleaned]
 
 
 # ---------------------------------------------------------------------------
