@@ -4,10 +4,9 @@ from app.config.preprocessing import YOUTUBE_PREPROCESS
 from app.ingestion.youtubeComments import getVideoId, getYoutubeComments
 from app.preprocessing.reviewPipeline import clean
 from app.llm.extractInsights import extract_insights
-from app.config.promptTemplates import build_youtube_prompt, youtubePromptOutput
+from app.config.promptTemplates import build_youtube_prompt, build_youtube_refinement_prompt, youtubePromptOutput
 from app.config.genres import get_default_genre
 from app.config.secrets import RAG_WRITE_ENABLED, RAG_READ_ENABLED
-from app.config.constants import RAG_QUERY_MAX_CHARS
 from app.rag.rag import embed_and_store, enrich_problems, retrieve_similar
 from app.clients.youtube import get_video_metadata
 from app.schemas.api import YoutubeAnalysisResponse
@@ -26,18 +25,30 @@ def youtube_manual(link: str):
     all_items = relevance + time
     rows = [{**item, "Content": item["Text"]} for item in all_items]
     cleaned_data = clean(rows, **YOUTUBE_PREPROCESS)
+    raw_result = extract_insights(cleaned_data, build_youtube_prompt(default, []), youtubePromptOutput, source="youtube")
+    if raw_result is None:
+        return None
 
     prior_insights = []
-    if RAG_READ_ENABLED and cleaned_data:
-        query = " ".join(row["Content"] for row in cleaned_data)[:RAG_QUERY_MAX_CHARS]
-        try:
-            prior_insights = retrieve_similar(query)
-        except Exception:
-            logger.exception("retrieve_similar failed; proceeding with empty prior_insights")
+    if RAG_READ_ENABLED:
+        seen: set[str] = set()
+        for problem in raw_result.problems:
+            try:
+                matches = retrieve_similar(problem.problem)
+                for m in matches:
+                    if m.problem not in seen:
+                        seen.add(m.problem)
+                        prior_insights.append(m)
+            except Exception:
+                logger.exception("retrieve_similar failed for %r; skipping", problem.problem)
 
-    result = extract_insights(cleaned_data, build_youtube_prompt(default, prior_insights), youtubePromptOutput, source="youtube")
+    problems_data = [
+        {"problem": p.problem, "type": p.type, "severity": p.severity, "frequency": p.frequency, "total_likes": p.total_likes}
+        for p in raw_result.problems
+    ]
+    result = extract_insights(problems_data, build_youtube_refinement_prompt(default, prior_insights), youtubePromptOutput, source="youtube")
     if result is None:
-        return None
+        result = raw_result
     result.title = meta.get("title")
     if RAG_READ_ENABLED:
         enrich_problems(result)

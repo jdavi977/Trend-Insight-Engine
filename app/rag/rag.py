@@ -42,7 +42,7 @@ def embed_and_store(extraction: LLMExtraction, source_url: str) -> None:
             )
             if same_source:
                 # Existing record found: upsert will UPDATE the row in place.
-                row_id = _make_id(same_source["source_url"], same_source["problem"])
+                row_id = same_source["id"]
                 print("RAG update: existing problem matched for %r (id=%s)", problem.problem, row_id)
             else:
                 # No match: upsert will INSERT a new row.
