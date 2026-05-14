@@ -35,7 +35,8 @@ class SourceAdapter:
     item_id: Callable[[dict], Any]
     check_existing: Callable[[Any], list | dict | None]
     delete_existing: Callable[[Any], None]
-    ingest: Callable[[dict], list]
+    helpful: Callable[[dict], list]
+    time: Callable[[dict], list]
     clean: Callable[[list, list[str]], list]
     system_prompt: str | Callable[[dict], str]
     output_prompt: str
@@ -71,7 +72,11 @@ def run_automatic_pipeline(
             print(f"Overwriting key: {item_id}. Deleting stale data and re-ingesting.")
             adapter.delete_existing(item_id)
 
-        raw = adapter.ingest(item)
+        # Ingest fresh data for this item
+        helpful = adapter.helpful(item)
+        time = adapter.time(item)
+        raw = helpful + time
+
         cleaned = adapter.clean(raw, keywords)
 
         if not cleaned:

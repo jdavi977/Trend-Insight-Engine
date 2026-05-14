@@ -8,6 +8,7 @@ from app.jobs.automaticYoutube import youtube_automatic
 
 
 def run_category(category_id, genre, keywords):
+    # Get most popular videos for the category
     videos = getMostPopularVideos(category_id)
     rows = youtube_automatic(videos, category_id, genre, keywords) or []
     return len(videos), len(rows)
