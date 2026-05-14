@@ -33,6 +33,8 @@ May 13: Issues -
 1. automatic app/youtube pipelines dont write to supabase insights table (fixed)
 2. automatic app does not provide much information, usually has no issues. (fixed, used mostHelpful sorting)
 3. automatic pipeline does not update keys if already found in the database (fixed)
-4. add to frontend "no insights found"
+4. add to frontend "no insights found" (fixed)
 
 Noticed that deleting data on supabase takes a long time, but it is fine as we are only deleting data during the automatic workflow which the user will not affect the user.
+
+Current goals: fix rag and optimize preprocessing for analyzing and tokens

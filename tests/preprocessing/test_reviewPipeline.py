@@ -4,6 +4,9 @@ Parameterized over both source configs (YOUTUBE_PREPROCESS and
 APPSTORE_PREPROCESS) wherever the behaviour under test is source-agnostic.
 Source-specific cases (keyword filter present vs. None) use dedicated tests.
 """
+import re
+from unittest.mock import patch
+
 import pytest
 
 from app.preprocessing.reviewPipeline import clean
@@ -48,24 +51,24 @@ def test_empty_input_returns_empty(engagement_field, threshold):
 
 @_SOURCE_PARAMS
 def test_threshold_drops_below(engagement_field, threshold):
-    rows = [_row("keep me", engagement_field, threshold),
-            _row("drop me", engagement_field, threshold - 1)]
-    result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None)
+    rows = [_row("keep me please right now", engagement_field, threshold),
+            _row("drop me please right now", engagement_field, threshold - 1)]
+    result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None, min_length=0)
     contents = [r["Content"] for r in result]
-    assert "keep me" in contents
-    assert "drop me" not in contents
+    assert "keep me please right now" in contents
+    assert "drop me please right now" not in contents
 
 
 @_SOURCE_PARAMS
 def test_threshold_keeps_exactly_at_threshold(engagement_field, threshold):
-    rows = [_row("boundary", engagement_field, threshold)]
-    result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None)
-    assert [r["Content"] for r in result] == ["boundary"]
+    rows = [_row("boundary value exactly here", engagement_field, threshold)]
+    result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None, min_length=0)
+    assert [r["Content"] for r in result] == ["boundary value exactly here"]
 
 
 @_SOURCE_PARAMS
 def test_missing_engagement_field_treated_as_zero_and_dropped(engagement_field, threshold):
-    rows = [{"Content": "no score field"}]
+    rows = [{"Content": "no score field present at all"}]
     result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None)
     assert result == []
 
@@ -76,9 +79,9 @@ def test_missing_engagement_field_treated_as_zero_and_dropped(engagement_field, 
 
 @_SOURCE_PARAMS
 def test_content_is_lowercased_and_stripped(engagement_field, threshold):
-    rows = [_row("  HELLO WORLD  ", engagement_field, threshold)]
+    rows = [_row("  HELLO WORLD LONG ENOUGH  ", engagement_field, threshold)]
     result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None)
-    assert result[0]["Content"] == "hello world"
+    assert result[0]["Content"] == "hello world long enough"
 
 
 # ---------------------------------------------------------------------------
@@ -87,11 +90,11 @@ def test_content_is_lowercased_and_stripped(engagement_field, threshold):
 
 @_SOURCE_PARAMS
 def test_emojis_are_removed(engagement_field, threshold):
-    rows = [_row("great app 🔥💥", engagement_field, threshold)]
+    rows = [_row("great application works well 🔥💥", engagement_field, threshold)]
     result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None)
     assert "🔥" not in result[0]["Content"]
     assert "💥" not in result[0]["Content"]
-    assert "great app" in result[0]["Content"]
+    assert "great application works well" in result[0]["Content"]
 
 
 # ---------------------------------------------------------------------------
@@ -101,12 +104,12 @@ def test_emojis_are_removed(engagement_field, threshold):
 @_SOURCE_PARAMS
 def test_duplicate_content_rows_are_deduplicated(engagement_field, threshold):
     rows = [
-        _row("same text", engagement_field, threshold),
-        _row("same text", engagement_field, threshold + 10),
+        _row("same text repeated again here", engagement_field, threshold),
+        _row("same text repeated again here", engagement_field, threshold + 10),
     ]
     result = clean(rows, engagement_field=engagement_field, threshold=threshold, keyword_filter=None)
     assert len(result) == 1
-    assert result[0]["Content"] == "same text"
+    assert result[0]["Content"] == "same text repeated again here"
 
 
 # ---------------------------------------------------------------------------
@@ -191,3 +194,74 @@ def test_appstore_preprocess_config_splat_works():
     rows = [_row("App CRASHES constantly 💥", _APPSTORE_FIELD, _APPSTORE_THRESH)]
     result = clean(rows, **APPSTORE_PREPROCESS)
     assert result[0]["Content"] == "app crashes constantly "
+
+
+# ---------------------------------------------------------------------------
+# Min-length filter
+# ---------------------------------------------------------------------------
+
+def test_min_length_drops_short_content():
+    rows = [_row("ok", _YOUTUBE_FIELD, _YOUTUBE_THRESH)]
+    result = clean(rows, engagement_field=_YOUTUBE_FIELD, threshold=_YOUTUBE_THRESH, min_length=20)
+    assert result == []
+
+
+def test_min_length_override_keeps_short_content():
+    rows = [_row("ok", _YOUTUBE_FIELD, _YOUTUBE_THRESH)]
+    result = clean(rows, engagement_field=_YOUTUBE_FIELD, threshold=_YOUTUBE_THRESH, min_length=2)
+    assert len(result) == 1
+    assert result[0]["Content"] == "ok"
+
+
+def test_min_length_applied_after_normalisation():
+    # emoji-only string collapses to empty after strip — dropped by min_length
+    rows = [_row("🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥", _YOUTUBE_FIELD, _YOUTUBE_THRESH)]
+    result = clean(rows, engagement_field=_YOUTUBE_FIELD, threshold=_YOUTUBE_THRESH, min_length=20)
+    assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Pre-compiled keyword patterns
+# ---------------------------------------------------------------------------
+
+def test_keyword_patterns_compiled_once_per_call():
+    """re.compile is called once per keyword, not once per row."""
+    _filter = ("crash", "bug")
+    rows = [
+        _row("app crash on startup every time", _APPSTORE_FIELD, _APPSTORE_THRESH),
+        _row("serious bug in the checkout flow", _APPSTORE_FIELD, _APPSTORE_THRESH),
+        _row("another crash report from users", _APPSTORE_FIELD, _APPSTORE_THRESH),
+    ]
+    with patch("app.preprocessing.reviewPipeline.re.compile", wraps=re.compile) as mock_compile:
+        clean(
+            rows,
+            engagement_field=_APPSTORE_FIELD,
+            threshold=_APPSTORE_THRESH,
+            keyword_filter=_filter,
+        )
+    assert mock_compile.call_count == len(_filter)
+
+
+# ---------------------------------------------------------------------------
+# Dedup with casing
+# ---------------------------------------------------------------------------
+
+def test_duplicate_rows_different_casing_collapsed():
+    rows = [
+        _row("App Crashes On Launch Every Time", _APPSTORE_FIELD, _APPSTORE_THRESH),
+        _row("app crashes on launch every time", _APPSTORE_FIELD, _APPSTORE_THRESH),
+    ]
+    result = clean(rows, engagement_field=_APPSTORE_FIELD, threshold=_APPSTORE_THRESH, keyword_filter=None)
+    assert len(result) == 1
+    assert result[0]["Content"] == "app crashes on launch every time"
+
+
+# ---------------------------------------------------------------------------
+# Engagement drop does not mutate original row Content
+# ---------------------------------------------------------------------------
+
+def test_dropped_row_content_not_mutated():
+    original_content = "Short"
+    row = _row(original_content, _YOUTUBE_FIELD, _YOUTUBE_THRESH - 1)
+    clean([row], engagement_field=_YOUTUBE_FIELD, threshold=_YOUTUBE_THRESH)
+    assert row["Content"] == original_content
