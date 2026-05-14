@@ -25,6 +25,10 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
         "app.services.youtube_service.getVideoId",
         return_value="dQw4w9WgXcQ",
     )
+    mocker.patch(
+        "app.services.youtube_service.get_video_metadata",
+        return_value={"title": "Vid"},
+    )
 
     relevance_comments = [
         {"Title": "Vid", "Likes": 200, "Text": "battery problem on the device"},
@@ -65,6 +69,10 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
 
 def test_youtube_manual_returns_none_when_extract_insights_returns_none(mocker):
     mocker.patch("app.services.youtube_service.getVideoId", return_value="abc123")
+    mocker.patch(
+        "app.services.youtube_service.get_video_metadata",
+        return_value={"title": "Vid"},
+    )
     mocker.patch(
         "app.services.youtube_service.getYoutubeComments",
         side_effect=[[], []],

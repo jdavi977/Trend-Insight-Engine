@@ -25,6 +25,7 @@ class TestEmbedAndStore:
         from app.rag import rag
 
         mocker.patch.object(rag, "create_embedding", return_value=_FAKE_EMBEDDING)
+        mocker.patch.object(rag, "query_similar", return_value=[])
         upsert = mocker.patch.object(rag, "upsert_embedding")
 
         rag.embed_and_store(_EXTRACTION, "https://www.youtube.com/watch?v=abc")
@@ -35,6 +36,7 @@ class TestEmbedAndStore:
         from app.rag import rag
 
         mocker.patch.object(rag, "create_embedding", return_value=_FAKE_EMBEDDING)
+        mocker.patch.object(rag, "query_similar", return_value=[])
         upsert = mocker.patch.object(rag, "upsert_embedding")
 
         rag.embed_and_store(_EXTRACTION, "https://www.youtube.com/watch?v=abc")
@@ -53,6 +55,7 @@ class TestEmbedAndStore:
         from app.rag import rag
 
         mocker.patch.object(rag, "create_embedding", return_value=_FAKE_EMBEDDING)
+        mocker.patch.object(rag, "query_similar", return_value=[])
         upsert = mocker.patch.object(rag, "upsert_embedding")
 
         url = "https://www.youtube.com/watch?v=abc"
