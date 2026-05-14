@@ -41,8 +41,8 @@ class TestGetAppReviews:
         result = getAppReviews("123", "mostRecent", max_pages=1)
 
         assert result == [
-            {"rating": "5", "title": "Great", "content": "Love it", "vote_count": "10"},
-            {"rating": "1", "title": "Bad", "content": "Hate it", "vote_count": "2"},
+            {"Id": "123", "Title": None, "rating": "5", "title": "Great", "content": "Love it", "vote_count": "10"},
+            {"Id": "123", "Title": None, "rating": "1", "title": "Bad", "content": "Hate it", "vote_count": "2"},
         ]
 
     def test_breaks_when_page_has_one_or_zero_entries(self, mocker):

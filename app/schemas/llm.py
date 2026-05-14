@@ -18,7 +18,7 @@ class AppStoreProblemItem(BaseModel):
     problem: str = Field(min_length=5)
     type: str = Field(min_length=2)
     average_rating: float = Field(ge=0, le=5)
-    vote_count: int = Field(ge=0)
+    vote_count: int = Field(default=0, ge=0)
     severity: int = Field(ge=1, le=5)
     frequency: int = Field(ge=1, le=5)
     example_reviews: List[str] = Field(min_length=1)

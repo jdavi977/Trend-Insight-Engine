@@ -48,11 +48,13 @@ def _make_adapter(**overrides) -> SourceAdapter:
     defaults: dict = dict(
         item_id=lambda item: item["id"],
         check_existing=MagicMock(return_value=[]),
-        bump_date=MagicMock(),
-        ingest=MagicMock(return_value=["raw comment"]),
+        delete_existing=MagicMock(),
+        helpful=MagicMock(return_value=["raw comment"]),
+        time=MagicMock(return_value=[]),
         clean=MagicMock(return_value=["cleaned comment"]),
         system_prompt="system",
         output_prompt="output",
+        source="youtube",
         build_row=MagicMock(return_value={"built": "row"}),
         persist_row=MagicMock(),
     )
@@ -63,38 +65,37 @@ def _make_adapter(**overrides) -> SourceAdapter:
 PATCH_TARGET = "app.jobs.automaticPipeline.extract_insights"
 
 # ---------------------------------------------------------------------------
-# Existing-id short-circuit
+# Existing-id overwrite
 # ---------------------------------------------------------------------------
 
 
-class TestExistingIdShortCircuit:
-    def test_bumps_date_when_id_already_exists(self):
+class TestExistingIdOverwrite:
+    def test_deletes_existing_when_id_already_exists(self):
         existing_rows = [{"key": "vid1", "date": "2026-01-01"}]
         adapter = _make_adapter(check_existing=MagicMock(return_value=existing_rows))
 
-        with patch(PATCH_TARGET) as mock_extract:
+        with patch(PATCH_TARGET, return_value=None):
             run_automatic_pipeline([ITEM], [], adapter)
 
-        adapter.bump_date.assert_called_once()
-        mock_extract.assert_not_called()
+        adapter.delete_existing.assert_called_once()
 
-    def test_existing_rows_appended_to_return_value(self):
+    def test_helpful_still_called_after_deletion(self):
         existing_rows = [{"key": "vid1", "date": "2026-01-01"}]
         adapter = _make_adapter(check_existing=MagicMock(return_value=existing_rows))
 
-        with patch(PATCH_TARGET):
-            result = run_automatic_pipeline([ITEM], [], adapter)
-
-        assert result == [existing_rows]
-
-    def test_ingest_not_called_when_id_exists(self):
-        existing_rows = [{"key": "vid1"}]
-        adapter = _make_adapter(check_existing=MagicMock(return_value=existing_rows))
-
-        with patch(PATCH_TARGET):
+        with patch(PATCH_TARGET, return_value=None):
             run_automatic_pipeline([ITEM], [], adapter)
 
-        adapter.ingest.assert_not_called()
+        adapter.helpful.assert_called_once()
+
+    def test_extract_called_after_deletion(self):
+        existing_rows = [{"key": "vid1", "date": "2026-01-01"}]
+        adapter = _make_adapter(check_existing=MagicMock(return_value=existing_rows))
+
+        with patch(PATCH_TARGET, return_value=None) as mock_extract:
+            run_automatic_pipeline([ITEM], [], adapter)
+
+        mock_extract.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

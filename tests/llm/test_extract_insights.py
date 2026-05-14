@@ -38,7 +38,7 @@ class TestHappyPath:
         monkeypatch.chdir(tmp_path)
         mocker.patch(MOCK_TARGET, return_value=_yt_json([VALID_YT_PROBLEM]))
 
-        result = extract_insights(["some comment"], "sys", "out")
+        result = extract_insights(["some comment"], "sys", "out", source="youtube")
 
         assert isinstance(result, LLMExtraction)
         assert result.source == "youtube"
@@ -50,7 +50,7 @@ class TestHappyPath:
         monkeypatch.chdir(tmp_path)
         mocker.patch(MOCK_TARGET, return_value=_as_json([VALID_AS_PROBLEM]))
 
-        result = extract_insights(["some review"], "sys", "out")
+        result = extract_insights(["some review"], "sys", "out", source="app_store")
 
         assert isinstance(result, LLMExtraction)
         assert result.source == "app_store"
@@ -64,7 +64,7 @@ class TestHappyPath:
         second = {**VALID_YT_PROBLEM, "problem": "video stutters on playback"}
         mocker.patch(MOCK_TARGET, return_value=_yt_json([VALID_YT_PROBLEM, second]))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert isinstance(result, LLMExtraction)
         assert len(result.problems) == 2
@@ -76,7 +76,7 @@ class TestListEnvelopeUnwrap:
         payload = {"source": "youtube", "title": "T", "problems": [VALID_YT_PROBLEM]}
         mocker.patch(MOCK_TARGET, return_value=json.dumps([payload]))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert isinstance(result, LLMExtraction)
         assert result.problems[0].problem == VALID_YT_PROBLEM["problem"]
@@ -84,7 +84,7 @@ class TestListEnvelopeUnwrap:
     def test_empty_list_response_returns_none(self, mocker):
         mocker.patch(MOCK_TARGET, return_value=json.dumps([]))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert result is None
 
@@ -93,14 +93,14 @@ class TestEmptyOrNoProblems:
     def test_empty_problems_list_returns_none(self, mocker):
         mocker.patch(MOCK_TARGET, return_value=_yt_json([]))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert result is None
 
     def test_missing_problems_key_returns_none(self, mocker):
         mocker.patch(MOCK_TARGET, return_value=json.dumps({"source": "youtube", "title": "T"}))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert result is None
 
@@ -109,7 +109,7 @@ class TestEmptyOrNoProblems:
         bad = {**VALID_YT_PROBLEM, "severity": 99}
         mocker.patch(MOCK_TARGET, return_value=_yt_json([bad]))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert result is None
 
@@ -120,7 +120,7 @@ class TestQuarantine:
         bad = {**VALID_YT_PROBLEM, "severity": 99}
         mocker.patch(MOCK_TARGET, return_value=_yt_json([VALID_YT_PROBLEM, bad]))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert isinstance(result, LLMExtraction)
         assert len(result.problems) == 1
@@ -131,7 +131,7 @@ class TestQuarantine:
         bad = {**VALID_YT_PROBLEM, "severity": 99}
         mocker.patch(MOCK_TARGET, return_value=_yt_json([VALID_YT_PROBLEM, bad]))
 
-        extract_insights([], "sys", "out")
+        extract_insights([], "sys", "out", source="youtube")
 
         invalid_dir = tmp_path / "data" / "invalid_data"
         assert invalid_dir.exists()
@@ -147,8 +147,8 @@ class TestQuarantine:
         bad = {**VALID_YT_PROBLEM, "severity": 99}
         mocker.patch(MOCK_TARGET, return_value=_yt_json([VALID_YT_PROBLEM, bad]))
 
-        extract_insights([], "sys", "out")
-        extract_insights([], "sys", "out")
+        extract_insights([], "sys", "out", source="youtube")
+        extract_insights([], "sys", "out", source="youtube")
 
         invalid_dir = tmp_path / "data" / "invalid_data"
         run_dirs = list(invalid_dir.iterdir())
@@ -161,13 +161,13 @@ class TestEnvelopeValidationFailure:
         payload = {"source": "unknown_source", "problems": [VALID_YT_PROBLEM]}
         mocker.patch(MOCK_TARGET, return_value=json.dumps(payload))
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert result is None
 
     def test_invalid_json_returns_none(self, mocker):
         mocker.patch(MOCK_TARGET, return_value="not valid json {{{")
 
-        result = extract_insights([], "sys", "out")
+        result = extract_insights([], "sys", "out", source="youtube")
 
         assert result is None

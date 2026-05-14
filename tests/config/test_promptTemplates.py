@@ -186,9 +186,11 @@ Rules:
 _APPSTORE_GAMES_EXPECTED = """
 You are an expert App Store review analyst focused ONLY on extracting GAME-RELEVANT user problems, unmet needs, and feature requests from review datasets about mobile games (iOS games, free-to-play titles, gacha games, casual/puzzle games, etc.).
 
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "Votes" (helpful-vote count)
-- "Content" (full review text)
+You will receive a JSON array of App Store reviews, each with:
+- "Title": name of the app
+- "rating": star rating (1–5)
+- "vote_count": number of helpful votes
+- "Content": the review text
 
 Your task:
 
@@ -237,9 +239,11 @@ Rules:
 _APPSTORE_SOCIAL_EXPECTED = """
 You are an expert App Store review analyst focused ONLY on extracting SOCIAL-NETWORKING-RELEVANT user problems, unmet needs, and feature requests from review datasets about social networking apps (messaging, social feeds, communities, dating, video/photo sharing, group chat, etc.).
 
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "Votes" (helpful-vote count)
-- "Content" (full review text)
+You will receive a JSON array of App Store reviews, each with:
+- "Title": name of the app
+- "rating": star rating (1–5)
+- "vote_count": number of helpful votes
+- "Content": the review text
 
 Your task:
 
@@ -291,9 +295,11 @@ Rules:
 _APPSTORE_UTILITIES_EXPECTED = """
 You are an expert App Store review analyst focused ONLY on extracting UTILITIES-RELEVANT user problems, unmet needs, and feature requests from review datasets about utility apps (file managers, cleaners, VPNs, password managers, scanners, calculators, weather, flashlight, system tools, network tools, backup, clipboard managers, etc.).
 
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "Votes" (helpful-vote count)
-- "Content" (full review text)
+You will receive a JSON array of App Store reviews, each with:
+- "Title": name of the app
+- "rating": star rating (1–5)
+- "vote_count": number of helpful votes
+- "Content": the review text
 
 Your task:
 
@@ -345,13 +351,11 @@ Rules:
 _APPSTORE_DEFAULT_EXPECTED = """
 You are an expert App Store review analyst specializing in identifying user problems, unmet needs, feature requests, and patterns in product feedback.
 
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "rating" (1\u20135 stars)
-- "title"
-- "review" (full text)
-- "date"
-- "version"
-- "isEdited" (optional)
+You will receive a JSON array of App Store reviews, each with:
+- "Title": name of the app
+- "rating": star rating (1\u20135)
+- "vote_count": number of helpful votes
+- "Content": the review text
 
 Your task:
 

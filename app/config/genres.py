@@ -371,11 +371,7 @@ _APPSTORE_GAMES = GenreConfig(
     source=APPSTORE_SOURCE,
     id=APPLE_GAMES_GENRE_ID,
     keywords=_APPLE_KEYWORDS,
-    intro="""You are an expert App Store review analyst focused ONLY on extracting GAME-RELEVANT user problems, unmet needs, and feature requests from review datasets about mobile games (iOS games, free-to-play titles, gacha games, casual/puzzle games, etc.).
-
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "Votes" (helpful-vote count)
-- "Content" (full review text)""",
+    intro="You are an expert App Store review analyst focused ONLY on extracting GAME-RELEVANT user problems, unmet needs, and feature requests from review datasets about mobile games (iOS games, free-to-play titles, gacha games, casual/puzzle games, etc.).",
     theme_bullets="""1. Identify GAME-RELEVANT themes such as:
    - gameplay loop issues (progression, grind, pacing, difficulty, balance, RNG)
    - controls + input (touch controls, sensitivity, accessibility)
@@ -421,11 +417,7 @@ _APPSTORE_SOCIAL = GenreConfig(
     source=APPSTORE_SOURCE,
     id=APPLE_SOCIAL_GENRE_ID,
     keywords=_APPLE_KEYWORDS,
-    intro="""You are an expert App Store review analyst focused ONLY on extracting SOCIAL-NETWORKING-RELEVANT user problems, unmet needs, and feature requests from review datasets about social networking apps (messaging, social feeds, communities, dating, video/photo sharing, group chat, etc.).
-
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "Votes" (helpful-vote count)
-- "Content" (full review text)""",
+    intro="You are an expert App Store review analyst focused ONLY on extracting SOCIAL-NETWORKING-RELEVANT user problems, unmet needs, and feature requests from review datasets about social networking apps (messaging, social feeds, communities, dating, video/photo sharing, group chat, etc.).",
     theme_bullets="""1. Identify SOCIAL-NETWORKING-RELEVANT themes such as:
    - feed/algorithm issues (irrelevant content, ranking, missed posts, chronological vs. algorithmic)
    - messaging + chat (delivery delays, missing messages, group chat limits, voice/video calls)
@@ -474,11 +466,7 @@ _APPSTORE_UTILITIES = GenreConfig(
     source=APPSTORE_SOURCE,
     id=APPLE_UTILITIES_GENRE_ID,
     keywords=_APPLE_KEYWORDS,
-    intro="""You are an expert App Store review analyst focused ONLY on extracting UTILITIES-RELEVANT user problems, unmet needs, and feature requests from review datasets about utility apps (file managers, cleaners, VPNs, password managers, scanners, calculators, weather, flashlight, system tools, network tools, backup, clipboard managers, etc.).
-
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "Votes" (helpful-vote count)
-- "Content" (full review text)""",
+    intro="You are an expert App Store review analyst focused ONLY on extracting UTILITIES-RELEVANT user problems, unmet needs, and feature requests from review datasets about utility apps (file managers, cleaners, VPNs, password managers, scanners, calculators, weather, flashlight, system tools, network tools, backup, clipboard managers, etc.).",
     theme_bullets="""1. Identify UTILITIES-RELEVANT themes such as:
    - core function reliability (does the tool actually do its one job: scanning, cleaning, converting, measuring, etc.)
    - performance/tech (crashes, freezing, slow scans, high battery/CPU usage, memory leaks)
@@ -527,15 +515,7 @@ _APPSTORE_DEFAULT = GenreConfig(
     source=APPSTORE_SOURCE,
     id=0,
     keywords=_APPLE_KEYWORDS,
-    intro="""You are an expert App Store review analyst specializing in identifying user problems, unmet needs, feature requests, and patterns in product feedback.
-
-You will receive a JSON array of App Store reviews. Each review includes fields such as:
-- "rating" (1–5 stars)
-- "title"
-- "review" (full text)
-- "date"
-- "version"
-- "isEdited" (optional)""",
+    intro="You are an expert App Store review analyst specializing in identifying user problems, unmet needs, feature requests, and patterns in product feedback.",
     theme_bullets="""1. Extract meaningful recurring themes across reviews, including:
    - unmet needs
    - feature requests

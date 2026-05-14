@@ -1,2 +1,8 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:supabase",
+    "ignore::DeprecationWarning:postgrest",
+    "ignore::pyparsing.exceptions.PyparsingDeprecationWarning",
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+]
