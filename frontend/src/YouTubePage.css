@@ -548,6 +548,33 @@
 
 .yt-btn-secondary:hover { background: var(--surface); border-color: var(--ink-4); }
 
+/* ── No-insights empty state ── */
+.yt-no-insights {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: var(--s-9) 0;
+  text-align: center;
+}
+.yt-no-insights-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--green, #22c55e);
+  margin-bottom: 4px;
+}
+.yt-no-insights-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-1);
+}
+.yt-no-insights-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
 /* ── Empty state ── */
 .yt-empty {
   text-align: center;

@@ -257,63 +257,76 @@ function AppStorePage() {
             </div>
           )}
 
-          {/* Section heading */}
-          <div className="section-h">
-            <div>
-              <h2>Extracted themes</h2>
-              <div className="sub">
-                {problems.length} insight{problems.length !== 1 ? "s" : ""} surfaced
-              </div>
+          {problems.length === 0 ? (
+            <div className="as-no-insights">
+              <svg className="as-no-insights-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="24" cy="24" r="20" />
+                <path d="M16 24l6 6 10-12" />
+              </svg>
+              <p className="as-no-insights-title">No problems found</p>
+              <p className="as-no-insights-sub">The analysis didn't surface any notable issues from the reviews.</p>
             </div>
-            <div className="as-view-toggle">
-              {["cards", "json"].map((v) => (
-                <button
-                  key={v}
-                  className={view === v ? "on" : ""}
-                  onClick={() => setView(v)}
-                >
-                  {v.charAt(0).toUpperCase() + v.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Cards view */}
-          {view === "cards" && (
+          ) : (
             <>
-              {types.length > 1 && (
-                <div className="theme-chips">
-                  {types.map((t) => {
-                    const cnt = t === "All" ? problems.length : problems.filter((p) => p.type === t).length;
-                    return (
-                      <button
-                        key={t}
-                        className={`filter-chip${activeType === t ? " active" : ""}`}
-                        onClick={() => setActiveType(t)}
-                      >
-                        {t} <span className="count">{cnt}</span>
-                      </button>
-                    );
-                  })}
+              {/* Section heading */}
+              <div className="section-h">
+                <div>
+                  <h2>Extracted themes</h2>
+                  <div className="sub">
+                    {problems.length} insight{problems.length !== 1 ? "s" : ""} surfaced
+                  </div>
                 </div>
-              )}
-              {visible.length > 0 ? (
-                <div className="results-grid">
-                  {visible.map((problem, i) => (
-                    <InsightCard key={i} problem={problem} />
+                <div className="as-view-toggle">
+                  {["cards", "json"].map((v) => (
+                    <button
+                      key={v}
+                      className={view === v ? "on" : ""}
+                      onClick={() => setView(v)}
+                    >
+                      {v.charAt(0).toUpperCase() + v.slice(1)}
+                    </button>
                   ))}
                 </div>
-              ) : (
-                <div className="as-empty">No insights found for this filter.</div>
+              </div>
+
+              {/* Cards view */}
+              {view === "cards" && (
+                <>
+                  {types.length > 1 && (
+                    <div className="theme-chips">
+                      {types.map((t) => {
+                        const cnt = t === "All" ? problems.length : problems.filter((p) => p.type === t).length;
+                        return (
+                          <button
+                            key={t}
+                            className={`filter-chip${activeType === t ? " active" : ""}`}
+                            onClick={() => setActiveType(t)}
+                          >
+                            {t} <span className="count">{cnt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {visible.length > 0 ? (
+                    <div className="results-grid">
+                      {visible.map((problem, i) => (
+                        <InsightCard key={i} problem={problem} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="as-empty">No insights found for this filter.</div>
+                  )}
+                </>
+              )}
+
+              {/* JSON view */}
+              {view === "json" && (
+                <div className="as-json-wrap">
+                  <pre>{JSON.stringify(problems, null, 2)}</pre>
+                </div>
               )}
             </>
-          )}
-
-          {/* JSON view */}
-          {view === "json" && (
-            <div className="as-json-wrap">
-              <pre>{JSON.stringify(problems, null, 2)}</pre>
-            </div>
           )}
         </>
       )}

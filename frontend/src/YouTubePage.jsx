@@ -289,7 +289,14 @@ function YouTubePage() {
           )}
 
           {problems.length === 0 ? (
-            <p className="yt-empty">No insights found in the comments.</p>
+            <div className="yt-no-insights">
+              <svg className="yt-no-insights-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="24" cy="24" r="20" />
+                <path d="M16 24l6 6 10-12" />
+              </svg>
+              <p className="yt-no-insights-title">No problems found</p>
+              <p className="yt-no-insights-sub">The analysis didn't surface any notable issues from the comments.</p>
+            </div>
           ) : (
             <>
               {/* Section heading + view toggle */}
