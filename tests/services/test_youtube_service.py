@@ -153,7 +153,7 @@ class TestYoutubeManualRAGReadPath:
         )
         mocker.patch(
             "app.services.youtube_service.getYoutubeComments",
-            side_effect=[[{"Likes": 10, "Text": "good video"}], []],
+            side_effect=[[{"Likes": 100, "Text": "battery drains way too fast on this device"}], []],
         )
         mocker.patch("app.services.youtube_service.extract_insights", return_value=_LLM_RESULT)
         mocker.patch("app.services.youtube_service.embed_and_store")
@@ -178,10 +178,27 @@ class TestYoutubeManualRAGReadPath:
         enrich.assert_called_once()
         assert isinstance(result, YoutubeAnalysisResponse)
 
-    def test_prompt_builder_called_with_empty_prior_insights(self, mocker):
+    def test_retrieve_similar_called_and_result_passed_to_prompt_builder(self, mocker):
         self._setup(mocker)
         mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", True)
         mocker.patch("app.services.youtube_service.enrich_problems")
+        from app.schemas.rag import RetrievedInsight
+        from datetime import datetime, timezone
+        fake_insight = RetrievedInsight(
+            problem="past issue",
+            type="complaint",
+            severity=3,
+            frequency=2,
+            source="youtube",
+            source_url="https://example.com",
+            title=None,
+            extracted_at=datetime.now(timezone.utc).isoformat(),
+            similarity=0.85,
+        )
+        retrieve = mocker.patch(
+            "app.services.youtube_service.retrieve_similar",
+            return_value=[fake_insight],
+        )
         build = mocker.patch(
             "app.services.youtube_service.build_youtube_prompt",
             return_value="mocked prompt",
@@ -189,6 +206,51 @@ class TestYoutubeManualRAGReadPath:
 
         youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
+        retrieve.assert_called_once()
+        call_kwargs = build.call_args
+        prior = call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs.get("prior_insights")
+        assert prior == [fake_insight]
+
+    def test_retrieve_similar_not_called_when_read_disabled(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", False)
+        retrieve = mocker.patch("app.services.youtube_service.retrieve_similar")
+
+        youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        retrieve.assert_not_called()
+
+    def test_retrieve_similar_not_called_when_cleaned_data_empty(self, mocker):
+        mocker.patch("app.services.youtube_service.getVideoId", return_value="dQw4w9WgXcQ")
+        mocker.patch(
+            "app.services.youtube_service.get_video_metadata",
+            return_value={"title": "Rick Astley"},
+        )
+        mocker.patch("app.services.youtube_service.getYoutubeComments", side_effect=[[], []])
+        mocker.patch("app.services.youtube_service.extract_insights", return_value=None)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", True)
+        retrieve = mocker.patch("app.services.youtube_service.retrieve_similar")
+
+        youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        retrieve.assert_not_called()
+
+    def test_retrieve_similar_exception_falls_back_to_empty_prior_insights(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", True)
+        mocker.patch("app.services.youtube_service.enrich_problems")
+        mocker.patch(
+            "app.services.youtube_service.retrieve_similar",
+            side_effect=Exception("embedding service down"),
+        )
+        build = mocker.patch(
+            "app.services.youtube_service.build_youtube_prompt",
+            return_value="mocked prompt",
+        )
+
+        result = youtube_manual("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+
+        assert isinstance(result, YoutubeAnalysisResponse)
         call_kwargs = build.call_args
         prior = call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs.get("prior_insights")
         assert prior == []

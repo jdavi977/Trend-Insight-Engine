@@ -38,3 +38,18 @@ May 13: Issues -
 Noticed that deleting data on supabase takes a long time, but it is fine as we are only deleting data during the automatic workflow which the user will not affect the user.
 
 Current goals: fix rag and optimize preprocessing for analyzing and tokens
+s
+Issues: 
+- RAG update/insert does not work well. getting inserts for existing problems (might have to lower constant similarity) (fixed)
+- Sometimes says rag update: exisitng problem matched but would still insert new data (fixed)
+- Cleaned data does not remove emojis (update preprocessing)
+- Prior insights is always empty (fixed) - cleaned data as a whole was being compared to the insights, this would result in never getting any prior insights. Changed this so that we run two extract insights, one to bundle insights from cleaned_data, afterwards we get similar insights to the bundle insights and extract insights once more (tradeoff: 2x LLM cost + latency)
+- RAG right now only nudges severity/frequency for recurring issues and attaches recurrence tag. add more use cases for rags
+
+May 16:
+I have to relook at my project. Right now it feels like I went away from what my intended purpose was for this project by trying to add as many features as possible. It is time to scope down and build back up slowly.
+
+Plans:
+- Create a PRD to define the purpose, requirements, features, audience, and current/future scope.
+- Create a C4 model diagram to better understand the current architecture and flow of data. It will also help me with future feature design.
+- Reorganize my AI Workflow files for better context hopping

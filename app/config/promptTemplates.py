@@ -66,6 +66,33 @@ def build_youtube_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsig
     return base + _prior_insights_block(prior_insights)
 
 
+YOUTUBE_REFINEMENT_TEMPLATE = """
+{intro}
+
+You will receive a JSON array of problems already extracted from YouTube comments, each with:
+- "problem": a concise description of the problem
+- "type": problem category
+- "severity": 1–5 scale
+- "frequency": 1–5 scale
+- "total_likes": total likes across comments mentioning this problem
+
+Your task:
+1. Review each problem. Do not merge or split them.
+2. Use the previously observed problems (if any) to decide whether severity or frequency should be adjusted upward — recurring issues that match past patterns are likely underweighted.
+3. Return every problem. Do not drop any.
+{severity_anchor}
+"""
+
+
+def build_youtube_refinement_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsight] = []) -> str:
+    """Render a refinement prompt for pass-2 YouTube analysis (input is extracted problems, not raw comments)."""
+    base = YOUTUBE_REFINEMENT_TEMPLATE.format(
+        intro=genre.intro,
+        severity_anchor=genre.severity_hint,
+    )
+    return base + _prior_insights_block(prior_insights)
+
+
 youtubePromptOutput = """
 - Return ONLY valid JSON in this format:
 
@@ -114,6 +141,35 @@ def build_appstore_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsi
         intro=genre.intro,
         themes=genre.theme_bullets,
         exclusion=genre.exclusion_hint,
+        severity_anchor=genre.severity_hint,
+    )
+    return base + _prior_insights_block(prior_insights)
+
+
+APPSTORE_REFINEMENT_TEMPLATE = """
+{intro}
+
+You will receive a JSON array of problems already extracted from App Store reviews, each with:
+- "problem": a concise description of the problem
+- "type": problem category
+- "average_rating": average star rating across reviews mentioning this problem
+- "vote_count": total helpful votes across reviews mentioning this problem
+- "severity": 1–5 scale
+- "frequency": 1–5 scale
+- "example_reviews": sample review snippets
+
+Your task:
+1. Review each problem. Do not merge or split them.
+2. Use the previously observed problems (if any) to decide whether severity or frequency should be adjusted upward — recurring issues that match past patterns are likely underweighted.
+3. Return every problem. Do not drop any.
+{severity_anchor}
+"""
+
+
+def build_appstore_refinement_prompt(genre: GenreConfig, prior_insights: list[RetrievedInsight] = []) -> str:
+    """Render a refinement prompt for pass-2 App Store analysis (input is extracted problems, not raw reviews)."""
+    base = APPSTORE_REFINEMENT_TEMPLATE.format(
+        intro=genre.intro,
         severity_anchor=genre.severity_hint,
     )
     return base + _prior_insights_block(prior_insights)

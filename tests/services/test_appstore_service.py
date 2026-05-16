@@ -133,7 +133,7 @@ class TestAppStoreManualRAGReadPath:
         mocker.patch("app.services.appstore_service.get_app_metadata", return_value=_META)
         mocker.patch(
             "app.services.appstore_service.getAppReviews",
-            side_effect=[[{"title": "App", "vote_count": 1, "content": "great"}], []],
+            side_effect=[[{"title": "App", "vote_count": 10, "content": "notifications never arrive on this application"}], []],
         )
         mocker.patch("app.services.appstore_service.extract_insights", return_value=_LLM_RESULT)
         mocker.patch("app.services.appstore_service.embed_and_store")
@@ -163,3 +163,76 @@ class TestAppStoreManualRAGReadPath:
         result = app_store_manual("https://apps.apple.com/app/cool-app/id12345")
 
         assert isinstance(result, AppStoreAnalysisResponse)
+
+    def test_retrieve_similar_called_and_result_passed_to_prompt_builder(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", True)
+        mocker.patch("app.services.appstore_service.enrich_problems")
+        from datetime import datetime, timezone
+        fake_insight = RetrievedInsight(
+            problem="past issue",
+            type="complaint",
+            severity=3,
+            frequency=2,
+            source="app_store",
+            source_url="https://example.com",
+            title=None,
+            extracted_at=datetime.now(timezone.utc).isoformat(),
+            similarity=0.85,
+        )
+        retrieve = mocker.patch(
+            "app.services.appstore_service.retrieve_similar",
+            return_value=[fake_insight],
+        )
+        build = mocker.patch(
+            "app.services.appstore_service.build_appstore_prompt",
+            return_value="mocked prompt",
+        )
+
+        app_store_manual("https://apps.apple.com/app/cool-app/id12345")
+
+        retrieve.assert_called_once()
+        call_kwargs = build.call_args
+        prior = call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs.get("prior_insights")
+        assert prior == [fake_insight]
+
+    def test_retrieve_similar_not_called_when_read_disabled(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", False)
+        retrieve = mocker.patch("app.services.appstore_service.retrieve_similar")
+
+        app_store_manual("https://apps.apple.com/app/cool-app/id12345")
+
+        retrieve.assert_not_called()
+
+    def test_retrieve_similar_not_called_when_cleaned_data_empty(self, mocker):
+        mocker.patch("app.services.appstore_service.getAppId", return_value="12345")
+        mocker.patch("app.services.appstore_service.get_app_metadata", return_value=_META)
+        mocker.patch("app.services.appstore_service.getAppReviews", side_effect=[[], []])
+        mocker.patch("app.services.appstore_service.extract_insights", return_value=None)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", True)
+        retrieve = mocker.patch("app.services.appstore_service.retrieve_similar")
+
+        app_store_manual("https://apps.apple.com/app/cool-app/id12345")
+
+        retrieve.assert_not_called()
+
+    def test_retrieve_similar_exception_falls_back_to_empty_prior_insights(self, mocker):
+        self._setup(mocker)
+        mocker.patch.object(_svc_mod, "RAG_READ_ENABLED", True)
+        mocker.patch("app.services.appstore_service.enrich_problems")
+        mocker.patch(
+            "app.services.appstore_service.retrieve_similar",
+            side_effect=Exception("embedding service down"),
+        )
+        build = mocker.patch(
+            "app.services.appstore_service.build_appstore_prompt",
+            return_value="mocked prompt",
+        )
+
+        result = app_store_manual("https://apps.apple.com/app/cool-app/id12345")
+
+        assert isinstance(result, AppStoreAnalysisResponse)
+        call_kwargs = build.call_args
+        prior = call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs.get("prior_insights")
+        assert prior == []
