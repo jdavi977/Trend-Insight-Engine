@@ -26,6 +26,20 @@ _MODEL = "gpt-4o"
 
 IDEAS = [
     {"id": 1, "text": "note-taking app with better offline sync"},
+    {"id": 2, "text": "habit tracker that uses streaks"},
+    {"id": 3, "text": "podcast player with better chapter navigation"},
+    {"id": 4, "text": "meditation app for sleep"},
+    {"id": 5, "text": "expense tracker for freelancers"},
+    {"id": 6, "text": "2.5d vampire survivors-like game"},
+    {"id": 7, "text": "roguelike deckbuilder"},
+    {"id": 8, "text": "city-builder with realistic logistics"},
+    {"id": 9, "text": "productivity app"},
+    {"id": 10, "text": "fitness app"},
+    {"id": 11, "text": "note-taking app for ADHD users with spaced repetition"},
+    {"id": 12, "text": "video editor for short-form creators"},
+    {"id": 13, "text": "Slack alternative for solo developers"},
+    {"id": 14, "text": "tool for prompt engineers to manage prompts"},
+    {"id": 15, "text": "AI companion app for processing dreams"},
 ]
 
 OUTPUT_DIR = Path(__file__).parent
@@ -247,15 +261,17 @@ def main() -> None:
             f"raw videos: {result['raw_video_count']}"
         )
 
-        queries_rows.append({
+        query_common = {
             "idea_id": idea_id,
             "idea": idea,
-            "appstore_queries": " | ".join(result["appstore"]),
-            "youtube_queries": " | ".join(result["youtube"]),
             "category": result["category"],
             "signal_strength": result["signal_strength"],
             "signal_reasoning": result["signal_reasoning"],
-        })
+        }
+        for q in result["appstore"]:
+            queries_rows.append({**query_common, "query_kind": "appstore", "query": q})
+        for q in result["youtube"]:
+            queries_rows.append({**query_common, "query_kind": "youtube", "query": q})
 
         common = {
             "idea_id": idea_id,
@@ -298,8 +314,8 @@ def main() -> None:
 
     with QUERIES_CSV.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=[
-            "idea_id", "idea", "appstore_queries", "youtube_queries",
-            "category", "signal_strength", "signal_reasoning",
+            "idea_id", "idea", "category", "signal_strength", "signal_reasoning",
+            "query_kind", "query",
         ])
         writer.writeheader()
         writer.writerows(queries_rows)
