@@ -53,3 +53,8 @@ Plans:
 - Create a PRD to define the purpose, requirements, features, audience, and current/future scope.
 - Create a C4 model diagram to better understand the current architecture and flow of data. It will also help me with future feature design.
 - Reorganize my AI Workflow files for better context hopping
+
+What I learned:
+- My current project is a URL-in, problems-out analyzer. Right now, we paste either a youtube/AppStore URL and get a rannked list of problems for a single source. The weekly cron would do the same thing for the top-N items in specific categories.
+
+- Through the PRD, I created a clear user and problem. This helped me realize that the current project does not solve the problem. Instead, I scoped down, reinvented
