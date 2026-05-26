@@ -3,10 +3,11 @@
 | | |
 |---|---|
 | **Version** | 2.1 |
-| **Status** | Draft |
-| **Last updated** | 2026-05-16 |
+| **Status** | Draft (pre-flight validated 2026-05-22) |
+| **Last updated** | 2026-05-26 |
 | **Owner** | John Lowen David |
 | **Supersedes** | v2.0 (idea-first run flow, pre-launch review) |
+| **Pre-flight validation** | PASS — see [findings memo](../planning/prototypes/preflight/findings.md) (2026-05-22) |
 
 ---
 
@@ -172,6 +173,8 @@ Idea text
 ```
 
 Defaults: 5 apps + 5 videos per run. Engagement filters default per category (§7.6). Low-signal runs are not blocked — the user can proceed after acknowledging the warning.
+
+The pre-flight stage was prototyped end-to-end and graded against a 15-idea test set on 2026-05-22 — outcome PASS on all three pass criteria (90.7% aggregate usefulness, 15/15 per-idea floor, signal-strength correct on every flagged idea). See [findings memo](../planning/prototypes/preflight/findings.md) for the per-idea breakdown, confirmed failure modes, and grader-bias caveat.
 
 ### 7.4 Output schema
 
@@ -395,6 +398,12 @@ Decisions resolved during the v2.1 revision (all of these were open in earlier d
 15. **Pipeline parallelism** — Per-source parallelism (10 sources fan out concurrently); stages within a source remain serial. Cap of 5 concurrent OpenAI calls.
 16. **Data model** — Top-level + `gaps` table promoted out of the JSON blob; `feedback_events` is append-only.
 17. **Success measurement honesty** — §4 metrics reframed as leading indicators, not validated success. Longitudinal validation deferred to v1.1.
+18. **Pre-flight prototype validation** — Prototyped and graded against a 15-idea test set on 2026-05-22 (memo: [findings](../planning/prototypes/preflight/findings.md)). Outcome: PASS on all three pass criteria (90.7% aggregate usefulness; 15/15 per-idea floor; signal-strength correct on every flagged idea). Failure mode A (qualifier loss — e.g. *"note app for ADHD with spaced repetition"* returning generic notes apps) confirmed in practice and mitigated by §7.6 competitor editor. Shallow App Store results for B2B devtools (e.g. *"prompt-management tools"* — real competitors live on the web) confirmed and mitigated by §7.5 low-signal warning. Grades were LLM-applied (spec assumed human grader); pass margin is wide enough that LLM-grader optimism does not flip the outcome on aggregate or per-idea criteria.
+
+    **Build prerequisites (before v1 implementation starts):**
+    - Productionise `itunes_search()` into `app/clients/appstore.py`. The prototype called the iTunes Search API ad-hoc; v1 needs it as a proper client alongside the existing RSS client.
+    - Tighten the YouTube ranker prompt to filter gameplay-only let's-plays. Currently ~1 in 10 slip through (see §15 known weaknesses).
+    - *Optional:* extend the validation test set with an industrial/enterprise idea (e.g. *"OSHA compliance tracker for warehouse managers"*) and re-run before v1 ship — the current set didn't surface a clean B2B failure (idea #13 "Slack alternative for solo developers" was predicted to fail and didn't).
 
 ## 15. v1.1 Roadmap & Known Limitations
 
@@ -412,3 +421,5 @@ Deferred from v1 but planned, in rough priority order:
 - The §4 indicators are weak signals on their own. We are shipping with them anyway because longitudinal tracking requires email collection and follow-up infrastructure that isn't justified pre-product-market-fit.
 - Quote-then-claim grounding defends against pure hallucination but not against *selection bias* — the LLM still chooses which quotes ground the synthesis. v1.1's golden eval set is the primary mitigation.
 - The grounded competitor search depends on App Store and YouTube returning useful results for the idea's category. For very niche or very new categories, US-S1 (zero-competitors error) is the expected outcome.
+- The YouTube ranker keeps occasional gameplay-only let's-plays (~1 in 10 slipped through during pre-flight validation). Didn't move pass/fail in the 15-idea test, but degrades quality on game-category ideas. Prompt-level tightening before v1 ship; v1.1 golden eval set will catch regressions.
+- Pre-flight validation grades were applied by an LLM, not a human grader (§14.18). Aggregate score should be read with that bias in mind; signal-strength classification is objective and unaffected. Re-running validation with a wider idea set (including an industrial/enterprise idea, e.g. *"OSHA compliance tracker for warehouse managers"*) is a candidate before v1 ship.
