@@ -60,7 +60,7 @@ def test_youtube_manual_returns_validated_insights_for_real_pipeline(mocker):
     assert fetch.call_args_list[0].args == ("dQw4w9WgXcQ", "relevance")
     assert fetch.call_args_list[1].args == ("dQw4w9WgXcQ", "time")
 
-    cleaned_passed_to_llm = extract.call_args.args[0]
+    cleaned_passed_to_llm = extract.call_args_list[0].args[0]
     contents = [row["Content"] for row in cleaned_passed_to_llm]
     assert "battery problem on the device" in contents
     assert "the bug ruined this " in contents
@@ -200,7 +200,7 @@ class TestYoutubeManualRAGReadPath:
             return_value=[fake_insight],
         )
         build = mocker.patch(
-            "app.services.youtube_service.build_youtube_prompt",
+            "app.services.youtube_service.build_youtube_refinement_prompt",
             return_value="mocked prompt",
         )
 

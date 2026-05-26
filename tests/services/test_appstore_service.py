@@ -59,7 +59,7 @@ def test_app_store_manual_returns_validated_insights(mocker):
     assert result.problems[0].problem == "notifications never arrive"
 
     assert fetch.call_count == 2
-    assert extract.call_count == 1
+    assert extract.call_count == 2
 
 
 def test_app_store_manual_returns_none_when_extract_insights_returns_none(mocker):
@@ -185,7 +185,7 @@ class TestAppStoreManualRAGReadPath:
             return_value=[fake_insight],
         )
         build = mocker.patch(
-            "app.services.appstore_service.build_appstore_prompt",
+            "app.services.appstore_service.build_appstore_refinement_prompt",
             return_value="mocked prompt",
         )
 
