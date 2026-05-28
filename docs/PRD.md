@@ -6,8 +6,25 @@
 | **Status** | Draft (pre-flight validated 2026-05-22) |
 | **Last updated** | 2026-05-27 |
 | **Owner** | John Lowen David |
-| **Supersedes** | v2.1 — added §7.8 selection-bias mitigations, `coverage` field in §7.4, §15 cost-tradeoff table |
+| **Supersedes** | v2.1 — added §7.8 selection-bias mitigations, `coverage` field in §7.4, §15 cost-tradeoff table. v2.2 adds §7.9 evaluation harness, §10.1 model routing, promotes golden eval seed to v1 scope |
 | **Pre-flight validation** | PASS — see [findings memo](../planning/prototypes/preflight/findings.md) |
+
+---
+
+## Background: Why this version exists
+
+v1 was a **URL-in, problems-out analyzer**: paste a YouTube video or App Store app URL, get a ranked list of problems for that single source. A weekly cron extended the same one-shot extraction to top-N items per category, persisting to `automatic_table` / `automatic_apple_table` as a "weekly trending" feed. Successive iterations added RAG retrieval, recurrence tagging, cross-pass refinement, and the v3 canonical-ledger spec.
+
+Two compounding problems drove the pivot:
+
+1. **No anchored user.** v1 grew by feature accretion without a sharp answer to *"who is this for, and what decision are they making?"* Writing the first PRD draft surfaced that the implied user — *someone who wants insights about a specific video or app they've already chosen* — wasn't a real persona with a real workflow. The weekly trending feed had the same problem: popular-video summaries are content, not a decision-support tool.
+2. **The output shape didn't match the natural workflow.** A solo founder or indie dev doesn't start with a competitor URL — they start with an *idea* and need a cross-competitor view of unaddressed pain (§2). v1 forced the user to (a) pick a competitor themselves, (b) run it through the analyzer one URL at a time, then (c) do the cross-source synthesis in their head. The two steps the tool *should* own — competitor discovery and cross-source synthesis — were the two steps the tool wasn't doing.
+
+v2 inverts the entry point: **idea-in, cross-competitor gaps-out.** Pre-flight (§7.3) turns the idea into a candidate competitor list the user can edit; the pipeline fans out across the approved sources; quote-then-claim synthesis (§7.7) returns ranked gaps grounded in verbatim quotes. The weekly trending pipeline, the `/analyze/youtube` and `/analyze/appStore` single-URL endpoints, and the `automatic_table` / `automatic_apple_table` stores are **removed** (§7.2, §9) — they served a workflow that wasn't load-bearing.
+
+**What carries over** from v1: per-source extraction logic, App Store / YouTube client wrappers, PII redaction, Pydantic validation at boundaries, and the layered `api/ → services/` architecture (§10). The pivot is in the *framing and entry point*, not a ground-up rewrite of pipeline internals — which is also why the v3 RAG / canonical-ledger work is deferred: it was solving for longitudinal trend detection in a product whose primary user journey is now single-run, idea-scoped.
+
+The cost of the pivot is explicit: §4 leading indicators replace any v1 "weekly engagement" framing, longitudinal outcome tracking is deferred to v1.1 (§15), and the pre-flight stage was prototyped and graded on 15 ideas before committing to the v2 build ([findings memo](../planning/prototypes/preflight/findings.md)) to confirm the new entry point is actually viable before rebuilding around it.
 
 ---
 
@@ -264,7 +281,51 @@ v1 ships three near-zero-cost mitigations:
 2. **Coverage metrics in output.** `coverage: { quotes_retrieved, quotes_cited, citation_ratio }`. UI renders one line: *"12 of 184 retrieved quotes were cited (6%)"*. A run discarding 95% of evidence is structurally weaker than one citing 40%.
 3. **Citation count per gap.** UI shows `len(evidence_quote_ids)` next to severity — 2 citations is weaker than 12.
 
-These reduce one bias vector (idea-leakage) and make the rest *visible*, consistent with §1's "decision support, not verdict" framing. They do not *measure* selection bias — that requires the v1.1 golden eval (§15). Higher-cost active mitigations are catalogued in §15.
+These reduce one bias vector (idea-leakage) and make the rest *visible*, consistent with §1's "decision support, not verdict" framing. They do not *measure* selection bias — that requires the golden eval (§15). Higher-cost active mitigations are catalogued in §15.
+
+### 7.9 Evaluation harness
+
+v1 ships the evaluation harness and a seed set. v1.1 fills the full golden eval corpus (§15). The harness is the prerequisite for every cost-increasing quality improvement in §15 — without measurement, no mitigation can be justified.
+
+**Harness (v1 scope):**
+
+A runner script that takes an idea + hand-labelled expected gaps, executes the full pipeline, and scores the output against four metrics:
+
+| Metric | What it measures | How |
+|---|---|---|
+| **Gap recall** | Did the expected gaps surface? | Fuzzy match each labelled gap against output gaps; report hit/miss per idea |
+| **Hallucination rate** | Gaps with broken or missing grounding | Count gaps whose `evidence_quote_ids` reference IDs not in the quote pool, or with <2 citations |
+| **Citation ratio** | What fraction of retrieved evidence was used | `coverage.citation_ratio` — already in §7.4. Logged per run for trend tracking |
+| **Severity calibration** | Is the rubric applied consistently? | Flag runs where >80% of gaps are severity 4–5 (inflation) or >80% are 1–2 (deflation) |
+
+The harness outputs a structured JSON report per idea. No CI gate in v1 — runs are manual and results reviewed by hand.
+
+**Seed set (v1 scope):**
+
+5 ideas drawn from the pre-flight validation set (§14.18), each hand-labelled with 3–5 expected gaps and expected severity ranges. Enough to confirm the harness works and establish a baseline, not enough to be statistically meaningful.
+
+Selection criteria for seed ideas: one per category (consumer-app, mobile-game, creator-tool, productivity, low-signal), covering the range of signal strengths.
+
+**Full set (v1.1):**
+
+15–20 ideas with hand-labelled expected gaps. Automated: runs before every prompt or model change. Regression gate: if gap recall drops >15% or hallucination rate exceeds 5%, block the change. See §15 for sequencing with other mitigations.
+
+**Per-run quality signals (v1 scope):**
+
+In addition to `coverage` (§7.4), the output schema gains a `quality_signals` field logged on every production run — not just eval runs:
+
+```
+quality_signals: {
+  quote_source_diversity: float,   // 0–1; 1 = citations spread evenly across sources
+  severity_distribution: [int],    // count of gaps at each severity level [1..5]
+  single_source_gap_count: int,    // gaps where spread == 1 (weaker evidence)
+  extraction_yield: [{ source, comment_count, pain_item_count }]
+}
+```
+
+`quote_source_diversity` flags when the synthesizer over-indexes on one source. `extraction_yield` flags sources where hundreds of comments produce very few pain items — a possible extraction failure.
+
+These signals are logged, not surfaced in the UI in v1. They feed the golden eval analysis in v1.1 and inform whether cost-increasing mitigations (adversarial pass, cold-model critique) are justified.
 
 ## 8. Non-Functional Requirements
 
@@ -321,6 +382,23 @@ Legacy `automatic_table` and `automatic_apple_table` (weekly trending) are **rem
 
 Layer rule: `api/` → `services/` only. Pipeline modules don't import each other.
 
+### 10.1 Model routing
+
+v1 uses a single model (gpt-4o) for all LLM stages. This section documents the per-stage requirements so that agent orchestration — routing different stages to different models — becomes a configuration change, not an architecture change.
+
+| Stage | Calls / run | Token profile | Latency constraint | v1 model | Future routing candidates |
+|---|---|---|---|---|---|
+| **Pre-flight** | 1 | Light (idea text + search results) | ≤10s user-facing | gpt-4o | Cheaper/faster (gpt-4o-mini, Haiku-class). Classification + ranking is a simpler task; accuracy must be validated via §7.9 harness before downgrading. |
+| **Per-source extraction** | 10 (parallel) | Heavy (hundreds of comments each) | Background; dominates total run time | gpt-4o | Same family. Token volume is the cost driver — stratified sampling (§15) reduces input before model routing helps. |
+| **Synthesis** | 1 | Heavy (entire pooled quote set) | Background; single largest call | gpt-4o | Reasoning model (o3-class, Opus with extended thinking). One call per run, highest-stakes output — a stronger model here has the best cost/accuracy ratio. |
+| **Idea-match** | 0–1 | Light (gap list + idea text) | Background | gpt-4o | Cheaper model viable; low-stakes relative to synthesis. |
+| **Adversarial pass** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different model family (Claude, Gemini). Same-family critique catches fewer blind spots. |
+| **Cold-model critique** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different family + low temperature. Independent audit of synthesis output. |
+
+**Implementation rule:** each pipeline stage calls an LLM through a single routing function that resolves `(stage_name) → (model, temperature, max_tokens)` from config. v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry and validating against the §7.9 eval harness — no pipeline code changes.
+
+**Cost-neutral orchestration path:** downgrading pre-flight and idea-match to a cheaper model frees ~10–15% of per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move when the eval harness shows the cheaper models maintain accuracy on those stages.
+
 ## 11. Alternatives Considered
 
 | Alternative | Why a user would pick it | Where Trend Insight Engine differs |
@@ -360,6 +438,10 @@ Layer rule: `api/` → `services/` only. Pipeline modules don't import each othe
 - **Severity** — 1–5 with anchored rubric (§7.4).
 - **Frequency** — Raw count of supporting pain items.
 - **Spread** — Count of distinct competitors surfacing a gap.
+- **Model routing** — Config-driven mapping of pipeline stages to LLM models. v1 maps all stages to gpt-4o; enables agent orchestration without code changes (§10.1).
+- **Eval harness** — Runner script that scores pipeline output against hand-labelled expected gaps. Measures gap recall, hallucination rate, citation ratio, severity calibration (§7.9).
+- **Golden eval set** — Corpus of ideas with hand-labelled expected gaps used by the eval harness. 5-idea seed in v1; full 15–20 idea set in v1.1.
+- **Quality signals** — Per-run metrics (quote diversity, severity distribution, extraction yield) logged for trend analysis. Not surfaced in v1 UI (§7.9).
 
 ## 14. Resolved Decisions
 
@@ -390,12 +472,14 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
     - *Optional:* extend validation set with an industrial/enterprise idea and re-run before v1 ship.
 
 19. **Selection-bias mitigations (v1)** — Quote-then-claim constrains *grounding* but not *which* quotes. v1 ships three near-zero-cost mitigations (§7.8): idea-blinded extraction, coverage metrics, citation count per gap. Higher-cost active mitigations catalogued in §15.
+20. **Evaluation harness + seed set (v1)** — Harness runner + 5 hand-labelled ideas ship with v1 (§7.9). Full 15–20 idea corpus and CI regression gate deferred to v1.1. Rationale: the harness is the prerequisite for justifying every cost-increasing mitigation in §15 — shipping the infrastructure early means v1.1 improvements are data-driven from day one.
+21. **Model routing as config (v1)** — All LLM calls route through a single `(stage_name) → model` resolver (§10.1). v1 maps everything to gpt-4o. Swapping a model per stage requires one config change + eval harness validation — no pipeline code changes. Rationale: makes agent orchestration (multi-model, cold-model critique) a deployment decision, not an architecture change.
 
 ## 15. v1.1 Roadmap & Known Limitations
 
-Deferred from v1, in rough priority:
+Deferred from v1, in rough priority (note: eval harness + seed set promoted to v1 scope in §7.9):
 
-1. **Golden evaluation set.** 15–20 ideas with hand-labelled expected gaps; run before every release to measure hallucination and gap-recall regressions. Without it, v1 quality guarantees are structural, not statistical.
+1. **Full golden evaluation set.** Expand the v1 seed set (5 ideas, §7.9) to 15–20 ideas with hand-labelled expected gaps. Automate runs before every prompt or model change with regression gates. The seed harness ships with v1; the full corpus and CI gate are v1.1.
 2. **Queue UX with ETA.** Replaces `429 busy` with accept-and-queue showing position + estimated start.
 3. **Longitudinal outcome tracking.** Optional email at submit; 14-day follow-up: *"did the gap prove real?"* Until this exists, §4 indicators can't distinguish "ran successfully" from "user built on it."
 4. **User research on §2.** The four-step workflow is a hypothesis. Interview 5–10 indie devs pre-v1.1.
@@ -426,7 +510,7 @@ Cost is *additional LLM work per run* against a v1 baseline of ~12 calls (1 pre-
 **Known v1 weaknesses we are accepting:**
 
 - §4 indicators are weak alone. Longitudinal tracking requires email + follow-up infra not justified pre-PMF.
-- Quote-then-claim defends against hallucination but not selection bias. v1 reduces one vector and surfaces the rest (§7.8); v1.1 adds measurement (golden eval) and active defence (adversarial pass).
+- Quote-then-claim defends against hallucination but not selection bias. v1 reduces one vector, surfaces the rest (§7.8), and ships the eval harness + seed set (§7.9) to establish a baseline. v1.1 scales the eval corpus and adds active defence (adversarial pass).
 - Grounded competitor search depends on App Store + YouTube returning useful results. For niche/new categories, US-S1 (zero competitors) is the expected outcome.
 - YouTube ranker keeps ~1-in-10 gameplay-only let's-plays. Prompt tightening before v1 ship; v1.1 golden eval catches regressions.
 - Pre-flight grades were LLM-applied, not human. Aggregate score should be read with that bias; signal-strength classification is objective. Re-running with a wider set (incl. an industrial/enterprise idea) is a candidate before v1 ship.

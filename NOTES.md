@@ -58,3 +58,14 @@ What I learned:
 - My current project is a URL-in, problems-out analyzer. Right now, we paste either a youtube/AppStore URL and get a rannked list of problems for a single source. The weekly cron would do the same thing for the top-N items in specific categories.
 
 - Through the PRD, I created a clear user and problem. This helped me realize that the current project does not solve the problem. Instead, I scoped down, reinvented
+
+May 27:
+Current version:
+- Presents weekly insights of the most popular videos/apps in youtube/appstore for specific categories
+- Paste a URL-in and get a ranked list of problems for that source.
+
+These features dont solve the target issue which was to help validate if a builder's idea addresses a real user problem.
+
+Version 2.2:
+- User inputs their idea and pipeline returns a ranked list of evidence-backed canidate gaps validated through quoted complaints.
+
