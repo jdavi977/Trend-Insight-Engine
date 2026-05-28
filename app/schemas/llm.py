@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Literal, Optional, Union
 
 from app.schemas.rag import RetrievedInsight
+from app.schemas.runs import PainItem, Quote
 
 
 class YoutubeProblemItem(BaseModel):
@@ -33,3 +34,5 @@ class LLMExtraction(BaseModel):
     source: Literal["youtube", "app_store"]
     title: Optional[str] = None
     problems: List[ProblemItem] = Field(min_length=1)
+    pain_items: List[PainItem] = Field(default_factory=list)
+    quotes: List[Quote] = Field(default_factory=list)

@@ -18,3 +18,13 @@ RAG_TOP_K = 5
 RAG_MIN_SIMILARITY = 0.60
 RAG_DEDUP_SIMILARITY = 0.75
 RAG_COLLECTION = "insights"
+
+# Model routing for v2 pipeline (PRD §10.1, spec §9). Every LLM call in slice 1
+# goes through app/llm/router.py::resolve(stage); v1 ships gpt-4o for every stage.
+MODEL_ROUTING = {
+    "preflight_classify": {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 1500},
+    "preflight_rank":     {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 2000},
+    "per_source_extract": {"model": "gpt-4o", "temperature": 0.3, "max_tokens": 4000},
+    "synthesis":          {"model": "gpt-4o", "temperature": 0.3, "max_tokens": 6000},
+    "idea_match":         {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 1500},
+}

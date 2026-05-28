@@ -20,9 +20,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from app.clients.openai import get_openai_client  # noqa: E402
 from app.config.secrets import keyChecker  # noqa: E402
+from app.llm.router import resolve  # noqa: E402
 
 YOUTUBE_API = keyChecker("YOUTUBE_API")
-_MODEL = "gpt-4o"
 
 IDEAS = [
     {"id": 1, "text": "note-taking app with better offline sync"},
@@ -91,9 +91,12 @@ Return JSON with this exact schema:
 
 def generate_queries(idea: str) -> dict:
     """LLM call #1: search queries + signal-strength assessment."""
+    cfg = resolve("preflight_classify")
     client = get_openai_client()
     response = client.chat.completions.create(
-        model=_MODEL,
+        model=cfg.model,
+        temperature=cfg.temperature,
+        max_tokens=cfg.max_tokens,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": _GENERATE_QUERIES_SYSTEM},
@@ -180,9 +183,12 @@ def rank_candidates(idea: str, apps: list[dict], videos: list[dict]) -> dict:
         for v in videos
     ]
 
+    cfg = resolve("preflight_rank")
     client = get_openai_client()
     response = client.chat.completions.create(
-        model=_MODEL,
+        model=cfg.model,
+        temperature=cfg.temperature,
+        max_tokens=cfg.max_tokens,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": _RANK_SYSTEM},
