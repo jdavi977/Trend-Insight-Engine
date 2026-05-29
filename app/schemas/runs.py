@@ -6,7 +6,7 @@ Persisted shape: planning/specs/v2-slice-1-end-to-end_spec.md §4.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -90,3 +90,40 @@ class RunResult(BaseModel):
     quotes: dict[str, Quote]
     coverage: Coverage
     idea_match: Optional[IdeaMatch] = None
+
+
+class RunCreateResponse(BaseModel):
+    run_id: str
+    status: RunStatus
+    preflight: PreflightResult
+
+
+class RunStateResponse(BaseModel):
+    """Permissive view of a single `idea_runs` row at any lifecycle stage.
+
+    Fields populated by later pipeline stages (gaps, coverage, idea_match) are
+    optional so a `preflight_ready` row serialises cleanly. Once slice 1's
+    background pipeline lands, the `done` view is the union of this shape and
+    the `gaps` table — RunResult stays the strict "terminal" view.
+    """
+
+    run_id: str
+    idea: str
+    target_gap: Optional[str] = None
+    status: RunStatus
+    created_at: datetime
+    updated_at: datetime
+    category: Optional[str] = None
+    signal_strength: Optional[SignalStrength] = None
+    signal_reasoning: Optional[str] = None
+    competitors: List[Competitor] = Field(default_factory=list)
+    quotes: Dict[str, Quote] = Field(default_factory=dict)
+    coverage: Optional[Coverage] = None
+    idea_match: Optional[IdeaMatch] = None
+    failure_reason: Optional[str] = None
+
+
+class RunFeedItem(BaseModel):
+    run_id: str
+    idea: str
+    completed_at: datetime

@@ -1,10 +1,10 @@
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import appstore, errors, home, insights, internal, youtube
+from app.api import appstore, errors, home, insights, internal, runs, youtube
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -27,11 +27,21 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Spec §6 / §10: keep run pages out of search indexes. Middleware (not a
+    # per-route header) so /runs/:id/approve, feedback, report etc. inherit it.
+    @app.middleware("http")
+    async def add_x_robots_tag(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/runs"):
+            response.headers["X-Robots-Tag"] = "noindex, nofollow"
+        return response
+
     app.include_router(youtube.router)
     app.include_router(appstore.router)
     app.include_router(home.router)
     app.include_router(internal.router)
     app.include_router(insights.router)
+    app.include_router(runs.router)
 
     errors.register_exception_handlers(app)
 

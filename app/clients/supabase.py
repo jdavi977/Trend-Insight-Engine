@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from supabase import create_client, Client
 
 from app.config.secrets import SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -78,3 +81,50 @@ def get_all_apple_ids(genre_id: int):
 def get_insights_count() -> int:
     response = supabase_client.table("insights").select("id", count="exact").limit(0).execute()
     return response.count or 0
+
+
+def insert_idea_run(idea: str, target_gap: Optional[str]) -> dict:
+    response = supabase_client.table("idea_runs").insert({
+        "idea": idea,
+        "target_gap": target_gap,
+        "status": "pending",
+        "competitors_json": [],
+        "quotes_json": {},
+    }).execute()
+    return response.data[0]
+
+
+def update_idea_run_preflight(
+    run_id: str,
+    category: str,
+    signal_strength: str,
+    signal_reasoning: str,
+    candidates: list[dict],
+) -> dict:
+    response = supabase_client.table("idea_runs").update({
+        "status": "preflight_ready",
+        "category": category,
+        "signal_strength": signal_strength,
+        "signal_reasoning": signal_reasoning,
+        "competitors_json": candidates,
+    }).eq("id", run_id).execute()
+    return response.data[0]
+
+
+def get_idea_run(run_id: str) -> Optional[dict]:
+    response = supabase_client.table("idea_runs").select("*").eq("id", run_id).execute()
+    if response.data:
+        return response.data[0]
+    return None
+
+
+def list_done_idea_runs(limit: int, before: Optional[datetime]) -> list[dict]:
+    query = (
+        supabase_client.table("idea_runs")
+        .select("id, idea, updated_at")
+        .eq("status", "done")
+    )
+    if before is not None:
+        query = query.lt("updated_at", before.isoformat())
+    response = query.order("updated_at", desc=True).limit(limit).execute()
+    return response.data or []
