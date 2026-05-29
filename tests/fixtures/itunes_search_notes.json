@@ -1,0 +1,29 @@
+{
+  "resultCount": 3,
+  "results": [
+    {
+      "bundleId": "md.obsidian.Obsidian",
+      "trackName": "Obsidian",
+      "primaryGenreName": "Productivity",
+      "description": "Obsidian is a private and flexible note-taking app that adapts to the way you think. Build a personal knowledge base with markdown files stored locally on your device. Includes graph view, backlinks, and a plugin ecosystem.",
+      "userRatingCount": 4321,
+      "trackViewUrl": "https://apps.apple.com/us/app/obsidian/id1557175442"
+    },
+    {
+      "bundleId": "com.bear-writer",
+      "trackName": "Bear - Markdown Notes",
+      "primaryGenreName": "Productivity",
+      "description": "Bear is a beautiful, flexible writing app for crafting notes and prose. With markdown support, advanced markup options, and cross-device sync, Bear is the perfect note-taking companion.",
+      "userRatingCount": 28000,
+      "trackViewUrl": "https://apps.apple.com/us/app/bear/id1016366447"
+    },
+    {
+      "bundleId": "com.standardnotes.standardnotes",
+      "trackName": "Standard Notes",
+      "primaryGenreName": "Productivity",
+      "description": null,
+      "userRatingCount": 312,
+      "trackViewUrl": "https://apps.apple.com/us/app/standard-notes/id1285392450"
+    }
+  ]
+}

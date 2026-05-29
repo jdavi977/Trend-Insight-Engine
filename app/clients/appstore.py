@@ -1,4 +1,39 @@
+import time
+
 import requests
+
+
+def itunes_search(query: str, limit: int = 10, timeout: int = 10) -> list[dict]:
+    """iTunes Search API — return normalized App Store app candidates for a query.
+
+    Each row: ``{bundle_id, name, genre, description, rating_count, url}``.
+    Description is truncated to 300 chars so downstream LLM ranker prompts stay bounded.
+    Sleeps 0.5s after the request — iTunes Search is rate-limited (~20 req/min, undocumented).
+    """
+    response = requests.get(
+        "https://itunes.apple.com/search",
+        params={
+            "term": query,
+            "entity": "software",
+            "limit": limit,
+            "country": "us",
+        },
+        timeout=timeout,
+    )
+    results = response.json().get("results", [])
+    apps = [
+        {
+            "bundle_id": item.get("bundleId"),
+            "name": item.get("trackName"),
+            "genre": item.get("primaryGenreName"),
+            "description": (item.get("description") or "")[:300],
+            "rating_count": item.get("userRatingCount"),
+            "url": item.get("trackViewUrl"),
+        }
+        for item in results
+    ]
+    time.sleep(0.5)
+    return apps
 
 
 def get_app_metadata(app_id: str, timeout: int = 10) -> dict:

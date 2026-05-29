@@ -27,6 +27,26 @@ def create_response(system_prompt: str, user_data: str, assistant_prompt: str) -
     return response.choices[0].message.content
 
 
+def create_chat_completion(
+    messages: list[dict],
+    model: str,
+    temperature: float,
+    max_tokens: int,
+) -> str:
+    """Generic chat-completion call used by v2 LLM stages.
+
+    Callers obtain `(model, temperature, max_tokens)` from `app.llm.router.resolve(stage)`.
+    """
+    client = get_openai_client()
+    response = client.chat.completions.create(
+        model=model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        messages=messages,
+    )
+    return response.choices[0].message.content
+
+
 def create_embedding(text: str) -> list[float]:
     client = get_openai_client()
     response = client.embeddings.create(model=_EMBEDDING_MODEL, input=text)

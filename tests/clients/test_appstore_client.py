@@ -6,6 +6,84 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from tests.conftest import load_fixture
+
+
+def test_itunes_search_normalizes_recorded_fixture(mocker):
+    """v2 spec §7: itunes_search returns app candidates from the iTunes Search API."""
+    from app.clients import appstore
+
+    mocker.patch.object(appstore.time, "sleep")  # don't sleep in tests
+    response = MagicMock(status_code=200)
+    response.json.return_value = load_fixture("itunes_search_notes.json")
+    get = mocker.patch.object(appstore.requests, "get", return_value=response)
+
+    result = appstore.itunes_search("note taking app", limit=5)
+
+    assert get.call_args.args[0] == "https://itunes.apple.com/search"
+    assert get.call_args.kwargs["params"] == {
+        "term": "note taking app",
+        "entity": "software",
+        "limit": 5,
+        "country": "us",
+    }
+    assert get.call_args.kwargs["timeout"] == 10
+
+    assert [a["bundle_id"] for a in result] == [
+        "md.obsidian.Obsidian",
+        "com.bear-writer",
+        "com.standardnotes.standardnotes",
+    ]
+    assert result[0] == {
+        "bundle_id": "md.obsidian.Obsidian",
+        "name": "Obsidian",
+        "genre": "Productivity",
+        "description": (
+            "Obsidian is a private and flexible note-taking app that adapts to "
+            "the way you think. Build a personal knowledge base with markdown "
+            "files stored locally on your device. Includes graph view, "
+            "backlinks, and a plugin ecosystem."
+        ),
+        "rating_count": 4321,
+        "url": "https://apps.apple.com/us/app/obsidian/id1557175442",
+    }
+    # null description coerced to empty string, not propagated as None
+    assert result[2]["description"] == ""
+
+
+def test_itunes_search_truncates_long_descriptions(mocker):
+    from app.clients import appstore
+
+    mocker.patch.object(appstore.time, "sleep")
+    long_desc = "x" * 1000
+    response = MagicMock(status_code=200)
+    response.json.return_value = {
+        "results": [{
+            "bundleId": "id",
+            "trackName": "name",
+            "primaryGenreName": "g",
+            "description": long_desc,
+            "userRatingCount": 1,
+            "trackViewUrl": "u",
+        }]
+    }
+    mocker.patch.object(appstore.requests, "get", return_value=response)
+
+    result = appstore.itunes_search("q")
+
+    assert len(result[0]["description"]) == 300
+
+
+def test_itunes_search_returns_empty_when_no_results(mocker):
+    from app.clients import appstore
+
+    mocker.patch.object(appstore.time, "sleep")
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"resultCount": 0}
+    mocker.patch.object(appstore.requests, "get", return_value=response)
+
+    assert appstore.itunes_search("nonsense query xyz") == []
+
 
 def test_fetch_reviews_page_builds_url_and_returns_json(mocker):
     from app.clients import appstore

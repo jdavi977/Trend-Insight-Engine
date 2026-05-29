@@ -1,0 +1,41 @@
+{
+  "idea": "note-taking app with better offline sync",
+  "target_gap": null,
+  "quotes": [
+    {"quote_id": "q01", "source": "youtube", "source_id": "notion_review", "text_redacted": "Notion is unusable when I'm on a flight. Edits I make offline get blown away when I reconnect.", "like_count": 142},
+    {"quote_id": "q02", "source": "youtube", "source_id": "notion_review", "text_redacted": "The mobile app stutters badly once a page has more than a few hundred lines.", "like_count": 88},
+    {"quote_id": "q03", "source": "youtube", "source_id": "notion_review", "text_redacted": "Paying $10 a month for what's basically a glorified wiki is highway robbery.", "like_count": 60},
+    {"quote_id": "q04", "source": "youtube", "source_id": "notion_review", "text_redacted": "I genuinely love the database views, no complaints there.", "like_count": 33},
+    {"quote_id": "q05", "source": "youtube", "source_id": "notion_review", "text_redacted": "Tried to draft a doc on the subway and lost half of it when I got back to wifi. Never again.", "like_count": 71},
+    {"quote_id": "q06", "source": "youtube", "source_id": "obsidian_review", "text_redacted": "Sync between my laptop and phone is a nightmare. Obsidian Sync is extra money on top.", "like_count": 120},
+    {"quote_id": "q07", "source": "youtube", "source_id": "obsidian_review", "text_redacted": "Long markdown files chug on iPhone. Scrolling jumps everywhere.", "like_count": 54},
+    {"quote_id": "q08", "source": "youtube", "source_id": "obsidian_review", "text_redacted": "Plugin ecosystem is the best part of Obsidian, hands down.", "like_count": 210},
+    {"quote_id": "q09", "source": "youtube", "source_id": "obsidian_review", "text_redacted": "Edited a note on the train, came back to wifi, and the conflict resolver kept the wrong copy.", "like_count": 47},
+    {"quote_id": "q10", "source": "youtube", "source_id": "obsidian_review", "text_redacted": "Why is exporting to anything other than markdown such a pain?", "like_count": 22},
+    {"quote_id": "q11", "source": "appstore", "source_id": "bear_app", "text_redacted": "Sync is broken half the time. iCloud just gives up.", "like_count": 18},
+    {"quote_id": "q12", "source": "appstore", "source_id": "bear_app", "text_redacted": "Beautiful editor, but the iPad version slows to a crawl on a note over a few thousand words.", "like_count": 9},
+    {"quote_id": "q13", "source": "appstore", "source_id": "bear_app", "text_redacted": "Lost three days of notes because the offline cache silently overwrote the cloud copy.", "like_count": 26},
+    {"quote_id": "q14", "source": "appstore", "source_id": "bear_app", "text_redacted": "Pro subscription is way overpriced for what you get.", "like_count": 14},
+    {"quote_id": "q15", "source": "appstore", "source_id": "bear_app", "text_redacted": "Tag system is unmatched, love it.", "like_count": 31},
+    {"quote_id": "q16", "source": "appstore", "source_id": "bear_app", "text_redacted": "Crashes on launch ever since the last update.", "like_count": 11},
+    {"quote_id": "q17", "source": "appstore", "source_id": "evernote", "text_redacted": "Offline edits are STILL not reliable in 2026. Unbelievable.", "like_count": 64},
+    {"quote_id": "q18", "source": "appstore", "source_id": "evernote", "text_redacted": "Mobile app feels like molasses on anything longer than a single page.", "like_count": 39},
+    {"quote_id": "q19", "source": "appstore", "source_id": "evernote", "text_redacted": "Two-device limit on free tier is insulting in 2026.", "like_count": 51},
+    {"quote_id": "q20", "source": "appstore", "source_id": "evernote", "text_redacted": "Wrote a long note on the plane and watched it vanish when I landed.", "like_count": 28},
+    {"quote_id": "q21", "source": "appstore", "source_id": "evernote", "text_redacted": "Web clipper is honestly still the killer feature.", "like_count": 19}
+  ],
+  "pain_items": [
+    {"source": "youtube", "source_id": "notion_review", "text": "offline edits lost on reconnect", "quote_ids": ["q01", "q05"]},
+    {"source": "youtube", "source_id": "notion_review", "text": "mobile editor lag on long pages", "quote_ids": ["q02"]},
+    {"source": "youtube", "source_id": "notion_review", "text": "pricing too high", "quote_ids": ["q03"]},
+    {"source": "youtube", "source_id": "obsidian_review", "text": "sync requires paid add-on, conflicts mis-resolved", "quote_ids": ["q06", "q09"]},
+    {"source": "youtube", "source_id": "obsidian_review", "text": "long markdown files lag on mobile", "quote_ids": ["q07"]},
+    {"source": "youtube", "source_id": "obsidian_review", "text": "export options limited", "quote_ids": ["q10"]},
+    {"source": "appstore", "source_id": "bear_app", "text": "iCloud sync unreliable, offline cache overwrites cloud", "quote_ids": ["q11", "q13"]},
+    {"source": "appstore", "source_id": "bear_app", "text": "iPad editor slow on long notes", "quote_ids": ["q12"]},
+    {"source": "appstore", "source_id": "bear_app", "text": "subscription overpriced", "quote_ids": ["q14"]},
+    {"source": "appstore", "source_id": "evernote", "text": "offline edits unreliable, data loss on reconnect", "quote_ids": ["q17", "q20"]},
+    {"source": "appstore", "source_id": "evernote", "text": "mobile app sluggish on long notes", "quote_ids": ["q18"]},
+    {"source": "appstore", "source_id": "evernote", "text": "free tier device limit too restrictive", "quote_ids": ["q19"]}
+  ]
+}

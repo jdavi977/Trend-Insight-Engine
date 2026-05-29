@@ -45,6 +45,38 @@ def list_comment_threads(video_id, order, max_results):
         service.close()
 
 
+def search_videos(query: str, max_results: int = 10) -> list[dict]:
+    """YouTube Data search.list — return candidate videos for a free-text query.
+
+    Each row: ``{video_id, title, channel, description, url}``.
+    Description truncated to 200 chars to keep ranker prompts bounded.
+    ~100 quota units per call (YouTube Data API v3).
+    """
+    service = _service()
+    try:
+        response = service.search().list(
+            part="snippet",
+            q=query,
+            type="video",
+            maxResults=max_results,
+        ).execute()
+    finally:
+        service.close()
+
+    videos = []
+    for item in response.get("items", []):
+        snippet = item["snippet"]
+        video_id = item["id"]["videoId"]
+        videos.append({
+            "video_id": video_id,
+            "title": snippet.get("title"),
+            "channel": snippet.get("channelTitle"),
+            "description": (snippet.get("description") or "")[:200],
+            "url": f"https://www.youtube.com/watch?v={video_id}",
+        })
+    return videos
+
+
 def list_most_popular(category_id, max_results):
     service = _service()
     try:
