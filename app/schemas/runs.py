@@ -48,6 +48,19 @@ class PainItem(BaseModel):
     quote_ids: List[str] = Field(min_length=1)
 
 
+class SourceMetadata(BaseModel):
+    """Per-source descriptor for the idea-blinded extractor (spec §8 / §13).
+
+    Lives here because the extractor's signature is part of the v2 boundary —
+    it physically excludes `idea` / `target_gap` so confirmation bias cannot
+    leak into per-source prompts.
+    """
+    source: SourceLiteral
+    source_id: str = Field(min_length=1)
+    category: str = Field(min_length=1)
+    title: Optional[str] = None
+
+
 class GapItem(BaseModel):
     gap_id: str = Field(min_length=1)
     gap: str = Field(min_length=1)
