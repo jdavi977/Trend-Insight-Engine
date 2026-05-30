@@ -131,6 +131,7 @@ class RunStateResponse(BaseModel):
     signal_reasoning: Optional[str] = None
     competitors: List[Competitor] = Field(default_factory=list)
     quotes: Dict[str, Quote] = Field(default_factory=dict)
+    gaps: List[GapItem] = Field(default_factory=list)
     coverage: Optional[Coverage] = None
     idea_match: Optional[IdeaMatch] = None
     failure_reason: Optional[str] = None

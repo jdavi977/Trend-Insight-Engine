@@ -14,6 +14,7 @@ from app.clients.supabase import (
     get_idea_run,
     insert_idea_run,
     list_done_idea_runs,
+    list_gaps_for_run,
     update_idea_run_preflight,
 )
 from app.schemas.runs import (
@@ -73,6 +74,9 @@ def list_done_runs(limit: int, before: Optional[datetime]) -> list[RunFeedItem]:
 
 
 def _row_to_state(row: dict) -> RunStateResponse:
+    # Gaps live in their own table; only fetch them for the terminal `done` view
+    # (spec §6 — GET /runs/:id returns the full result once complete).
+    gaps = _gaps_for(row) if row["status"] == "done" else []
     return RunStateResponse(
         run_id=row["id"],
         idea=row["idea"],
@@ -85,7 +89,24 @@ def _row_to_state(row: dict) -> RunStateResponse:
         signal_reasoning=row.get("signal_reasoning"),
         competitors=row.get("competitors_json") or [],
         quotes=row.get("quotes_json") or {},
+        gaps=gaps,
         coverage=row.get("coverage_json"),
         idea_match=row.get("idea_match_json"),
         failure_reason=row.get("failure_reason"),
     )
+
+
+def _gaps_for(row: dict) -> list[dict]:
+    """Map persisted `gaps` rows to the GapItem-shaped dicts the schema expects."""
+    return [
+        {
+            "gap_id": g["gap_id"],
+            "gap": g["gap"],
+            "severity": g["severity"],
+            "frequency": g["frequency"],
+            "spread": g["spread"],
+            "competitors_present": g.get("competitors_present_json") or [],
+            "evidence_quote_ids": g.get("evidence_quote_ids_json") or [],
+        }
+        for g in list_gaps_for_run(row["id"])
+    ]

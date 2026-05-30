@@ -1,22 +1,23 @@
 """Idea-run HTTP surface — spec §6 (v2 slice 1).
 
-POST /runs, GET /runs/:id, GET /runs land in this PR. POST /runs/:id/approve
-returns 501 until the background-pipeline issue lands.
+POST /runs, GET /runs/:id, GET /runs, and POST /runs/:id/approve. The approve
+endpoint kicks off the background pipeline via FastAPI `BackgroundTasks`.
 """
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
 
 from app.schemas.runs import (
+    RunApprove,
     RunCreate,
     RunCreateResponse,
     RunFeedItem,
     RunStateResponse,
 )
-from app.services import idea_run_service
+from app.services import idea_run_service, run_pipeline_service
 
 router = APIRouter(prefix="/runs")
 
@@ -46,8 +47,9 @@ def get_run(run_id: str) -> RunStateResponse:
 
 
 @router.post("/{run_id}/approve")
-def approve_run(run_id: str):
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Background pipeline wired in next issue (v2 slice 1 PR 8).",
-    )
+def approve_run(
+    run_id: str,
+    request: RunApprove,
+    background_tasks: BackgroundTasks,
+) -> dict:
+    return run_pipeline_service.approve(run_id, request, background_tasks)

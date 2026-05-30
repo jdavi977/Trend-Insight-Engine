@@ -173,6 +173,49 @@ def test_get_run_missing_id_returns_404(client, mocker):
     assert response.json()["detail"] == "Run not found"
 
 
+def test_get_done_run_includes_gaps_from_gaps_table(client, mocker):
+    done = _row(status_="preflight_ready", category="productivity",
+                signal_strength="high", signal_reasoning="r")
+    done["status"] = "done"
+    mocker.patch(
+        "app.services.idea_run_service.get_idea_run", return_value=done,
+    )
+    mocker.patch(
+        "app.services.idea_run_service.list_gaps_for_run",
+        return_value=[{
+            "gap_id": "gap_001", "run_id": done["id"], "gap": "Offline edits lost",
+            "severity": 5, "frequency": 4, "spread": 2,
+            "competitors_present_json": ["youtube:v1", "appstore:a1"],
+            "evidence_quote_ids_json": ["q01", "q02"], "ordinal": 1,
+        }],
+    )
+
+    response = client.get(f"/runs/{done['id']}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "done"
+    assert len(body["gaps"]) == 1
+    assert body["gaps"][0]["gap_id"] == "gap_001"
+    assert body["gaps"][0]["competitors_present"] == ["youtube:v1", "appstore:a1"]
+    assert body["gaps"][0]["evidence_quote_ids"] == ["q01", "q02"]
+
+
+def test_get_preflight_run_does_not_query_gaps(client, mocker):
+    mocker.patch(
+        "app.services.idea_run_service.get_idea_run",
+        return_value=_row(status_="preflight_ready", category="c",
+                          signal_strength="high", signal_reasoning="r"),
+    )
+    gaps = mocker.patch("app.services.idea_run_service.list_gaps_for_run")
+
+    response = client.get("/runs/11111111-1111-1111-1111-111111111111")
+
+    assert response.status_code == 200
+    assert response.json()["gaps"] == []
+    gaps.assert_not_called()
+
+
 def test_list_runs_returns_done_feed(client, mocker):
     list_done = mocker.patch(
         "app.services.idea_run_service.list_done_idea_runs",
@@ -207,8 +250,101 @@ def test_list_runs_empty_until_pipeline_lands(client, mocker):
     assert response.json() == []
 
 
-def test_approve_returns_501_not_implemented(client):
-    response = client.post("/runs/abc/approve")
+def _competitor_body() -> dict:
+    return {
+        "source": "appstore",
+        "url": "https://apps.apple.com/us/app/obsidian/id1557175442",
+        "name": "Obsidian",
+        "identifier": "md.obsidian",
+    }
 
-    assert response.status_code == 501
-    assert "next issue" in response.json()["detail"]
+
+def test_approve_validates_body_requires_competitors(client):
+    response = client.post("/runs/abc/approve", json={"competitors": []})
+
+    assert response.status_code == 422
+
+
+def test_approve_happy_path_returns_running_and_enqueues(client, mocker):
+    mocker.patch(
+        "app.services.run_pipeline_service.get_idea_run",
+        return_value=_row(status_="preflight_ready", category="productivity",
+                          signal_strength="high", signal_reasoning="r"),
+    )
+    mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
+    # Stub the background task so the pipeline doesn't actually run under TestClient.
+    pipeline = mocker.patch("app.services.run_pipeline_service.run_pipeline")
+
+    response = client.post(
+        "/runs/11111111-1111-1111-1111-111111111111/approve",
+        json={"competitors": [_competitor_body()]},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "run_id": "11111111-1111-1111-1111-111111111111", "status": "running",
+    }
+    assert response.headers["X-Robots-Tag"] == "noindex, nofollow"
+    pipeline.assert_called_once()  # ran as a background task after the response
+
+
+def test_approve_low_signal_without_ack_returns_400(client, mocker):
+    mocker.patch(
+        "app.services.run_pipeline_service.get_idea_run",
+        return_value=_row(status_="preflight_ready", category="b2b-saas",
+                          signal_strength="low", signal_reasoning="thin"),
+    )
+    running = mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
+
+    response = client.post(
+        "/runs/11111111-1111-1111-1111-111111111111/approve",
+        json={"competitors": [_competitor_body()]},
+    )
+
+    assert response.status_code == 400
+    running.assert_not_called()
+
+
+def test_approve_low_signal_with_ack_proceeds(client, mocker):
+    mocker.patch(
+        "app.services.run_pipeline_service.get_idea_run",
+        return_value=_row(status_="preflight_ready", category="b2b-saas",
+                          signal_strength="low", signal_reasoning="thin"),
+    )
+    mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
+    mocker.patch("app.services.run_pipeline_service.run_pipeline")
+
+    response = client.post(
+        "/runs/11111111-1111-1111-1111-111111111111/approve",
+        json={"competitors": [_competitor_body()], "acknowledged_low_signal": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+
+
+def test_approve_wrong_status_returns_409(client, mocker):
+    mocker.patch(
+        "app.services.run_pipeline_service.get_idea_run",
+        return_value=_row(status_="done"),
+    )
+
+    response = client.post(
+        "/runs/11111111-1111-1111-1111-111111111111/approve",
+        json={"competitors": [_competitor_body()]},
+    )
+
+    assert response.status_code == 409
+
+
+def test_approve_missing_run_returns_404(client, mocker):
+    mocker.patch(
+        "app.services.run_pipeline_service.get_idea_run", return_value=None,
+    )
+
+    response = client.post(
+        "/runs/does-not-exist/approve",
+        json={"competitors": [_competitor_body()]},
+    )
+
+    assert response.status_code == 404
