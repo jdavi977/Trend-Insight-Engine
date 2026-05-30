@@ -23,7 +23,7 @@ This is a **tracer bullet that goes all the way through**, per PRD §10 architec
 
 **Pipeline (happy path only):**
 - Pre-flight: classify → signal_strength → propose 5 apps + 5 videos
-- User edits competitor list, approves
+- User edits competitor list, approves (TODO: user can remove or add links but is limited to 10 for all sources)
 - Background job: per-source extraction fans out across 10 sources in parallel
 - Quote-then-claim synthesis produces grounded `GapItem`s
 - Optional idea-match step when `target_gap` is supplied
