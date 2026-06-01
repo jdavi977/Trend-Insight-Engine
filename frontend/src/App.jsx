@@ -4,11 +4,16 @@ import YouTubePage from "./YouTubePage";
 import AppStorePage from "./AppStorePage";
 import HomePage from "./HomePage";
 import InsightsPage from "./InsightsPage";
+import HomeV2 from "./HomeV2";
 import NewRun from "./NewRun";
+import RunResult from "./RunResult";
 
+// v2 nav only points at the new run-lifecycle pages (issue #53). The legacy
+// pages (HomePage, InsightsPage, YouTubePage, AppStorePage) stay mounted below
+// but are unlinked from nav — removal is slice 3 (spec §3, §10).
 const NAV_ITEMS = [
   {
-    id: "homepage",
+    id: "homev2",
     label: "Home",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,42 +30,12 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
-  {
-    id: "insights",
-    label: "Insights",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 17l6-6 4 4 8-9"/><path d="M14 6h7v7"/>
-      </svg>
-    ),
-  },
-  {
-    id: "youtube",
-    label: "YouTube analysis",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="3"/>
-        <path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/>
-      </svg>
-    ),
-  },
-  {
-    id: "appstore",
-    label: "App Store analysis",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="4" y="3" width="16" height="18" rx="3"/>
-        <path d="M8 17h8"/>
-        <circle cx="12" cy="9" r="2"/>
-      </svg>
-    ),
-  },
 ];
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("homepage");
-  // Set when a run is approved; the Result page (#52) reads it. Until that
-  // page lands, a lightweight placeholder confirms the run started.
+  const [currentPage, setCurrentPage] = useState("homev2");
+  // Set when a run is approved (or opened from a feed); the Result page reads it
+  // and polls GET /runs/:id from there.
   const [activeRunId, setActiveRunId] = useState(null);
 
   const openRun = (runId) => {
@@ -93,21 +68,18 @@ function App() {
       </aside>
 
       <main className="site-main">
+        {currentPage === "homev2"    && (
+          <HomeV2 onOpenRun={openRun} onNewRun={() => setCurrentPage("newrun")} />
+        )}
+        {currentPage === "newrun"    && <NewRun onOpenRun={openRun} />}
+        {currentPage === "runresult" && (
+          <RunResult runId={activeRunId} onNewRun={() => setCurrentPage("newrun")} />
+        )}
+        {/* Legacy v1 pages — unlinked from nav, mounted until slice 3 removal. */}
         {currentPage === "youtube"   && <YouTubePage />}
         {currentPage === "appstore"  && <AppStorePage />}
         {currentPage === "homepage"  && <HomePage onNavigate={setCurrentPage} />}
         {currentPage === "insights"  && <InsightsPage />}
-        {currentPage === "newrun"    && <NewRun onOpenRun={openRun} />}
-        {currentPage === "runresult" && (
-          <div className="tie-page tie-page--narrow" style={{ marginTop: "2rem" }}>
-            <div className="tie-hero-eyebrow">Run started</div>
-            <h1 className="tie-hero-title" style={{ fontSize: "2rem" }}>Your run is processing.</h1>
-            <p className="tie-hero-sub">
-              Run <code style={{ fontFamily: "ui-monospace, monospace" }}>{activeRunId}</code> is now
-              running across its sources. The live Result page (issue&nbsp;#52) renders here once built.
-            </p>
-          </div>
-        )}
       </main>
 
     </div>
