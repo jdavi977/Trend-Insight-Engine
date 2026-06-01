@@ -67,7 +67,16 @@ admin-hidden). `failed` terminal with structured `failure_reason`.
 - Remaining v1 scope: feedback + report endpoints, Supabase-backed persistence
   (currently in-memory registry), rate limiting + budget cap, partial_sources
   banner, eval harness + 5-idea seed set (§7.9), frontend v2 pages.
-- Legacy v1 routers/jobs still in tree — to be removed/migrated to `services/`.
+- **Slice 2 (before public exposure):** hardening — retry-once + ≥70% partial-
+  source threshold, rate limits + budget cap, `feedback`/`report` endpoints and
+  their result-page controls, plus the **client-side router migration**
+  (`react-router-dom`; `/`, `/runs/new`, `/runs/:id`). Do the router conversion
+  *first* so the new feedback/report UI isn't built twice on the interim
+  state-based nav. This delivers US-4 (leave/return via URL) and US-5 (share) —
+  see [decisions/2026-06-01-frontend-routing-state-vs-router.md](decisions/2026-06-01-frontend-routing-state-vs-router.md).
+  Until then v2 navigates in-session only.
+- **Slice 3:** remove legacy v1 routers/jobs/pages (migrate any survivors to
+  `services/`); deletes the `currentPage` switch the router replaces.
 
 ## Known Constraints
 - Pre-flight ≤10s (user waits); full run ≤5 min p50; cap 5 concurrent OpenAI calls.
