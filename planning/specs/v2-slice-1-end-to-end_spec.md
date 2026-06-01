@@ -219,7 +219,20 @@ MODEL_ROUTING = {
 }
 ```
 
-**Every** LLM call in slice 1 goes through `resolve()`. No exceptions. This is the architecture-as-config bet (PRD §14.21).
+**No v2 stage hardcodes a model.** Every v2 call site obtains its `(model,
+temperature, max_tokens)` from `resolve(stage)`. Note that `app/llm/router.py`
+is a *config resolver*, not a transport — `resolve(stage) -> ModelConfig`. The
+SDK `.chat.completions.create` calls live in the stage modules (e.g.
+`app/llm/preflight.py`, `app/services/per_source_extraction_service.py`) and in
+the shared transport `app/clients/openai.py:create_chat_completion`, fed the
+resolved config. This is the architecture-as-config bet (PRD §14.21).
+
+One **known exception** survives slice 1: the v1-only helper
+`app/clients/openai.py:create_response` hardcodes a model and is reached only by
+the legacy `youtube`/`appstore` endpoints (via `extract_insights`). No v2 path
+calls it. Decision (issue #54): retire it with the rest of v1 in **slice 3**
+rather than route a soon-to-be-deleted helper. Until then it is a documented,
+contained carve-out — not a precedent for v2 call sites.
 
 ## 10. Frontend (slice 1)
 
@@ -260,7 +273,14 @@ Slice 1 is **done** when all of the following hold for a fresh `git pull` on a c
 2. Every gap shown has ≥2 citations referencing quote IDs present in the run's quote pool. Pick any gap → quote IDs exist in `quotes_json`.
 3. `idea_runs` has one new row with `status='done'`, populated `coverage_json`, `competitors_json`, `quotes_json`. `gaps` has ≥3 corresponding rows.
 4. Per-source extraction prompts do **not** contain the idea string (verified by logging the constructed prompt for one source).
-5. Every LLM call site routes through `resolve()` (verified by grep: no direct `openai.ChatCompletion` / SDK calls outside `app/llm/router.py`).
+5. No v2 LLM stage hardcodes a model — verified by **reading each v2 call site**
+   (preflight, per-source extract, synthesis, idea-match), each of which obtains
+   its config via `resolve(stage)`. (Not verified by grepping for SDK calls
+   outside `router.py`: `router.py` is a config resolver, not a transport — see
+   §9.) A grep for hardcoded model strings in `app/` returns only
+   `app/config/constants.py` (`MODEL_ROUTING`) plus the one documented v1
+   exception `app/clients/openai.py:create_response`, retired with v1 in slice 3
+   (issue #54).
 6. `GET /runs/:id` returns `X-Robots-Tag: noindex, nofollow`.
 7. PII redaction is applied: persist a row where the source comment contains `john@example.com` and verify `text_redacted` does not contain it.
 8. The submit-to-result path works for one B2B idea (e.g. `"tool for prompt engineers to manage prompts"`) with the low-signal warning + ack flow exercised.
