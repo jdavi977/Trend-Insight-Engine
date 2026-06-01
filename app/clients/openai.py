@@ -15,6 +15,13 @@ def get_openai_client() -> OpenAI:
 
 
 def create_response(system_prompt: str, user_data: str, assistant_prompt: str) -> str:
+    # v1-ONLY helper — hardcodes `_MODEL` and does NOT route through
+    # `app.llm.router.resolve()`. Reached only by the legacy youtube/appstore
+    # endpoints (via `app.llm.extractInsights.extract_insights`); no v2 path
+    # calls it. This is the one documented carve-out from the "no stage
+    # hardcodes a model" rule (spec §9 / §11 criterion 5). Decision (issue #54):
+    # retire with the rest of v1 in slice 3 rather than route a doomed helper.
+    # Do NOT call this from v2 code — v2 uses `create_chat_completion` + resolve().
     client = get_openai_client()
     response = client.chat.completions.create(
         model=_MODEL,

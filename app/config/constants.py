@@ -28,3 +28,29 @@ MODEL_ROUTING = {
     "synthesis":          {"model": "gpt-4o", "temperature": 0.3, "max_tokens": 6000},
     "idea_match":         {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 1500},
 }
+
+# Per-category engagement thresholds (PRD §7.5, spec §7 + §8). Consumed by the
+# per-source extractor before the LLM call — a comment must clear its source's
+# threshold for the run's category to enter the quote pool. Unknown categories
+# fall back to "other". Per-run tuning is a v1.1 candidate (PRD §15).
+ENGAGEMENT_FILTERS = {
+    "consumer-app": {"youtube": 50, "appstore": 6},
+    "mobile-game":  {"youtube": 30, "appstore": 4},
+    "creator-tool": {"youtube": 25, "appstore": 3},
+    "productivity": {"youtube": 50, "appstore": 6},
+    "b2b-saas":     {"youtube": 10, "appstore": 2},
+    "devtools":     {"youtube": 10, "appstore": 2},
+    "enterprise":   {"youtube": 10, "appstore": 2},
+    "other":        {"youtube": 50, "appstore": 6},
+}
+
+
+def engagement_threshold(source: str, category: str) -> int:
+    """Return min likes / vote_count for *source* under *category*.
+
+    Falls back to the ``other`` row when the category isn't in the table — the
+    pre-flight classifier may emit free-form categories, and a missing entry
+    should not crash the pipeline.
+    """
+    bucket = ENGAGEMENT_FILTERS.get(category, ENGAGEMENT_FILTERS["other"])
+    return bucket[source]

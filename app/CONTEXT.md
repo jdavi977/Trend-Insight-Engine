@@ -1,59 +1,100 @@
 # Backend Context — app/
 
-> Structural refactor in flight — see [planning/specs/app-refactor-and-pytest-bootstrap_spec.md](../planning/specs/app-refactor-and-pytest-bootstrap_spec.md). The Module Map below describes the **target** layout; current tree may differ until PRs 1–6 land.
-
+> Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) +
+> [planning/specs/v2-slice-1-end-to-end_spec.md](../planning/specs/v2-slice-1-end-to-end_spec.md).
+> v2 = **idea-in → cross-competitor gaps-out**. Legacy v1 single-URL + weekly
+> routers/jobs still exist in tree but are slated for removal/migration to
+> `services/` (PRD §7.2).
 
 ## Module Map
-| Folder         | Role                                              |
-|----------------|---------------------------------------------------|
-| config/        | Keywords, prompts, regex, API settings, category IDs |
-| clients/       | One file per external service we wrap — `supabase.py`, `youtube.py`, (future) `openai.py` |
-| ingestion/     | YouTube comment fetch + iTunes RSS scraper        |
-| preprocessing/ | reviewPipeline.py, validateUrl.py                  |
-| llm/           | extractInsights.py (OpenAI call + per-problem validation) |
-| schemas/       | All Pydantic boundary models — `api.py` (HTTP request bodies), `llm.py` (LLM output) |
-| api/           | One router per resource (youtube, appstore, home, internal) + request schemas + exception handlers |
-| services/      | Orchestration called by API/jobs (youtube, appstore, persistence) |
-| jobs/          | Runnable entrypoints with `__main__` (cron-invoked, e.g. automaticYoutube.py) |
-| utilities/     | Cross-cutting helpers only — `getDate.py`, `textCleaning.py` (YouTube API helper moved to `clients/youtube.py`) |
-| main.py        | App factory: create_app(), middleware, include_router(), register exception handlers |
+| Folder         | Role                                                                 |
+|----------------|---------------------------------------------------------------------|
+| config/        | Constants/tunables, prompts, regex, secrets. `constants.py` holds `MODEL_ROUTING` (§10.1) + engagement filters |
+| clients/       | One file per external service — `appstore.py`, `youtube.py`, `openai.py`, `supabase.py`, `pgvector.py` |
+| ingestion/     | YouTube comment fetch + App Store review fetch                       |
+| preprocessing/ | `reviewPipeline.py`, `validateUrl.py`, `redact.py` (regex + NER PII strip) |
+| llm/           | `preflight.py`, `per-source extract` (`extractInsights.py`), `synthesis.py`, `idea_match.py`, `router.py` (stage→model resolver) |
+| schemas/       | Pydantic boundary models — `runs.py` (v2 domain), `api.py`, `llm.py` |
+| api/           | One router per resource. v2: `runs.py`. Legacy: `youtube/appstore/home/insights`. Plus `errors.py`, `internal.py` |
+| services/      | Orchestration — `idea_run_service`, `run_pipeline_service`, `preflight_service`, `per_source_extraction_service`, `persistence_service` |
+| jobs/          | Runnable entrypoints. `preflight_smoke.py`. Legacy `automatic*.py` (weekly — removed in v2) |
+| utilities/     | Cross-cutting helpers only                                           |
+| main.py        | App factory: `create_app()`, CORS, X-Robots-Tag middleware, routers, exception handlers |
 
 ## Layer Boundaries
-- `api` (main.py / routers) → `services/` only. Never imports `ingestion/`, `preprocessing/`, `llm/` directly.
+- `api` (main.py / routers) → `services/` only. Never imports `ingestion/`,
+  `preprocessing/`, `llm/` directly.
 - `services/` orchestrate pipeline stages and return data. No HTTP, no `__main__`.
-- `jobs/` are thin shells: parse args/env, call a service, handle persistence/exit code.
+- Pipeline modules (`ingestion`, `preprocessing`, `llm`) don't import each other.
+- `jobs/` are thin shells: parse args/env, call a service, handle exit.
 
-## API Endpoints
-- POST /analyze/youtube   → manual YouTube analysis
-- POST /analyze/appStore  → manual App Store analysis
-- GET  /get/homePage      → fetch weekly Supabase insights
-- POST /data/send         → save JSON to local filesystem
+## v2 API Endpoints (PRD §7.2)
+- `POST /runs` — `{ idea, target_gap? }`. Runs pre-flight synchronously (≤10s),
+  returns `preflight_ready` + candidate competitors. Per-IP rate-limited.
+- `POST /runs/:id/approve` — `{ competitors[], acknowledged_low_signal? }`.
+  `preflight_ready → running`; enqueues background pipeline. Low-signal without
+  ack → 400.
+- `POST /runs/:id/feedback` — `{ new_to_me_gap_ids?, direction?, time_saved? }`.
+  Append-only; valid only when `done`. *(not yet implemented)*
+- `POST /runs/:id/report` — `{ reason }`. Hides run pending admin. *(not yet impl.)*
+- `GET /runs/:id` — current state + (when `done`) full results. Public.
+- `GET /runs` — paginated public feed of completed runs (drives Home).
+
+All `/runs` responses get `X-Robots-Tag: noindex, nofollow` (main.py middleware).
+Legacy `/analyze/*`, `/get/homePage` are **removed** in v2 (still in tree pending cleanup).
+
+## Run Lifecycle
+`pending → preflight_ready → running → done | failed` (+ `reported`).
+`failed` terminal with structured `failure_reason` (e.g. `server_restart`).
 
 ## Code Patterns (Follow These)
-- Each pipeline stage returns data to the caller — no side effects
-- All config (keywords, prompts, regex) lives in config/, never hardcoded
-- Pydantic models for ALL external data (API requests + LLM responses)
-- Use python-dotenv for all secrets — never hardcode keys
-- Logging via Python's logging module at appropriate levels
+- Each pipeline stage returns data to the caller — no side effects.
+- All config (prompts, regex, model routing, filters) in `config/`, never hardcoded.
+- Pydantic models for ALL external data (API requests + LLM responses).
+- **Every LLM call resolves config via `llm/router.py` `resolve(stage)`** —
+  never hardcode model/temperature/max_tokens at a call site (§10.1).
+- **Idea-blinded extraction:** per-source extractor takes `SourceMetadata`, never
+  `idea`/`target_gap`. Only synthesis + idea-match see the idea (§7.8).
+- Synthesis output validated for quote-ID grounding: every `GapItem` cites ≥2
+  `quote_id`s from the retrieval pool; uncited / unknown-ID gaps rejected (§7.7).
+- PII redacted at persist time (`redact.py`); raw text never persisted.
+- Use `python-dotenv` for secrets; logging via stdlib `logging`.
 
 ## Patterns to Avoid
-- Do NOT add business logic to main.py — it only routes
-- Do NOT write to Supabase from manual analysis endpoints
-- Do NOT add new dependencies without updating requirements/setup docs
-- Do NOT bypass extract_insights — validation is embedded; callers consume LLMExtraction directly
+- Do NOT add business logic to `main.py` — it only wires the app.
+- Do NOT let `idea`/`target_gap` reach per-source extraction prompts.
+- Do NOT emit a gap citing <2 quotes or a `quote_id` outside the pool.
+- Do NOT hardcode model selection — route through `resolve(stage)`.
+- Do NOT add new dependencies without updating requirements/setup docs.
+
+## Reliability / Limits (PRD §8)
+- Pre-flight ≤10s; full run ≤5 min p50; cap 5 concurrent OpenAI calls.
+- Sources fan out ≤10 concurrently, sequential within a source; retry once with
+  backoff. ≥70% sources succeed → `done` + `partial_sources`; below → `failed`.
+- Rate limits: per-IP 3/hr, 10/day; daily OpenAI budget cap → `429 budget_exhausted`.
+- Single active run per instance; 2nd submission → `429 busy` (queue UX is v1.1).
 
 ## Testing
-- Test tree lives at top-level `/tests/`, mirroring `app/` (`tests/api/`, `tests/services/`, `tests/preprocessing/`, `tests/llm/`). The empty `app/tests/` is removed.
+- Test tree at top-level `/tests/`, mirroring `app/` (`tests/api/`,
+  `tests/services/`, `tests/llm/`, `tests/preprocessing/`).
 - Tooling: `pytest` + `pytest-mock` + `httpx.TestClient`.
-- Mock external services: YouTube Data API, iTunes RSS, OpenAI, Supabase. Hit pure modules (preprocessing, validateUrl, schemas) for real — mocking deterministic functions tests nothing.
-- Pre-refactor safety net (write these BEFORE moving files):
-  1. `tests/preprocessing/test_validateUrl.py`
-  2. `tests/preprocessing/test_reviewPipeline.py` + `test_reviewClean.py`
-  3. `tests/llm/test_extractInsights.py`
-  4. `tests/services/test_youtube_service.py` (happy path, all clients mocked)
-  5. `tests/api/test_routes.py` (TestClient smoke tests, services mocked)
+- Mock external services (YouTube, App Store, OpenAI, Supabase). Hit pure modules
+  (preprocessing, redact, validateUrl, schemas, llm/router) for real.
+- Eval harness (PRD §7.9): runner scores pipeline output (gap recall,
+  hallucination rate, citation ratio, severity calibration) against a 5-idea
+  hand-labelled seed set. Manual in v1; CI gate is v1.1.
 
-## LLM Output Schema (schemas/llm.py)
-Each insight has: problem (str), type (enum), severity (1-5),
-frequency (1-5), total_likes (int)
-Problem types: feature_request, complaint, usability, performance, pricing
+## v2 Domain Schema (schemas/runs.py)
+- `GapItem`: `gap_id`, `gap`, `severity` (1–5 rubric), `frequency` (raw count),
+  `spread` (distinct competitors), `competitors_present[]`, `evidence_quote_ids[]`
+  (≥2).
+- `Quote` (keyed by `quote_id`): `source`, `source_id`, `text_redacted`, `like_count`.
+- `Coverage`: `quotes_retrieved`, `quotes_cited`, `citation_ratio`.
+- `RunResult` = strict terminal view; `RunStateResponse` = permissive any-stage view.
+- `Competitor`, `PainItem`, `SourceMetadata` (idea-blinded extractor input),
+  `IdeaMatch`, `PreflightResult`.
+
+## Model Routing (config/constants.py + llm/router.py)
+v1 maps every stage to `gpt-4o`. Stages: `preflight_classify`, `preflight_rank`,
+`per_source_extract`, `synthesis`, `idea_match`. Swapping a model per stage is a
+one-line config change validated against the eval harness — no pipeline edits.

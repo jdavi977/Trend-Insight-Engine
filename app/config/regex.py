@@ -3,6 +3,18 @@ import re
 YOUTUBE_REGEX = re.compile(r"^https?://((www\.)?youtube\.com/watch\?v=|youtu\.be/)[A-Za-z0-9_-]{11}$")
 APP_STORE_REGEX = re.compile(r"^https?:\/\/(www\.)?apps\.apple\.com\/[a-z]{2}\/app\/[A-Za-z0-9\-]+\/id\d+$")
 
+# --- PII redaction (app/preprocessing/redact.py) -----------------------------
+# Emails: redact before handles so the local-part "@" is not mistaken for a handle.
+EMAIL_REGEX = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+
+# @handles: an "@" not preceded by a word/email char, then >=2 word chars.
+HANDLE_REGEX = re.compile(r"(?<![\w@.])@\w{2,}")
+
+# Phone candidates (US + international formats). Deliberately broad: the redactor
+# confirms a candidate is a real number by counting digits (>= 7) before
+# replacing, which keeps short numbers like "version 2.0.0" from matching.
+PHONE_CANDIDATE_REGEX = re.compile(r"\+?\(?\d[\d\s().-]{5,}\d")
+
 EMOJI_REGEX = re.compile(
     "["
     "\U0001F600-\U0001F64F"  # Emoticons

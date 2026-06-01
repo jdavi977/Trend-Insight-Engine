@@ -39,9 +39,25 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 ### Install dependencies
 
 ```bash
-pip install fastapi "uvicorn[standard]" pydantic python-dotenv \
-  google-api-python-client openai requests supabase
+pip install -r requirements.txt
 ```
+
+Or, for the core packages only:
+
+```bash
+pip install fastapi "uvicorn[standard]" pydantic python-dotenv \
+  google-api-python-client openai requests supabase spacy
+```
+
+PII redaction (`app/preprocessing/redact.py`) uses spaCy's small English
+model for person-name detection. Download it once after installing spaCy:
+
+```bash
+python -m spacy download en_core_web_sm
+```
+
+(`pip install -r requirements.txt` already pins the model, so this step is
+only needed when installing the core packages manually.)
 
 ### Configure environment variables
 
