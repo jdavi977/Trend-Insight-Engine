@@ -94,7 +94,7 @@ These signals are weak on their own. A run hitting all three with a hallucinated
 | US-1 | indie dev with a specific idea | submit *"note-taking app with offline sync"* and get cross-competitor pain | I learn whether "offline sync" is a real gap |
 | US-2 | side-project builder with a vague concept | submit *"2.5d survivor-like game"* and see what nobody has fixed | I can pick a gap as my next project |
 | US-3 | user who knows their competitors | edit the LLM's proposed competitor list before the run | I get coverage of the apps/videos *I* care about |
-| US-4 | user who started a run | leave and return via a saved URL | I don't babysit a multi-minute job |
+| US-4 | user who started a run | keep the result page open and have it update itself as the run finishes | I don't babysit a multi-minute job |
 | US-5 | user reviewing past work | revisit prior runs from a public feed | I can compare ideas or share results |
 
 ### Sad paths
@@ -247,7 +247,7 @@ Applied server-side based on category; not exposed in v1 UI. Per-run tuning is a
 - **New Run** — submit form (idea + optional target gap) → pre-flight loading → **pre-flight review:**
   - **Signal-strength panel.** Shows `signal_strength` + `signal_reasoning`. If `low`, prominent: primary CTA *"Continue anyway — I understand the signal will be thin"*, secondary *"Cancel and refine"*. Acknowledgement gates `approve`.
   - **Competitor list editor.** Add / remove / paste URL. Each candidate shows its search-API source ("found via App Store search for X").
-- **Run Status / Result** — stable URL; live progress while `running`, full result when `done`. `X-Robots-Tag: noindex, nofollow`. When `done`:
+- **Run Status / Result** — live progress while `running` (the page polls and updates itself in-session), full result when `done`. The backend `GET /runs/:id` endpoint sets `X-Robots-Tag: noindex, nofollow`. *Navigation is state-based (no shareable/deep-linkable client URL in v2 — see §15); the run is reached in-session by approving it or opening it from the feed.* When `done`:
   - **Signal-strength banner** at the top.
   - **`partial_sources` banner** if any sources failed, naming them.
   - **Ranked gap list** with **verbatim quotes prominent next to each claim** (not hidden in drill-down) — reinforces §1 framing.
@@ -395,7 +395,7 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 | **Adversarial pass** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different model family (Claude, Gemini). Same-family critique catches fewer blind spots. |
 | **Cold-model critique** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different family + low temperature. Independent audit of synthesis output. |
 
-**Implementation rule:** each pipeline stage calls an LLM through a single routing function that resolves `(stage_name) → (model, temperature, max_tokens)` from config. v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry and validating against the §7.9 eval harness — no pipeline code changes.
+**Implementation rule:** each pipeline stage resolves its model config through a single routing function — `resolve(stage_name) → (model, temperature, max_tokens)` — *before* it calls the LLM. The resolver returns config only; the SDK call itself stays in the stage module (e.g. `app/llm/preflight.py`), not inside the router. The discipline being enforced is "no stage hardcodes a model," not "all SDK calls live in one file." v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry and validating against the §7.9 eval harness — no pipeline code changes.
 
 **Cost-neutral orchestration path:** downgrading pre-flight and idea-match to a cheaper model frees ~10–15% of per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move when the eval harness shows the cheaper models maintain accuracy on those stages.
 
@@ -434,7 +434,7 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 - **Gap** — Cross-source synthesized problem ranked by severity + frequency + spread, grounded in cited quote IDs.
 - **Quote-then-claim** — Architectural rule: every gap cites ≥2 retrieved quote IDs. Hallucinated IDs rejected.
 - **Signal strength** — Pre-flight classification of likely informativeness: high / medium / low.
-- **Run** — One end-to-end submission, identified by `run_id`, at a stable URL.
+- **Run** — One end-to-end submission, identified by `run_id`. Addressable server-side at `GET /runs/:id`; the v2 frontend reaches it via in-session state-based navigation (shareable client URLs deferred — §15).
 - **Severity** — 1–5 with anchored rubric (§7.4).
 - **Frequency** — Raw count of supporting pain items.
 - **Spread** — Count of distinct competitors surfacing a gap.
@@ -485,6 +485,8 @@ Deferred from v1, in rough priority (note: eval harness + seed set promoted to v
 4. **User research on §2.** The four-step workflow is a hypothesis. Interview 5–10 indie devs pre-v1.1.
 5. **Per-run engagement-filter tuning** if §7.5 defaults prove wrong.
 6. **Reddit + HN sources.** Broadens signal for B2B/devtools/developer-tool categories where App Store + YouTube are thin.
+
+**Note — shareable / deep-linkable run URLs are v1 (slice 2), not v1.1.** Slice-1 frontend shipped on in-session state-based navigation (`currentPage` + `activeRunId`, no client router), so a run currently can't be bookmarked, shared, or reopened across a reload — only revisited within the session via the feed or "My Runs." Real URLs (`/`, `/runs/new`, `/runs/:id`) require a router (`react-router-dom`) and converting the three run-lifecycle pages; this lands in **slice 2** (done before the slice-2 feedback/report UI so that UI isn't built twice), and delivers US-4 ("return via a saved URL") and US-5 sharing. Captured in [ADR 2026-06-01-frontend-routing-state-vs-router](../planning/decisions/2026-06-01-frontend-routing-state-vs-router.md).
 
 ### Selection-bias mitigations beyond v1
 

@@ -11,18 +11,31 @@ React 19 + Vite SPA, organised around the run lifecycle:
   + "Start a new run" CTA. Replaces old weekly-trending Home.
 - **New Run** → submit form (idea + optional target gap) → pre-flight loading →
   **pre-flight review** (signal-strength panel + competitor list editor).
-- **Run Status / Result** → stable URL; live progress while `running`, full
-  result when `done`.
+- **Run Status / Result** → in-session live progress while `running`, full
+  result when `done`. Reached by approving a run or opening one from the feed —
+  no shareable client URL in v2 (see Patterns below).
 - **My Runs** → frontend-only filter of the public feed against `localStorage`
   `run_id`s (no auth/accounts in v1).
+
+Pages live **flat in `src/`** (`HomeV2.jsx`, `NewRun.jsx`, `RunResult.jsx`) —
+there is no `src/pages/` directory. Legacy v1 pages (`HomePage`, `InsightsPage`,
+`YouTubePage`, `AppStorePage`) stay mounted in `App.jsx` but are unlinked from
+nav; removal is slice 3.
 
 ## Run Lifecycle (what the UI polls)
 `pending → preflight_ready → running → done | failed`. New Run drives
 `pending → preflight_ready` (synchronous, ≤10s wait) then `approve` →
-`running`; Result page polls `GET /runs/:id` until `done`.
+`running`; Result page polls `GET /runs/:id` every 5s while the status is
+non-terminal (`pending` / `preflight_ready` / `running`) and stops on
+`done` / `failed`.
 
 ## Patterns (Follow These)
 - State via React hooks (useState, useEffect) — no Redux/Zustand.
+- **Navigation is state-based in `App.jsx`** — `currentPage` selects the page,
+  `activeRunId` (set by the `openRun(runId)` callback) drives the Result page.
+  Pages don't own routing; App passes `onOpenRun` / `onNewRun` callbacks down.
+  No router library (the three run pages all landed on this pattern; shareable
+  `/runs/:id` URLs are a deferred architectural decision — PRD §15).
 - All API calls use Fetch against the `/runs` endpoints; base URL from a config
   constant (`import.meta.env.VITE_API_BASE`), never hardcoded.
 - Components are PascalCase.jsx. Each page is a top-level component; shared UI in
@@ -31,6 +44,9 @@ React 19 + Vite SPA, organised around the run lifecycle:
 
 ## Patterns to Avoid
 - Do NOT add a state management library.
+- Do NOT add a routing library (react-router); navigation is state-based in
+  `App.jsx`. Introducing real URLs is a separate ADR-level decision (PRD §15).
+- Do NOT create a `src/pages/` directory; pages are flat in `src/`.
 - Do NOT call the backend from child components — lift to page level.
 - Do NOT hardcode the backend URL.
 - Do NOT index run pages — backend sets `X-Robots-Tag: noindex, nofollow` on

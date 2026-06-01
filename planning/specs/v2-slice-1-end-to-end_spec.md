@@ -238,20 +238,20 @@ contained carve-out — not a precedent for v2 call sites.
 
 Three new pages. Existing v1 pages (Home, Insights, YouTube, AppStore) stay in the codebase but are unlinked from the new nav. Removal is slice 3.
 
-### Home — [frontend/src/pages/HomeV2.jsx](../../frontend/src/pages/HomeV2.jsx)
+### Home — [frontend/src/HomeV2.jsx](../../frontend/src/HomeV2.jsx)
 - Lists recent `done` runs from `GET /runs`: idea text + relative completed-at + link to result page.
-- Prominent "Start a new run" CTA → `/runs/new`.
+- Prominent "Start a new run" CTA → New Run page (via the App nav callback `onNewRun`).
 
-### New Run — [frontend/src/pages/NewRun.jsx](../../frontend/src/pages/NewRun.jsx)
+### New Run — [frontend/src/NewRun.jsx](../../frontend/src/NewRun.jsx)
 - Submit form: `idea` (required textarea) + `target_gap` (optional).
 - On submit → `POST /runs` (synchronous wait, ≤10s) → renders pre-flight review inline.
 - **Signal-strength panel:** shows `signal_strength` + `signal_reasoning`.
   - If `low`: prominent warning + checkbox *"I understand the signal will be thin"* (gates the Approve button).
 - **Competitor list editor:** add / remove / paste URL. Each candidate shows the search query that surfaced it.
-- "Approve and run" → `POST /runs/:id/approve` → navigate to `/runs/:id`.
+- "Approve and run" → `POST /runs/:id/approve` → open the Result page via the App `openRun(runId)` callback.
 
-### Run Status / Result — [frontend/src/pages/RunResult.jsx](../../frontend/src/pages/RunResult.jsx)
-- Polls `GET /runs/:id` every 5s while `status in {pending, running}`.
+### Run Status / Result — [frontend/src/RunResult.jsx](../../frontend/src/RunResult.jsx)
+- Polls `GET /runs/:id` every 5s while `status in {pending, preflight_ready, running}`; stops on `done` / `failed`. Transient fetch errors keep retrying rather than stranding a running page.
 - While running: progress shell ("Running across 10 sources…").
 - When `done`:
   - **Signal-strength banner** at top.
@@ -263,7 +263,7 @@ Three new pages. Existing v1 pages (Home, Insights, YouTube, AppStore) stay in t
   - **`idea_match`** card at top of list if present.
 - `X-Robots-Tag` header is server-side (§6); no frontend work needed.
 
-Routing wired via React Router in [frontend/src/App.jsx](../../frontend/src/App.jsx). Old pages remain mounted but the nav links only point to the new ones.
+Navigation is **state-based** in [frontend/src/App.jsx](../../frontend/src/App.jsx) — `currentPage` selects the active page and `activeRunId` (set by the `openRun(runId)` callback) drives the Result page. No router library is introduced: pages #51/#52/#53 all landed on the existing `currentPage` + callback pattern, and `frontend/CONTEXT.md` forbids new state/routing libraries. Pages live flat in `frontend/src/` (there is no `src/pages/` directory). Old v1 pages remain mounted but the nav links only point to the new ones. Shareable/deep-linkable run URLs are out of scope for slice 1; the `react-router-dom` migration (`/`, `/runs/new`, `/runs/:id`) is scheduled for **slice 2**, done before slice 2's feedback/report UI so that UI isn't built twice on the interim nav. See [../decisions/2026-06-01-frontend-routing-state-vs-router.md](../decisions/2026-06-01-frontend-routing-state-vs-router.md) and PRD §15.
 
 ## 11. Slice Exit Criteria
 
