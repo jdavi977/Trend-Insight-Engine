@@ -1,0 +1,126 @@
+/* Trend Insight Engine v2 — design tokens + layout utilities.
+ * Ported from the v2.2 prototype (~/Downloads/Trend v2.2/tokens.css + the
+ * shared layout/keyframe utilities from its index HTML). The --tie-* custom
+ * properties and .tie-* helpers are the shared design system for every v2
+ * page; reuse them instead of ad-hoc hex values (frontend/CONTEXT.md).
+ */
+
+:root {
+  /* ── Foreground / text ── */
+  --tie-fg-1: #1a1a1a;       /* primary text, headings */
+  --tie-fg-2: #4a4a4a;       /* secondary text, body */
+  --tie-fg-3: #6b6b6b;       /* muted/subtitle text */
+  --tie-fg-placeholder: #9ca3af;
+
+  /* ── Backgrounds / surfaces ── */
+  --tie-bg: #ffffff;
+  --tie-surface: #ffffff;
+  --tie-surface-soft: #fafafa;
+  --tie-surface-hover: #f5f5f5;
+  --tie-surface-muted: #f0f0f0;
+  --tie-placeholder: #e8e8e8;
+
+  /* ── Borders / dividers ── */
+  --tie-border: #e5e5e5;
+  --tie-border-soft: #e8e8e8;
+  --tie-border-strong: #d0d0d0;
+  --tie-border-hover: #b0b0b0;
+  --tie-divider: #e0e0e0;
+
+  /* ── Accent (brand indigo) ── */
+  --tie-accent: #6366f1;
+  --tie-accent-deep: #4338ca;
+  --tie-accent-shadow: rgba(79, 70, 229, 0.35);
+  --tie-accent-shadow-hover: rgba(79, 70, 229, 0.45);
+  --tie-accent-focus-ring: rgba(99, 102, 241, 0.2);
+  --tie-accent-gradient: linear-gradient(135deg, #6366f1, #4338ca);
+
+  /* ── Semantic — Error ── */
+  --tie-error-fg: #b91c1c;
+  --tie-error-bg: #fef2f2;
+  --tie-error-border: #fecaca;
+
+  /* ── Pill / chip ── */
+  --tie-pill-bg: #e5e5e5;
+  --tie-pill-fg: #4a4a4a;
+  --tie-pill-bg-muted: #f0f0f0;
+  --tie-pill-fg-muted: #6b6b6b;
+
+  /* ── Shadows / elevation ── */
+  --tie-shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --tie-shadow-item: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --tie-shadow-active: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --tie-shadow-cta: 0 10px 24px var(--tie-accent-shadow);
+  --tie-shadow-cta-hover: 0 12px 28px var(--tie-accent-shadow-hover);
+
+  /* ── Radii ── */
+  --tie-radius-xs: 6px;
+  --tie-radius-sm: 8px;
+  --tie-radius-md: 12px;
+  --tie-radius-lg: 14px;
+  --tie-radius-xl: 16px;
+  --tie-radius-pill: 999px;
+
+  /* ── Type ── */
+  --tie-font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+
+  --tie-fs-hero: clamp(2rem, 5vw, 2.75rem);
+  --tie-fs-body-lg: 1.15rem;
+  --tie-fs-body: 1rem;
+  --tie-fs-body-sm: 0.95rem;
+  --tie-fs-caption: 0.875rem;
+  --tie-fs-micro: 0.85rem;
+
+  --tie-fw-regular: 400;
+  --tie-fw-medium: 500;
+  --tie-fw-semibold: 600;
+  --tie-fw-bold: 700;
+
+  --tie-lh-tight: 1.2;
+  --tie-lh-snug: 1.4;
+  --tie-lh-base: 1.5;
+  --tie-lh-loose: 1.6;
+
+  --tie-tracking-tight: -0.02em;
+}
+
+/* ── Page layout helpers ─────────────────────────────────── */
+.tie-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2.5rem 1.75rem 4rem;
+  font-family: var(--tie-font-sans);
+}
+.tie-page--wide { max-width: 1200px; }
+.tie-page--narrow { max-width: 760px; }
+
+.tie-hero-eyebrow {
+  font-size: var(--tie-fs-micro);
+  font-weight: var(--tie-fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tie-fg-3);
+  margin-bottom: 1rem;
+}
+.tie-hero-title {
+  font-size: var(--tie-fs-hero);
+  font-weight: var(--tie-fw-bold);
+  letter-spacing: var(--tie-tracking-tight);
+  line-height: var(--tie-lh-tight);
+  color: var(--tie-fg-1);
+  margin: 0 0 1rem;
+  text-wrap: balance;
+}
+.tie-hero-sub {
+  font-size: var(--tie-fs-body-lg);
+  color: var(--tie-fg-2);
+  line-height: var(--tie-lh-base);
+  margin: 0;
+  max-width: 60ch;
+  text-wrap: pretty;
+}
+
+/* ── Keyframes ───────────────────────────────────────────── */
+@keyframes tie-spin { to { transform: rotate(360deg); } }
+@keyframes tie-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
