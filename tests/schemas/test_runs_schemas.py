@@ -14,13 +14,18 @@ from pydantic import ValidationError
 from app.schemas.runs import (
     Competitor,
     Coverage,
+    FailedSource,
+    FailureReason,
     GapItem,
     IdeaMatch,
     PainItem,
+    PartialSources,
     PreflightResult,
     Quote,
     RunApprove,
     RunCreate,
+    RunFeedback,
+    RunReport,
     RunResult,
 )
 
@@ -159,6 +164,87 @@ class TestPreflightResult:
             candidates=[_competitor()],
         )
         assert PreflightResult.model_validate(pr.model_dump()) == pr
+
+    def test_no_sources_false_when_candidates_present(self):
+        # US-S1 signal (slice 2 §6): driven by candidate count, serialised out.
+        pr = PreflightResult(
+            category="notes",
+            signal_strength="high",
+            signal_reasoning="r",
+            candidates=[_competitor()],
+        )
+        assert pr.no_sources is False
+        assert pr.model_dump()["no_sources"] is False
+
+    def test_no_sources_true_when_zero_candidates(self):
+        pr = PreflightResult(
+            category="notes",
+            signal_strength="low",
+            signal_reasoning="r",
+            candidates=[],
+        )
+        assert pr.no_sources is True
+        assert pr.model_dump()["no_sources"] is True
+
+
+class TestRunFeedback:
+    def test_all_fields_optional(self):
+        fb = RunFeedback()
+        assert fb.new_to_me_gap_ids is None
+        assert fb.direction is None
+        assert fb.time_saved_estimate_minutes is None
+
+    def test_valid_direction_accepted(self):
+        for direction in ("continue", "shift", "drop", "need_more_research"):
+            assert RunFeedback(direction=direction).direction == direction
+
+    def test_invalid_direction_rejected(self):
+        with pytest.raises(ValidationError):
+            RunFeedback(direction="pivot")
+
+    def test_negative_time_saved_rejected(self):
+        with pytest.raises(ValidationError):
+            RunFeedback(time_saved_estimate_minutes=-1)
+
+    def test_zero_time_saved_allowed(self):
+        assert RunFeedback(time_saved_estimate_minutes=0).time_saved_estimate_minutes == 0
+
+
+class TestRunReport:
+    def test_reason_required_non_empty(self):
+        with pytest.raises(ValidationError):
+            RunReport(reason="")
+
+    def test_happy_path(self):
+        assert RunReport(reason="spam").reason == "spam"
+
+
+class TestFailureReason:
+    def test_enum_values(self):
+        assert {r.value for r in FailureReason} == {
+            "server_restart",
+            "budget_exhausted",
+            "sources_below_threshold",
+            "internal_error",
+        }
+
+
+class TestPartialSources:
+    def test_round_trip(self):
+        ps = PartialSources(
+            failed=[FailedSource(source="youtube", name="Obsidian demo", reason="timeout")],
+            succeeded_count=8,
+            total_count=10,
+        )
+        assert PartialSources.model_validate(ps.model_dump()) == ps
+
+    def test_failed_source_requires_non_empty_reason(self):
+        with pytest.raises(ValidationError):
+            FailedSource(source="appstore", name="Notion", reason="")
+
+    def test_counts_non_negative(self):
+        with pytest.raises(ValidationError):
+            PartialSources(failed=[], succeeded_count=-1, total_count=0)
 
 
 class TestRunResult:

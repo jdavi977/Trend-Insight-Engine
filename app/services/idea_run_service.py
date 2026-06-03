@@ -12,6 +12,7 @@ from typing import Optional
 
 from app.clients.supabase import (
     get_idea_run,
+    insert_feedback_event,
     insert_idea_run,
     list_done_idea_runs,
     list_gaps_for_run,
@@ -20,6 +21,7 @@ from app.clients.supabase import (
 from app.schemas.runs import (
     RunCreate,
     RunCreateResponse,
+    RunFeedback,
     RunFeedItem,
     RunStateResponse,
 )
@@ -59,6 +61,24 @@ def get_run(run_id: str) -> Optional[RunStateResponse]:
     if row is None:
         return None
     return _row_to_state(row)
+
+
+def submit_feedback(run_id: str, feedback: RunFeedback) -> dict:
+    """Append a feedback row for a run (spec §7, PRD §9).
+
+    APPEND-ONLY: each submission inserts a new `feedback_events` row — never an
+    upsert. Endpoint-level gating (run must be `done`, gap ids must exist) lands
+    with POST /runs/:id/feedback in a later slice-2 PR; this is the write path
+    the foundation slice exposes.
+    """
+    row = insert_feedback_event(
+        run_id=run_id,
+        new_to_me_gap_ids=feedback.new_to_me_gap_ids,
+        direction=feedback.direction,
+        time_saved_estimate_minutes=feedback.time_saved_estimate_minutes,
+    )
+    logger.info("feedback_recorded run_id=%s direction=%s", run_id, feedback.direction)
+    return row
 
 
 def list_done_runs(limit: int, before: Optional[datetime]) -> list[RunFeedItem]:

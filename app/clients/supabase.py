@@ -172,6 +172,27 @@ def update_idea_run_failed(run_id: str, failure_reason: str) -> dict:
     return _one_updated_row(response, run_id)
 
 
+def insert_feedback_event(
+    run_id: str,
+    new_to_me_gap_ids: Optional[list[str]],
+    direction: Optional[str],
+    time_saved_estimate_minutes: Optional[int],
+) -> dict:
+    """APPEND-ONLY insert into `feedback_events` (spec §7, PRD §9).
+
+    Every call adds a row — never an upsert, update, or delete. Multiple rows
+    per `run_id` are expected (one per feedback submission). `submitted_at` is
+    stamped server-side by the column default (migration 002).
+    """
+    response = supabase_client.table("feedback_events").insert({
+        "run_id": run_id,
+        "new_to_me_gap_ids_json": new_to_me_gap_ids,
+        "direction": direction,
+        "time_saved_estimate_minutes": time_saved_estimate_minutes,
+    }).execute()
+    return response.data[0]
+
+
 def insert_gaps(gap_rows: list[dict]) -> list[dict]:
     """Insert the synthesised gaps for a run. No-op for an empty list."""
     if not gap_rows:
