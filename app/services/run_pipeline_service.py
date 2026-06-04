@@ -74,6 +74,17 @@ def _set_stage(run_id: str, stage: str) -> None:
         job["stage"] = stage
 
 
+def has_running_pipeline() -> bool:
+    """True when a background pipeline is currently `running` on this instance.
+
+    The concurrency guard (spec §6, issue #59 Q2) reuses this registry: it counts
+    active *pipelines* (post-approve), not in-flight synchronous pre-flights, so
+    a second POST /runs while a pipeline runs returns `429 busy`. Done/failed jobs
+    stay in `_jobs` as a thin audit trail but don't count as active.
+    """
+    return any(job.get("status") == "running" for job in _jobs.values())
+
+
 # --- approve front door -----------------------------------------------------
 
 

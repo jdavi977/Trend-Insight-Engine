@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, status
 
 from app.schemas.runs import (
     RunApprove,
@@ -17,14 +17,22 @@ from app.schemas.runs import (
     RunFeedItem,
     RunStateResponse,
 )
-from app.services import idea_run_service, run_pipeline_service
+from app.services import idea_run_service, rate_limit_service, run_pipeline_service
 
 router = APIRouter(prefix="/runs")
 
 
 @router.post("", response_model=RunCreateResponse)
-def create_run(request: RunCreate) -> RunCreateResponse:
-    return idea_run_service.create_run(request)
+def create_run(request: RunCreate, http_request: Request) -> RunCreateResponse:
+    # Abuse/cost guards run before any work (spec §6, issue #59): concurrency →
+    # rate limit → budget. `check_can_create_run` raises 429 on rejection;
+    # `record_run` counts the accepted run against this IP only once it's created
+    # (so a budget rejection doesn't burn a rate-limit slot).
+    ip = rate_limit_service.client_ip(http_request)
+    rate_limit_service.check_can_create_run(ip)
+    response = idea_run_service.create_run(request)
+    rate_limit_service.record_run(ip)
+    return response
 
 
 @router.get("", response_model=list[RunFeedItem])

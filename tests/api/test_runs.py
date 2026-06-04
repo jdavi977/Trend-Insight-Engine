@@ -348,3 +348,74 @@ def test_approve_missing_run_returns_404(client, mocker):
     )
 
     assert response.status_code == 404
+
+
+# --- abuse / cost guards on POST /runs (slice 2 §6, issue #59) ---------------
+
+
+def _mock_create_run_success(mocker):
+    """Wire idea_run_service.create_run to succeed so guards are the only gate."""
+    pending = _row()
+    ready = _row(status_="preflight_ready", category="note-taking",
+                 signal_strength="high")
+    mocker.patch("app.services.idea_run_service.insert_idea_run", return_value=pending)
+    mocker.patch("app.services.idea_run_service.update_idea_run_preflight",
+                 return_value=ready)
+    mocker.patch("app.services.idea_run_service.preflight_service.run",
+                 return_value=_preflight())
+
+
+def test_post_runs_busy_429_when_a_pipeline_is_running(client, mocker):
+    from app.services import run_pipeline_service
+
+    run_pipeline_service._jobs["other-run"] = {"status": "running", "stage": "synthesis"}
+
+    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+
+    assert response.status_code == 429
+    assert response.headers["X-RateLimit-Reason"] == "busy"
+    assert int(response.headers["Retry-After"]) > 0
+
+
+def test_post_runs_rate_limited_429_after_hourly_limit(client, mocker):
+    from app.config.constants import RATE_LIMIT_PER_HOUR
+    from app.services import rate_limit_service
+
+    # TestClient's socket peer is "testclient"; seed it to the hourly ceiling.
+    for _ in range(RATE_LIMIT_PER_HOUR):
+        rate_limit_service.record_run("testclient")
+
+    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+
+    assert response.status_code == 429
+    assert response.headers["X-RateLimit-Reason"] == "rate_limited"
+    assert int(response.headers["Retry-After"]) > 0
+
+
+def test_post_runs_budget_exhausted_429(client, mocker):
+    mocker.patch(
+        "app.services.rate_limit_service.openai_client.is_budget_exhausted",
+        return_value=True,
+    )
+
+    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+
+    assert response.status_code == 429
+    assert response.headers["X-RateLimit-Reason"] == "budget_exhausted"
+
+
+def test_post_runs_records_run_against_client_ip_on_success(client, mocker):
+    from app.services import rate_limit_service
+
+    _mock_create_run_success(mocker)
+
+    response = client.post(
+        "/runs",
+        json={"idea": "note-taking app with better offline sync", "target_gap": None},
+        headers={"X-Forwarded-For": "203.0.113.42"},
+    )
+
+    assert response.status_code == 200
+    # The first X-Forwarded-For hop is the recorded client, not the socket peer.
+    assert "203.0.113.42" in rate_limit_service._ip_runs
+    assert "testclient" not in rate_limit_service._ip_runs

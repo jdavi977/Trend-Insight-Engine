@@ -14,7 +14,13 @@ def general_http_exception_handler(request: Request, exception: StarletteHTTPExc
         if exception.detail
         else "An error occurred. Please check your request and try again."
     )
-    return JSONResponse(status_code=exception.status_code, content={"detail": message})
+    # Preserve any headers the raiser attached — e.g. `Retry-After` /
+    # `X-RateLimit-Reason` on the 429 abuse/cost guards (slice 2 §6, issue #59).
+    return JSONResponse(
+        status_code=exception.status_code,
+        content={"detail": message},
+        headers=getattr(exception, "headers", None),
+    )
 
 
 def register_exception_handlers(app: FastAPI) -> None:
