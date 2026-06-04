@@ -10,6 +10,7 @@
  * backend (frontend/CONTEXT.md). Pre-flight sub-pieces below are page-specific.
  */
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -65,7 +66,8 @@ function competitorFromUrl(rawUrl) {
   };
 }
 
-export default function NewRun({ onOpenRun }) {
+export default function NewRun() {
+  const navigate = useNavigate();
   const [idea, setIdea] = useState("");
   const [targetGap, setTargetGap] = useState("");
 
@@ -131,7 +133,7 @@ export default function NewRun({ onOpenRun }) {
         setError(await readError(res));
         return;
       }
-      onOpenRun?.(preflight.run_id);
+      navigate(`/runs/${preflight.run_id}`);
     } catch (err) {
       setError(err?.message || "Could not start the run. Try again.");
     } finally {

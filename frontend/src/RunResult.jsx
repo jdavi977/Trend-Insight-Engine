@@ -11,8 +11,12 @@
  * Page-level component owns all state and is the only thing that talks to the
  * backend (frontend/CONTEXT.md). Quotes arrive as a { quote_id: Quote } map and
  * are looked up per gap via evidence_quote_ids.
+ *
+ * The run id comes from the /runs/:id route (ADR 2026-06-01 / issue #58), so a
+ * pasted URL loads the run directly in a fresh tab (US-4, US-5).
  */
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   PrimaryButton,
   Pill,
@@ -39,7 +43,11 @@ async function readError(res) {
   return detail || `Request failed (${res.status}).`;
 }
 
-export default function RunResult({ runId, onNewRun }) {
+export default function RunResult() {
+  const { id: runId } = useParams();
+  const navigate = useNavigate();
+  const onNewRun = () => navigate("/runs/new");
+
   const [run, setRun] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

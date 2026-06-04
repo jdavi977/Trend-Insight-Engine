@@ -5,10 +5,11 @@
  * "Start a new run" CTA opens New Run.
  *
  * Page-level component owns all state and is the only thing that talks to the
- * backend (frontend/CONTEXT.md). Navigation is lifted to App via callbacks
- * (onOpenRun, onNewRun) — the SPA uses state-based routing, not a URL router.
+ * backend (frontend/CONTEXT.md). Navigation uses react-router-dom: a run row
+ * routes to /runs/:id, the CTA to /runs/new (ADR 2026-06-01 / issue #58).
  */
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PrimaryButton, Spinner, ErrorBanner } from "./components/atoms";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
@@ -41,7 +42,11 @@ function relativeTime(iso) {
   return then.toLocaleDateString();
 }
 
-export default function HomeV2({ onOpenRun, onNewRun }) {
+export default function HomeV2() {
+  const navigate = useNavigate();
+  const onNewRun = () => navigate("/runs/new");
+  const onOpenRun = (runId) => navigate(`/runs/${runId}`);
+
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
