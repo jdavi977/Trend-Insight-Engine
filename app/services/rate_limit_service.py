@@ -138,6 +138,18 @@ def check_can_create_run(ip: str) -> None:
     _check_budget()
 
 
+def check_can_report(ip: str) -> None:
+    """Per-IP rate limit for POST /runs/:id/report (issue #62, open question Q6).
+
+    Report has no auth in v1 (PRD §5) so it's grief-able; the only guard is the
+    shared per-IP run budget. This reuses the same TTL buckets and limits as
+    POST /runs — no concurrency or budget check, since a report does no pipeline
+    or LLM work. The router calls `record_run(ip)` on success so an accepted
+    report counts against the same 3/hour, 10/day window.
+    """
+    _check_rate_limit(ip, time.time())
+
+
 def record_run(ip: str) -> None:
     """Record one accepted POST /runs against the client IP's TTL bucket."""
     now = time.time()

@@ -10,6 +10,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+from fastapi import HTTPException, status
+
 from app.clients.supabase import (
     get_idea_run,
     insert_feedback_event,
@@ -18,6 +20,7 @@ from app.clients.supabase import (
     list_gaps_for_run,
     update_idea_run_failed_if_running,
     update_idea_run_preflight,
+    update_idea_run_reported,
 )
 from app.schemas.runs import (
     FailureReason,
@@ -25,6 +28,7 @@ from app.schemas.runs import (
     RunCreateResponse,
     RunFeedback,
     RunFeedItem,
+    RunReport,
     RunStateResponse,
 )
 from app.services import preflight_service, run_pipeline_service
@@ -62,6 +66,11 @@ def get_run(run_id: str) -> Optional[RunStateResponse]:
     row = get_idea_run(run_id)
     if row is None:
         return None
+    # A reported run is hidden from the public surface (spec §7, open question
+    # Q5): return None so the router 404s without confirming a report happened.
+    # The row is retained in the table for manual admin review (PRD §8).
+    if row["status"] == "reported":
+        return None
     row = _reconcile_orphaned_running(row)
     return _row_to_state(row)
 
@@ -93,21 +102,59 @@ def _reconcile_orphaned_running(row: dict) -> dict:
 
 
 def submit_feedback(run_id: str, feedback: RunFeedback) -> dict:
-    """Append a feedback row for a run (spec §7, PRD §9).
+    """Append a feedback row for a `done` run (spec §7, PRD §9, issue #62).
 
     APPEND-ONLY: each submission inserts a new `feedback_events` row — never an
-    upsert. Endpoint-level gating (run must be `done`, gap ids must exist) lands
-    with POST /runs/:id/feedback in a later slice-2 PR; this is the write path
-    the foundation slice exposes.
+    upsert, so repeat submissions add rows. Gating: the run must exist (else
+    404) and be `done` (else 409); every `new_to_me_gap_ids` entry must
+    reference a gap that exists on the run (else 400). `direction` and
+    `time_saved_estimate_minutes` are already bounded by the Pydantic body.
     """
-    row = insert_feedback_event(
+    row = get_idea_run(run_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Run not found"
+        )
+    if row["status"] != "done":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Feedback is only accepted on a 'done' run; run is '{row['status']}'",
+        )
+    if feedback.new_to_me_gap_ids:
+        known = {g["gap_id"] for g in list_gaps_for_run(run_id)}
+        unknown = [gid for gid in feedback.new_to_me_gap_ids if gid not in known]
+        if unknown:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown gap_ids for this run: {unknown}",
+            )
+
+    inserted = insert_feedback_event(
         run_id=run_id,
         new_to_me_gap_ids=feedback.new_to_me_gap_ids,
         direction=feedback.direction,
         time_saved_estimate_minutes=feedback.time_saved_estimate_minutes,
     )
     logger.info("feedback_recorded run_id=%s direction=%s", run_id, feedback.direction)
-    return row
+    return inserted
+
+
+def report_run(run_id: str, report: RunReport) -> dict:
+    """Hide a run from the public surface (spec §7, US-S7, issue #62).
+
+    Flips status → `reported`, stamps `reported_at`, and stores the reason for
+    manual admin review (the row is retained, not deleted — PRD §8). A missing
+    or already-`reported` run returns 404 so a report is never confirmed back to
+    the caller (open question Q5). The endpoint is per-IP rate-limited (Q6).
+    """
+    row = get_idea_run(run_id)
+    if row is None or row["status"] == "reported":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Run not found"
+        )
+    updated = update_idea_run_reported(run_id, report.reason)
+    logger.info("run_reported run_id=%s", run_id)
+    return updated
 
 
 def list_done_runs(limit: int, before: Optional[datetime]) -> list[RunFeedItem]:

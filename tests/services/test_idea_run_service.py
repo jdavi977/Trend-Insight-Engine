@@ -1,13 +1,17 @@
 """Tests for app/services/idea_run_service.py.
 
-Slice-2 foundation (issue #57): the append-only `feedback_events` write path.
-Endpoint-level gating (done-only, gap existence) lands in a later slice-2 PR.
+Slice-2 (issue #57): the append-only `feedback_events` write path.
+Slice-2 (issue #62): feedback gating (done-only, gap existence) + the report
+endpoint that hides a run from the public surface.
 """
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.schemas.runs import RunFeedback
+import pytest
+from fastapi import HTTPException
+
+from app.schemas.runs import RunFeedback, RunReport
 from app.services import idea_run_service, run_pipeline_service
 
 
@@ -23,7 +27,15 @@ def _running_row(run_id: str = "r1") -> dict:
     }
 
 
+def _done_row(run_id: str = "r1") -> dict:
+    return {**_running_row(run_id), "status": "done"}
+
+
 def test_submit_feedback_inserts_feedback_event(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=_done_row())
+    mocker.patch.object(
+        idea_run_service, "list_gaps_for_run", return_value=[{"gap_id": "g1"}]
+    )
     insert = mocker.patch.object(
         idea_run_service, "insert_feedback_event", return_value={"id": "fe1"}
     )
@@ -48,6 +60,7 @@ def test_submit_feedback_inserts_feedback_event(mocker):
 
 def test_submit_feedback_appends_never_upserts(mocker):
     """Two submissions for the same run insert two rows (append-only, PRD §9)."""
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=_done_row())
     insert = mocker.patch.object(
         idea_run_service, "insert_feedback_event", return_value={"id": "fe"}
     )
@@ -61,6 +74,7 @@ def test_submit_feedback_appends_never_upserts(mocker):
 
 
 def test_submit_feedback_passes_through_empty_feedback(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=_done_row())
     insert = mocker.patch.object(
         idea_run_service, "insert_feedback_event", return_value={"id": "fe"}
     )
@@ -73,6 +87,92 @@ def test_submit_feedback_passes_through_empty_feedback(mocker):
         direction=None,
         time_saved_estimate_minutes=None,
     )
+
+
+def test_submit_feedback_missing_run_raises_404(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=None)
+    insert = mocker.patch.object(idea_run_service, "insert_feedback_event")
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.submit_feedback("r1", RunFeedback(direction="continue"))
+
+    assert exc.value.status_code == 404
+    insert.assert_not_called()
+
+
+def test_submit_feedback_non_done_run_raises_409(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=_running_row())
+    insert = mocker.patch.object(idea_run_service, "insert_feedback_event")
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.submit_feedback("r1", RunFeedback(direction="continue"))
+
+    assert exc.value.status_code == 409
+    insert.assert_not_called()
+
+
+def test_submit_feedback_unknown_gap_ids_raises_400(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=_done_row())
+    mocker.patch.object(
+        idea_run_service, "list_gaps_for_run", return_value=[{"gap_id": "g1"}]
+    )
+    insert = mocker.patch.object(idea_run_service, "insert_feedback_event")
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.submit_feedback(
+            "r1", RunFeedback(new_to_me_gap_ids=["g1", "ghost"])
+        )
+
+    assert exc.value.status_code == 400
+    insert.assert_not_called()
+
+
+# --- report (US-S7, spec §7, issue #62) -------------------------------------
+
+
+def test_report_run_hides_run_and_stores_reason(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=_done_row())
+    update = mocker.patch.object(
+        idea_run_service,
+        "update_idea_run_reported",
+        return_value={**_done_row(), "status": "reported"},
+    )
+
+    idea_run_service.report_run("r1", RunReport(reason="spam"))
+
+    update.assert_called_once_with("r1", "spam")
+
+
+def test_report_run_missing_run_raises_404(mocker):
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=None)
+    update = mocker.patch.object(idea_run_service, "update_idea_run_reported")
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.report_run("r1", RunReport(reason="spam"))
+
+    assert exc.value.status_code == 404
+    update.assert_not_called()
+
+
+def test_report_run_already_reported_raises_404(mocker):
+    """A second report on a hidden run 404s — never confirm the run exists (Q5)."""
+    reported = {**_done_row(), "status": "reported"}
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=reported)
+    update = mocker.patch.object(idea_run_service, "update_idea_run_reported")
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.report_run("r1", RunReport(reason="again"))
+
+    assert exc.value.status_code == 404
+    update.assert_not_called()
+
+
+def test_get_run_hides_reported_run(mocker):
+    """A reported run reads back as None so the router 404s (spec §7, Q5)."""
+    reported = {**_done_row(), "status": "reported"}
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=reported)
+
+    assert idea_run_service.get_run("r1") is None
 
 
 # --- restart reconciliation (US-S4, spec §5.2) ------------------------------

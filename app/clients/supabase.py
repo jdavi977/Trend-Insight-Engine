@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from supabase import create_client, Client
@@ -196,6 +196,21 @@ def update_idea_run_failed_if_running(
     }).eq("id", run_id).eq("status", "running").execute()
     rows = response.data or []
     return rows[0] if rows else None
+
+
+def update_idea_run_reported(run_id: str, reason: str) -> dict:
+    """Hide a run from the public surface (spec §7, US-S7, issue #62).
+
+    Flips `status` → `reported`, stamps `reported_at`, and stores the report
+    reason for manual admin review. The row is retained, not deleted (PRD §8 —
+    "hidden pending decision"). Raises if the run_id matches no row.
+    """
+    response = supabase_client.table("idea_runs").update({
+        "status": "reported",
+        "reported_at": datetime.now(timezone.utc).isoformat(),
+        "report_reason": reason,
+    }).eq("id", run_id).execute()
+    return _one_updated_row(response, run_id)
 
 
 def insert_feedback_event(
