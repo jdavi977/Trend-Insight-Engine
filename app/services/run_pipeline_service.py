@@ -88,6 +88,18 @@ def _set_stage(run_id: str, stage: str) -> None:
         job["stage"] = stage
 
 
+def is_pipeline_live(run_id: str) -> bool:
+    """True when a background pipeline for `run_id` is currently running here.
+
+    Restart reconciliation (spec §5.2, US-S4) keys off this: `_jobs` is in-memory
+    and lost on restart, so the *absence* of a live entry for a row the DB still
+    calls `running` is the signal that the row was orphaned by a server restart.
+    Done/failed jobs linger in `_jobs` as an audit trail but are not live.
+    """
+    job = _jobs.get(run_id)
+    return job is not None and job.get("status") == "running"
+
+
 def has_running_pipeline() -> bool:
     """True when a background pipeline is currently `running` on this instance.
 

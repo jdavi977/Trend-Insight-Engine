@@ -16,16 +16,18 @@ from app.clients.supabase import (
     insert_idea_run,
     list_done_idea_runs,
     list_gaps_for_run,
+    update_idea_run_failed_if_running,
     update_idea_run_preflight,
 )
 from app.schemas.runs import (
+    FailureReason,
     RunCreate,
     RunCreateResponse,
     RunFeedback,
     RunFeedItem,
     RunStateResponse,
 )
-from app.services import preflight_service
+from app.services import preflight_service, run_pipeline_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +62,34 @@ def get_run(run_id: str) -> Optional[RunStateResponse]:
     row = get_idea_run(run_id)
     if row is None:
         return None
+    row = _reconcile_orphaned_running(row)
     return _row_to_state(row)
+
+
+def _reconcile_orphaned_running(row: dict) -> dict:
+    """Read-time restart reconciliation (spec §5.2, US-S4).
+
+    `_jobs` is in-memory and lost on restart, so a row the DB still calls
+    `running` with no live pipeline here was orphaned by a server restart.
+    Transition it to `failed` + `failure_reason: server_restart` before
+    returning. The write is conditional on `status='running'` (the supabase
+    guard), so a genuinely-live run on another code path is never clobbered;
+    if that guard finds no row we keep the row we already read.
+    """
+    if row["status"] != "running":
+        return row
+    if run_pipeline_service.is_pipeline_live(row["id"]):
+        return row
+
+    updated = update_idea_run_failed_if_running(
+        row["id"], FailureReason.server_restart.value
+    )
+    if updated is None:
+        return row
+    logger.warning(
+        "run_reconciled_server_restart run_id=%s (orphaned running row)", row["id"]
+    )
+    return updated
 
 
 def submit_feedback(run_id: str, feedback: RunFeedback) -> dict:

@@ -179,6 +179,25 @@ def update_idea_run_failed(run_id: str, failure_reason: str) -> dict:
     return _one_updated_row(response, run_id)
 
 
+def update_idea_run_failed_if_running(
+    run_id: str, failure_reason: str
+) -> Optional[dict]:
+    """Conditionally transition running → failed (spec §5.2, US-S4).
+
+    The `status='running'` precondition makes this safe for read-time restart
+    reconciliation: a row that a live pipeline already moved to `done`/`failed`
+    on another code path matches no row and returns `None`, so a genuinely-live
+    run can't be clobbered. Returns the updated row, or `None` when the run was
+    no longer `running`.
+    """
+    response = supabase_client.table("idea_runs").update({
+        "status": "failed",
+        "failure_reason": failure_reason,
+    }).eq("id", run_id).eq("status", "running").execute()
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
 def insert_feedback_event(
     run_id: str,
     new_to_me_gap_ids: Optional[list[str]],
