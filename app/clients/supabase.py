@@ -152,13 +152,20 @@ def update_idea_run_done(
     quotes: dict,
     coverage: dict,
     idea_match: Optional[dict],
+    partial_sources: Optional[dict] = None,
 ) -> dict:
-    """Write the terminal happy-path result. `status='done'` is set last (spec §8)."""
+    """Write the terminal happy-path result. `status='done'` is set last (spec §8).
+
+    `partial_sources` (slice 2 §5.1) is the partial-completion summary written to
+    `partial_sources_json` — `None` on a fully-successful run, populated when the
+    run completed `done` despite ≥1 source failing above the 70% threshold.
+    """
     response = supabase_client.table("idea_runs").update({
         "status": "done",
         "quotes_json": quotes,
         "coverage_json": coverage,
         "idea_match_json": idea_match,
+        "partial_sources_json": partial_sources,
     }).eq("id", run_id).execute()
     return _one_updated_row(response, run_id)
 

@@ -112,6 +112,7 @@ def _row_to_state(row: dict) -> RunStateResponse:
         gaps=gaps,
         coverage=row.get("coverage_json"),
         idea_match=row.get("idea_match_json"),
+        partial_sources=row.get("partial_sources_json"),
         failure_reason=row.get("failure_reason"),
     )
 

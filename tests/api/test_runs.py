@@ -201,6 +201,28 @@ def test_get_done_run_includes_gaps_from_gaps_table(client, mocker):
     assert body["gaps"][0]["evidence_quote_ids"] == ["q01", "q02"]
 
 
+def test_get_done_run_surfaces_partial_sources_banner(client, mocker):
+    # A run that completed above the 70% threshold persists partial_sources_json;
+    # GET /runs/:id must surface it so the frontend can render the banner (#60).
+    done = _row(status_="done", category="productivity",
+                signal_strength="high", signal_reasoning="r")
+    done["partial_sources_json"] = {
+        "failed": [{"source": "youtube", "name": "Vid 3", "reason": "RuntimeError: boom"}],
+        "succeeded_count": 9,
+        "total_count": 10,
+    }
+    mocker.patch("app.services.idea_run_service.get_idea_run", return_value=done)
+    mocker.patch("app.services.idea_run_service.list_gaps_for_run", return_value=[])
+
+    response = client.get(f"/runs/{done['id']}")
+
+    assert response.status_code == 200
+    partial = response.json()["partial_sources"]
+    assert partial["succeeded_count"] == 9
+    assert partial["total_count"] == 10
+    assert partial["failed"][0]["name"] == "Vid 3"
+
+
 def test_get_preflight_run_does_not_query_gaps(client, mocker):
     mocker.patch(
         "app.services.idea_run_service.get_idea_run",

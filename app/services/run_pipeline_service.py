@@ -13,10 +13,15 @@ semaphore, pools the per-source quotes + pain items, synthesises grounded gaps,
 optionally runs the idea-match step, redacts PII at the persist boundary, and
 writes `idea_runs` + `gaps`. `status='done'` is set last.
 
-**Happy path only (slice 1).** Any source failure fails the whole run
-(`status='failed'`, freeform `failure_reason`). No retries, no partial-source
-threshold, no rate limiting. A server restart mid-run leaves the row `running`
-forever — that's loud, not silent, and slice 2 fixes it.
+**Source resilience (slice 2 §5.1, US-S3, issue #60).** Each source is wrapped
+in retry-once-with-backoff and isolated: a source that exhausts its retries is
+recorded as a `_SourceFailure`, not raised, so it can't cancel its siblings.
+After fan-out, `succeeded / total` is gated against `PARTIAL_SOURCE_THRESHOLD` —
+above it the run completes `done` with a `partial_sources` banner naming the
+failures; below it the run is `failed` (`sources_below_threshold`). Errors
+*outside* the per-source fan-out map to `internal_error` (§5.3). A server restart
+mid-run still leaves the row `running` — the on-read reconciliation that fixes
+that is a separate slice-2 item (§5.2).
 
 **Idea-blinding (spec §13).** `_process_source` does not receive `idea` or
 `target_gap`; `idea` is only in scope at the synthesis / idea-match call sites.
@@ -26,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import BackgroundTasks, HTTPException, status
@@ -37,7 +43,12 @@ from app.clients.supabase import (
     update_idea_run_failed,
     update_idea_run_running,
 )
-from app.config.constants import APP_REVIEW_PAGES
+from app.config.constants import (
+    APP_REVIEW_PAGES,
+    PARTIAL_SOURCE_THRESHOLD,
+    SOURCE_RETRY_ATTEMPTS,
+    SOURCE_RETRY_BACKOFF_BASE_SECONDS,
+)
 from app.ingestion.appStoreReviews import getAppReviews
 from app.ingestion.youtubeComments import getYoutubeComments
 from app.llm import synthesis as synthesis_stage
@@ -45,8 +56,11 @@ from app.llm.idea_match import match_idea
 from app.preprocessing.redact import redact
 from app.schemas.runs import (
     Competitor,
+    FailedSource,
+    FailureReason,
     GapItem,
     PainItem,
+    PartialSources,
     Quote,
     RunApprove,
     SourceMetadata,
@@ -214,6 +228,71 @@ async def _process_source(
     return pain_items, redacted
 
 
+# --- per-source resilience (slice 2 §5.1, US-S3) ----------------------------
+
+
+@dataclass
+class _SourceSuccess:
+    """One source that survived (possibly after a retry); feeds the quote pool."""
+
+    competitor: Competitor
+    pain_items: list[PainItem]
+    quotes: list[Quote]
+
+
+@dataclass
+class _SourceFailure:
+    """One source that exhausted its retries; named in `partial_sources`."""
+
+    competitor: Competitor
+    reason: str
+
+
+def _backoff_delay(attempt: int) -> float:
+    """Seconds to wait before retry *attempt* (0-indexed): exponential backoff.
+
+    Isolated so tests can patch the wait to zero without faking time (PRD §8).
+    """
+    return SOURCE_RETRY_BACKOFF_BASE_SECONDS * (2 ** attempt)
+
+
+async def _process_source_resilient(
+    competitor: Competitor,
+    category: str,
+    semaphore: asyncio.Semaphore,
+) -> _SourceSuccess | _SourceFailure:
+    """Run `_process_source` with retry-once-with-backoff, never raising.
+
+    Slice 2 §5.1: a source is attempted ``SOURCE_RETRY_ATTEMPTS`` times; a
+    transient failure on the first attempt is retried after an exponential
+    backoff. A source that exhausts every attempt is captured as a
+    `_SourceFailure` instead of bubbling up — so one flaky source can't cancel
+    its siblings or fail the whole run below the §5.1 threshold.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(SOURCE_RETRY_ATTEMPTS):
+        try:
+            pain_items, quotes = await _process_source(competitor, category, semaphore)
+            return _SourceSuccess(
+                competitor=competitor, pain_items=pain_items, quotes=quotes
+            )
+        except Exception as exc:  # noqa: BLE001 — source-level isolation is the point.
+            last_exc = exc
+            if attempt < SOURCE_RETRY_ATTEMPTS - 1:
+                logger.warning(
+                    "source_retry source=%s name=%s attempt=%d reason=%s",
+                    competitor.source, competitor.name, attempt + 1, exc,
+                )
+                await asyncio.sleep(_backoff_delay(attempt))
+
+    reason = f"{type(last_exc).__name__}: {last_exc}"
+    logger.warning(
+        "source_failed source=%s name=%s reason=%s",
+        competitor.source, competitor.name, reason,
+    )
+    return _SourceFailure(competitor=competitor, reason=reason)
+
+
 def _gap_rows(run_id: str, gaps: list[GapItem]) -> list[dict]:
     """Map ordered GapItems to `gaps` table rows (spec §4)."""
     return [
@@ -243,15 +322,56 @@ async def run_pipeline(
     try:
         _set_stage(run_id, "extracting")
         semaphore = asyncio.Semaphore(_OPENAI_CONCURRENCY)
-        results = await asyncio.gather(
-            *(_process_source(c, category, semaphore) for c in competitors)
+        # Each task swallows its own failure into a `_SourceFailure`, so the
+        # fan-out never cancels siblings — no `return_exceptions` needed because
+        # `_process_source_resilient` is contractually non-raising (slice 2 §5.1).
+        outcomes = await asyncio.gather(
+            *(_process_source_resilient(c, category, semaphore) for c in competitors)
         )
+
+        succeeded = [o for o in outcomes if isinstance(o, _SourceSuccess)]
+        failed = [o for o in outcomes if isinstance(o, _SourceFailure)]
+        total_count = len(outcomes)
+
+        # Partial-completion gate (US-S3): below the threshold the surviving
+        # signal is too thin to synthesise honestly — fail loud rather than ship
+        # a misleadingly-confident result from a fraction of the sources.
+        if total_count and len(succeeded) / total_count < PARTIAL_SOURCE_THRESHOLD:
+            names = ", ".join(o.competitor.name for o in failed)
+            reason = (
+                f"Only {len(succeeded)}/{total_count} sources succeeded "
+                f"(< {int(PARTIAL_SOURCE_THRESHOLD * 100)}% threshold). Failed: {names}"
+            )
+            logger.warning("run_below_threshold run_id=%s reason=%s", run_id, reason)
+            update_idea_run_failed(run_id, FailureReason.sources_below_threshold.value)
+            job = _jobs.get(run_id)
+            if job is not None:
+                job["status"] = "failed"
+                job["stage"] = "failed"
+            return
+
+        # Some sources may have failed but the threshold held — record the
+        # survivors' names for the Result-page banner (slice 2 §5.1).
+        partial_sources = None
+        if failed:
+            partial_sources = PartialSources(
+                failed=[
+                    FailedSource(
+                        source=o.competitor.source,
+                        name=o.competitor.name,
+                        reason=o.reason,
+                    )
+                    for o in failed
+                ],
+                succeeded_count=len(succeeded),
+                total_count=total_count,
+            )
 
         all_pain: list[PainItem] = []
         all_quotes: list[Quote] = []
-        for pain_items, quotes in results:
-            all_pain.extend(pain_items)
-            all_quotes.extend(quotes)
+        for outcome in succeeded:
+            all_pain.extend(outcome.pain_items)
+            all_quotes.extend(outcome.quotes)
 
         _set_stage(run_id, "synthesis")
         gaps, coverage = await asyncio.to_thread(
@@ -277,6 +397,7 @@ async def run_pipeline(
             quotes=quotes_map,
             coverage=coverage.model_dump(),
             idea_match=idea_match.model_dump() if idea_match else None,
+            partial_sources=partial_sources.model_dump() if partial_sources else None,
         )
 
         job = _jobs.get(run_id)
@@ -286,11 +407,15 @@ async def run_pipeline(
         logger.info(
             "run_done run_id=%s gaps=%d quotes=%d", run_id, len(gaps), len(all_quotes)
         )
-    except Exception as exc:  # noqa: BLE001 — slice 1: any failure fails the run.
-        reason = f"{type(exc).__name__}: {exc}"
-        logger.exception("run_failed run_id=%s reason=%s", run_id, reason)
+    except Exception as exc:  # noqa: BLE001 — unexpected pipeline failure.
+        # Source-level failures are handled above (§5.1); reaching here means an
+        # error outside the per-source fan-out (synthesis, persistence, …), which
+        # maps to the catch-all `internal_error` reason (slice 2 §5.3).
+        logger.exception(
+            "run_failed run_id=%s reason=%s: %s", run_id, type(exc).__name__, exc
+        )
         try:
-            update_idea_run_failed(run_id, reason)
+            update_idea_run_failed(run_id, FailureReason.internal_error.value)
         finally:
             job = _jobs.get(run_id)
             if job is not None:

@@ -13,6 +13,20 @@ APPLE_UTILITIES_GENRE_ID = 6002
 APPLE_TOP_APPS_LIMIT = 5
 APPLE_COUNTRY = "us"
 
+# Partial-completion threshold (slice 2 §5.1, US-S3, issue #60). A run survives
+# as `done` (with a partial_sources banner) only when at least this fraction of
+# its sources succeed; below it the run is `failed` with
+# failure_reason=sources_below_threshold. In config, not hardcoded in the
+# pipeline (issue #60 acceptance criterion).
+PARTIAL_SOURCE_THRESHOLD = 0.70
+
+# Per-source retry policy (slice 2 §5.1, PRD §8: "one retry with exponential
+# backoff"). A source is attempted SOURCE_RETRY_ATTEMPTS times total; the wait
+# before retry N (0-indexed) is SOURCE_RETRY_BACKOFF_BASE_SECONDS * 2**N. A
+# source that exhausts its attempts is recorded as failed, not raised.
+SOURCE_RETRY_ATTEMPTS = 2
+SOURCE_RETRY_BACKOFF_BASE_SECONDS = 0.5
+
 RAG_QUERY_MAX_CHARS = 2000
 RAG_TOP_K = 5
 RAG_MIN_SIMILARITY = 0.60
