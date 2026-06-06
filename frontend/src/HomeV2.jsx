@@ -9,7 +9,7 @@
  * routes to /runs/:id, the CTA to /runs/new (ADR 2026-06-01 / issue #58).
  */
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PrimaryButton, Spinner, ErrorBanner } from "./components/atoms";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
@@ -44,8 +44,18 @@ function relativeTime(iso) {
 
 export default function HomeV2() {
   const navigate = useNavigate();
+  const location = useLocation();
   const onNewRun = () => navigate("/runs/new");
   const onOpenRun = (runId) => navigate(`/runs/${runId}`);
+
+  // A run just reported from the Result page lands here with an ack flag; show
+  // it once, then clear the history state so a refresh doesn't repeat it.
+  const [reportedAck, setReportedAck] = useState(Boolean(location.state?.reported));
+  useEffect(() => {
+    if (location.state?.reported) {
+      navigate(".", { replace: true, state: null });
+    }
+  }, [location.state, navigate]);
 
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +86,44 @@ export default function HomeV2() {
 
   return (
     <div className="tie-page tie-page--narrow">
+      {reportedAck && (
+        <div
+          role="status"
+          style={{
+            marginTop: "1.25rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "1rem",
+            padding: ".9rem 1.2rem",
+            background: "var(--tie-surface-soft)",
+            border: "1px solid var(--tie-border-strong)",
+            borderRadius: "var(--tie-radius-md)",
+            color: "var(--tie-fg-2)",
+            fontSize: ".9rem",
+          }}
+        >
+          <span>Thanks — that run has been reported and hidden pending review.</span>
+          <button
+            type="button"
+            onClick={() => setReportedAck(false)}
+            aria-label="Dismiss"
+            style={{
+              background: "none",
+              border: "none",
+              color: "var(--tie-fg-3)",
+              cursor: "pointer",
+              fontSize: "1.05rem",
+              lineHeight: 1,
+              padding: 0,
+              flexShrink: 0,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
         <div className="tie-hero-eyebrow">Trend Insight Engine</div>
         <h1 className="tie-hero-title" style={{ fontSize: "2.25rem", marginBottom: ".5rem" }}>
