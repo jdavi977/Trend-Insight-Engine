@@ -21,12 +21,46 @@ import {
   SignalBadge,
   SourceIcon,
 } from "./components/atoms";
+import { rememberRunId } from "./runStorage";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
+// Render a `Retry-After` value (seconds) as a human hint. Empty if absent so
+// callers can omit the timer line entirely (e.g. budget_exhausted has no timer).
+function formatRetryAfter(retryAfterRaw) {
+  const secs = Number(retryAfterRaw);
+  if (!Number.isFinite(secs) || secs <= 0) return "";
+  if (secs < 90) return `about ${Math.max(1, Math.round(secs))} seconds`;
+  const mins = Math.round(secs / 60);
+  if (mins < 90) return `about ${mins} minute${mins === 1 ? "" : "s"}`;
+  const hrs = Math.round(mins / 60);
+  return `about ${hrs} hour${hrs === 1 ? "" : "s"}`;
+}
+
+// The three slice-2 guards (issue #59) all return 429, distinguished by the
+// `X-RateLimit-Reason` header and timed by `Retry-After` (both exposed via CORS,
+// see app/main.py). Render a distinct, friendly message per reason honoring the
+// retry hint — slice 1 assumed the developer; slice 2 assumes a stranger (§9.3).
+function rateLimitMessage(res, detail) {
+  const reason = res.headers.get("X-RateLimit-Reason") || "";
+  const hint = formatRetryAfter(res.headers.get("Retry-After"));
+  const retryLine = hint ? ` You can try again in ${hint}.` : "";
+  switch (reason) {
+    case "busy":
+      return `Another run is already in progress — the engine handles one run at a time.${retryLine || " Please try again shortly."}`;
+    case "rate_limited":
+      return `You've reached the run limit for now (3 per hour, 10 per day).${retryLine || " Please try again later."}`;
+    case "budget_exhausted":
+      return "Today's analysis budget has been reached. Please try again tomorrow.";
+    default:
+      // Header not readable (e.g. CORS not exposing it) — fall back to the body.
+      return `${detail || "The engine is busy or rate-limited."}${retryLine}`;
+  }
+}
+
 // Turn a backend error response into a readable line. Slice-2 sad paths
-// (rate_limited / budget_exhausted / busy) arrive as 429 with a JSON detail;
-// surface them rather than failing silently (frontend skill, PRD §8).
+// (rate_limited / budget_exhausted / busy) arrive as 429; surface a distinct
+// friendly message per reason rather than failing silently (PRD §8, §9.3).
 async function readError(res) {
   let detail = "";
   try {
@@ -35,7 +69,7 @@ async function readError(res) {
   } catch {
     detail = res.statusText;
   }
-  if (res.status === 429) return detail || "The engine is busy or rate-limited. Try again shortly.";
+  if (res.status === 429) return rateLimitMessage(res, detail);
   return detail || `Request failed (${res.status}).`;
 }
 
@@ -97,6 +131,9 @@ export default function NewRun() {
         return;
       }
       const data = await res.json();
+      // Remember this run for "My Runs" — collected at submit time, filtered
+      // client-side against the public feed (spec §9.4, no accounts in v1).
+      rememberRunId(data.run_id);
       setPreflight(data);
       setCompetitors(data.preflight?.candidates ?? []);
       setAcknowledged(false);
@@ -244,14 +281,22 @@ function Field({ label, hint, children, required }) {
 
 // ── Phase 2: pre-flight review ─────────────────────────────────
 function PreflightReview({ runIdea, preflight, competitors, setCompetitors, acknowledged, setAcknowledged, approving, error, onApprove, onBack }) {
-  const isLow = preflight.signal_strength === "low";
+  // US-S1 (spec §9.3): pre-flight found zero public sources. The signal-strength
+  // analysis is meaningless with nothing to read, so swap the whole panel for a
+  // "no public sources" explanation — the only path forward is to paste URLs.
+  // `no_sources` reflects the original backend result and stays true even after
+  // the user adds competitors, so the context line persists while they paste.
+  const noSources = preflight.no_sources === true;
+  const isLow = !noSources && preflight.signal_strength === "low";
   const blocked = (isLow && !acknowledged) || competitors.length === 0 || approving;
 
   return (
     <div className="tie-page tie-page--narrow">
       <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
         <div className="tie-hero-eyebrow">Step 2 of 2 · Review pre-flight</div>
-        <h1 className="tie-hero-title" style={{ fontSize: "2rem", marginBottom: ".5rem" }}>Here’s what we’ll read.</h1>
+        <h1 className="tie-hero-title" style={{ fontSize: "2rem", marginBottom: ".5rem" }}>
+          {noSources ? "No public sources found." : "Here’s what we’ll read."}
+        </h1>
         <p style={{ color: "var(--tie-fg-3)", fontSize: ".95rem", margin: 0 }}>
           Idea: <span style={{ color: "var(--tie-fg-1)", fontWeight: 500 }}>“{runIdea}”</span>
           {preflight.category && <span> · {preflight.category}</span>}
@@ -259,9 +304,14 @@ function PreflightReview({ runIdea, preflight, competitors, setCompetitors, ackn
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-        <SignalPanel signal={preflight.signal_strength} reasoning={preflight.signal_reasoning} />
-
-        {isLow && <LowSignalAck acknowledged={acknowledged} setAcknowledged={setAcknowledged} />}
+        {noSources ? (
+          <NoSourcesPanel reasoning={preflight.signal_reasoning} />
+        ) : (
+          <>
+            <SignalPanel signal={preflight.signal_strength} reasoning={preflight.signal_reasoning} />
+            {isLow && <LowSignalAck acknowledged={acknowledged} setAcknowledged={setAcknowledged} />}
+          </>
+        )}
 
         <CompetitorEditor competitors={competitors} setCompetitors={setCompetitors} />
 
@@ -270,7 +320,11 @@ function PreflightReview({ runIdea, preflight, competitors, setCompetitors, ackn
 
       <div style={{ marginTop: "2.5rem", display: "flex", gap: ".75rem", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
         <div style={{ fontSize: ".85rem", color: "var(--tie-fg-3)", maxWidth: 380, lineHeight: 1.5 }}>
-          {isLow
+          {noSources
+            ? competitors.length === 0
+              ? "Paste at least one App Store or YouTube URL above to run."
+              : "Using the sources you pasted — pre-flight found none automatically."
+            : isLow
             ? acknowledged
               ? "Acknowledged — results will be thinner than usual."
               : "You must acknowledge low signal before continuing."
@@ -289,6 +343,30 @@ function PreflightReview({ runIdea, preflight, competitors, setCompetitors, ackn
               "Approve and run →"
             )}
           </PrimaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// US-S1 (spec §9.3): zero candidates from pre-flight. Explain the situation and
+// point at the paste-URL editor below as the way forward, rather than dropping
+// the user into an empty competitor list that reads like a bug.
+function NoSourcesPanel({ reasoning }) {
+  return (
+    <div style={{ background: "var(--tie-surface-soft)", border: "1px solid var(--tie-border-strong)", borderRadius: "var(--tie-radius-md)", padding: "1.25rem 1.4rem" }}>
+      <div style={{ display: "flex", gap: ".75rem", alignItems: "flex-start" }}>
+        <span aria-hidden="true" style={{ fontSize: "1.05rem", lineHeight: 1.4 }}>🔍</span>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: "0 0 .35rem", color: "var(--tie-fg-1)", fontSize: "1.05rem", fontWeight: 700 }}>
+            No public sources found for this idea.
+          </h3>
+          <p style={{ margin: 0, color: "var(--tie-fg-2)", fontSize: ".92rem", lineHeight: 1.55, textWrap: "pretty" }}>
+            Pre-flight couldn’t surface any App Store apps or YouTube videos to mine
+            for complaints. {reasoning ? <span>{reasoning} </span> : null}
+            If you already know competitors worth reading, paste their App Store or
+            YouTube URLs below and we’ll run against those.
+          </p>
         </div>
       </div>
     </div>

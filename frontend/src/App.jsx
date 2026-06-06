@@ -7,6 +7,7 @@ import InsightsPage from "./InsightsPage";
 import HomeV2 from "./HomeV2";
 import NewRun from "./NewRun";
 import RunResult from "./RunResult";
+import MyRuns from "./MyRuns";
 
 // v2 nav only points at the new run-lifecycle pages. Navigation is real
 // client-side routing via react-router-dom (ADR 2026-06-01 / issue #58) —
@@ -29,6 +30,15 @@ const NAV_ITEMS = [
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+      </svg>
+    ),
+  },
+  {
+    to: "/runs/mine",
+    label: "My Runs",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6h16M4 12h16M4 18h10"/>
       </svg>
     ),
   },
@@ -71,6 +81,9 @@ function App() {
         <Routes>
           <Route path="/" element={<HomeV2 />} />
           <Route path="/runs/new" element={<NewRun />} />
+          {/* Static `/runs/mine` outranks `/runs/:id` in react-router's match
+              ranking, so My Runs resolves before the dynamic run route. */}
+          <Route path="/runs/mine" element={<MyRuns />} />
           <Route path="/runs/:id" element={<RunResult />} />
           {/* Legacy v1 pages — unlinked from nav, mounted until slice 3 removal. */}
           <Route path="/legacy/home" element={<LegacyHomePage />} />
