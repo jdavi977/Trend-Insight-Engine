@@ -63,6 +63,12 @@ def _clear_jobs():
     svc._jobs.clear()
 
 
+@pytest.fixture(autouse=True)
+def _no_backoff_sleep(mocker):
+    """Collapse the per-source retry backoff so tests don't actually wait."""
+    mocker.patch.object(svc, "_backoff_delay", return_value=0)
+
+
 # --- approve() --------------------------------------------------------------
 
 
@@ -238,26 +244,6 @@ class TestRunPipeline:
 
         match.assert_not_called()
 
-    def test_source_failure_marks_run_failed(self, mocker):
-        # approve() registers the job before enqueuing; simulate that here.
-        svc._jobs[RUN_ID] = {"status": "running", "stage": "queued",
-                             "started_at": None, "future": None}
-        competitors = [_competitor(identifier="vid_1"), _competitor(identifier="vid_2", url="https://youtu.be/vid_2")]
-        mocker.patch.object(svc, "_ingest", return_value=[])
-        mocker.patch.object(svc, "redact", side_effect=lambda t: t)
-        mocker.patch.object(svc, "extract_per_source",
-                            side_effect=[([], [_quote("q01")]), RuntimeError("youtube 500")])
-        done = mocker.patch.object(svc, "update_idea_run_done")
-        failed = mocker.patch.object(svc, "update_idea_run_failed")
-
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
-                                     category="productivity", competitors=competitors))
-
-        done.assert_not_called()
-        failed.assert_called_once()
-        assert "youtube 500" in failed.call_args.args[1]
-        assert svc._jobs[RUN_ID]["status"] == "failed"
-
     def test_semaphore_caps_concurrent_openai_calls_at_five(self, mocker):
         competitors = [_competitor(identifier=f"vid_{i}", url=f"https://youtu.be/vid_{i}") for i in range(10)]
         mocker.patch.object(svc, "_ingest", return_value=[])
@@ -286,6 +272,140 @@ class TestRunPipeline:
 
         assert state["max"] <= svc._OPENAI_CONCURRENCY
         assert state["max"] > 1  # genuinely concurrent, not serialised
+
+
+# --- source resilience: retry + partial-source threshold (issue #60) ---------
+
+
+def _extract_dispatch(*, fail_ids=(), fail_once_ids=()):
+    """An `extract_per_source` side_effect keyed by `metadata.source_id`.
+
+    - `fail_ids`: raise on every attempt (permanent failure).
+    - `fail_once_ids`: raise on the first attempt only, then succeed (transient).
+    A surviving source yields one pain item + one quote tagged with its id.
+    Thread-safe attempt counting — sources fan out across worker threads.
+    """
+    attempts: dict[str, int] = {}
+    lock = threading.Lock()
+
+    def _extract(comments, metadata):
+        sid = metadata.source_id
+        with lock:
+            n = attempts.get(sid, 0)
+            attempts[sid] = n + 1
+        if sid in fail_ids:
+            raise RuntimeError(f"{sid} permafail")
+        if sid in fail_once_ids and n == 0:
+            raise RuntimeError(f"{sid} transient")
+        qid = f"q_{sid}"
+        return (
+            [PainItem(source="youtube", source_id=sid, text="p", quote_ids=[qid])],
+            [_quote(qid, source_id=sid)],
+        )
+
+    return _extract
+
+
+def _ten_competitors():
+    return [
+        _competitor(identifier=f"vid_{i}", url=f"https://youtu.be/vid_{i}", name=f"Vid {i}")
+        for i in range(10)
+    ]
+
+
+class TestSourceResilience:
+    def test_source_that_fails_once_is_retried_and_contributes(self, mocker):
+        competitors = [_competitor(identifier="vid_1"),
+                       _competitor(identifier="vid_2", url="https://youtu.be/vid_2")]
+        coverage = Coverage(quotes_retrieved=2, quotes_cited=2, citation_ratio=1.0)
+        done, failed, _ = _wire_pipeline(
+            mocker,
+            extract_returns=_extract_dispatch(fail_once_ids=("vid_2",)),
+            gaps=[_gap()], coverage=coverage,
+        )
+        synth = mocker.patch("app.llm.synthesis.synthesize",
+                             return_value=([_gap()], coverage))
+
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+                                     category="productivity", competitors=competitors))
+
+        failed.assert_not_called()
+        done.assert_called_once()
+        # The retried source's quote made it into the pool → it contributed.
+        pooled_quotes = synth.call_args.args[2]
+        assert {q.quote_id for q in pooled_quotes} == {"q_vid_1", "q_vid_2"}
+        # A fully-recovered run carries no partial_sources block.
+        assert done.call_args.kwargs["partial_sources"] is None
+
+    def test_two_of_ten_failing_completes_done_with_partial_sources(self, mocker):
+        competitors = _ten_competitors()
+        coverage = Coverage(quotes_retrieved=8, quotes_cited=8, citation_ratio=1.0)
+        done, failed, _ = _wire_pipeline(
+            mocker,
+            extract_returns=_extract_dispatch(fail_ids=("vid_3", "vid_7")),
+            gaps=[_gap()], coverage=coverage,
+        )
+        mocker.patch("app.llm.synthesis.synthesize", return_value=([_gap()], coverage))
+
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+                                     category="productivity", competitors=competitors))
+
+        failed.assert_not_called()
+        done.assert_called_once()
+        partial = done.call_args.kwargs["partial_sources"]
+        assert partial["succeeded_count"] == 8
+        assert partial["total_count"] == 10
+        failed_names = {f["name"] for f in partial["failed"]}
+        assert failed_names == {"Vid 3", "Vid 7"}
+
+    def test_four_of_ten_failing_ends_failed_below_threshold(self, mocker):
+        svc._jobs[RUN_ID] = {"status": "running", "stage": "queued",
+                             "started_at": None, "future": None}
+        competitors = _ten_competitors()
+        coverage = Coverage(quotes_retrieved=6, quotes_cited=6, citation_ratio=1.0)
+        done, failed, _ = _wire_pipeline(
+            mocker,
+            extract_returns=_extract_dispatch(fail_ids=("vid_0", "vid_1", "vid_2", "vid_3")),
+            gaps=[_gap()], coverage=coverage,
+        )
+
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+                                     category="productivity", competitors=competitors))
+
+        done.assert_not_called()
+        failed.assert_called_once()
+        assert failed.call_args.args[1] == "sources_below_threshold"
+        assert svc._jobs[RUN_ID]["status"] == "failed"
+
+    def test_one_source_raising_does_not_cancel_siblings(self, mocker):
+        # 1 of 5 fails (80% ≥ 70%) → siblings must all still contribute.
+        competitors = [
+            _competitor(identifier=f"vid_{i}", url=f"https://youtu.be/vid_{i}")
+            for i in range(5)
+        ]
+        coverage = Coverage(quotes_retrieved=4, quotes_cited=4, citation_ratio=1.0)
+        done, failed, _ = _wire_pipeline(
+            mocker,
+            extract_returns=_extract_dispatch(fail_ids=("vid_2",)),
+            gaps=[_gap()], coverage=coverage,
+        )
+        synth = mocker.patch("app.llm.synthesis.synthesize",
+                             return_value=([_gap()], coverage))
+
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+                                     category="productivity", competitors=competitors))
+
+        failed.assert_not_called()
+        done.assert_called_once()
+        pooled_quotes = synth.call_args.args[2]
+        assert {q.quote_id for q in pooled_quotes} == {
+            "q_vid_0", "q_vid_1", "q_vid_3", "q_vid_4",
+        }
+
+    def test_threshold_is_read_from_constants(self):
+        from app.config import constants
+        assert constants.PARTIAL_SOURCE_THRESHOLD == 0.70
+        assert svc.PARTIAL_SOURCE_THRESHOLD is constants.PARTIAL_SOURCE_THRESHOLD
 
 
 class TestAppStoreIdResolution:

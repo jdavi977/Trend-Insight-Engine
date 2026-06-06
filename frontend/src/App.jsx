@@ -1,5 +1,5 @@
 import "./App.css";
-import { useState } from "react";
+import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import YouTubePage from "./YouTubePage";
 import AppStorePage from "./AppStorePage";
 import HomePage from "./HomePage";
@@ -7,13 +7,16 @@ import InsightsPage from "./InsightsPage";
 import HomeV2 from "./HomeV2";
 import NewRun from "./NewRun";
 import RunResult from "./RunResult";
+import MyRuns from "./MyRuns";
 
-// v2 nav only points at the new run-lifecycle pages (issue #53). The legacy
-// pages (HomePage, InsightsPage, YouTubePage, AppStorePage) stay mounted below
-// but are unlinked from nav — removal is slice 3 (spec §3, §10).
+// v2 nav only points at the new run-lifecycle pages. Navigation is real
+// client-side routing via react-router-dom (ADR 2026-06-01 / issue #58) —
+// replacing the slice-1 `currentPage` state switch. The legacy v1 pages
+// (HomePage, InsightsPage, YouTubePage, AppStorePage) stay mounted on
+// /legacy/* routes but are unlinked from nav — removal is slice 3 (spec §9.1).
 const NAV_ITEMS = [
   {
-    id: "homev2",
+    to: "/",
     label: "Home",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -22,7 +25,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    id: "newrun",
+    to: "/runs/new",
     label: "New Run",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,19 +33,26 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    to: "/runs/mine",
+    label: "My Runs",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6h16M4 12h16M4 18h10"/>
+      </svg>
+    ),
+  },
 ];
 
+// Legacy pages addressed paths via string keys ("insights", "youtube", …);
+// adapt that to /legacy/* routes so the unlinked pages keep working until
+// slice-3 removal.
+function LegacyHomePage() {
+  const navigate = useNavigate();
+  return <HomePage onNavigate={(page) => navigate(`/legacy/${page}`)} />;
+}
+
 function App() {
-  const [currentPage, setCurrentPage] = useState("homev2");
-  // Set when a run is approved (or opened from a feed); the Result page reads it
-  // and polls GET /runs/:id from there.
-  const [activeRunId, setActiveRunId] = useState(null);
-
-  const openRun = (runId) => {
-    setActiveRunId(runId);
-    setCurrentPage("runresult");
-  };
-
   return (
     <div className="app-layout">
 
@@ -54,32 +64,34 @@ function App() {
 
         <nav className="nav" aria-label="Primary">
           {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`nav-item${currentPage === item.id ? " active" : ""}`}
-              onClick={() => setCurrentPage(item.id)}
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/"}
+              className={({ isActive }) => `nav-item${isActive ? " active" : ""}`}
             >
               <span className="ico">{item.icon}</span>
               {item.label}
-            </button>
+            </NavLink>
           ))}
         </nav>
       </aside>
 
       <main className="site-main">
-        {currentPage === "homev2"    && (
-          <HomeV2 onOpenRun={openRun} onNewRun={() => setCurrentPage("newrun")} />
-        )}
-        {currentPage === "newrun"    && <NewRun onOpenRun={openRun} />}
-        {currentPage === "runresult" && (
-          <RunResult runId={activeRunId} onNewRun={() => setCurrentPage("newrun")} />
-        )}
-        {/* Legacy v1 pages — unlinked from nav, mounted until slice 3 removal. */}
-        {currentPage === "youtube"   && <YouTubePage />}
-        {currentPage === "appstore"  && <AppStorePage />}
-        {currentPage === "homepage"  && <HomePage onNavigate={setCurrentPage} />}
-        {currentPage === "insights"  && <InsightsPage />}
+        <Routes>
+          <Route path="/" element={<HomeV2 />} />
+          <Route path="/runs/new" element={<NewRun />} />
+          {/* Static `/runs/mine` outranks `/runs/:id` in react-router's match
+              ranking, so My Runs resolves before the dynamic run route. */}
+          <Route path="/runs/mine" element={<MyRuns />} />
+          <Route path="/runs/:id" element={<RunResult />} />
+          {/* Legacy v1 pages — unlinked from nav, mounted until slice 3 removal. */}
+          <Route path="/legacy/home" element={<LegacyHomePage />} />
+          <Route path="/legacy/homepage" element={<LegacyHomePage />} />
+          <Route path="/legacy/insights" element={<InsightsPage />} />
+          <Route path="/legacy/youtube" element={<YouTubePage />} />
+          <Route path="/legacy/appstore" element={<AppStorePage />} />
+        </Routes>
       </main>
 
     </div>

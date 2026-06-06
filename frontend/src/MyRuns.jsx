@@ -1,19 +1,20 @@
-/* Home V2 — public feed of completed runs + new-run CTA. Spec §10 / issue #53.
+/* My Runs — runs started in this browser. Spec §9.4 / issue #64.
  *
- * The v2 landing page. Lists recent `done` runs from `GET /runs` (idea text +
- * relative completed-at) and links each to its result page. A prominent
- * "Start a new run" CTA opens New Run.
+ * No accounts in v1 (PRD §5), so this is a frontend-only filter of the public
+ * `GET /runs` feed against the run ids collected in localStorage at submit time
+ * (see runStorage.js). No backend change. A run started in another browser — or
+ * one that was reported and excluded from the feed — simply won't appear.
  *
  * Page-level component owns all state and is the only thing that talks to the
- * backend (frontend/CONTEXT.md). Navigation uses react-router-dom: a run row
- * routes to /runs/:id, the CTA to /runs/new (ADR 2026-06-01 / issue #58).
+ * backend (frontend/CONTEXT.md). Navigation uses react-router-dom.
  */
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { PrimaryButton, Spinner, ErrorBanner } from "./components/atoms";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { PrimaryButton, SecondaryButton, Spinner, ErrorBanner } from "./components/atoms";
+import { getMyRunIds } from "./runStorage";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
-const FEED_LIMIT = 20;
+const FEED_LIMIT = 100;
 
 async function readError(res) {
   let detail = "";
@@ -42,20 +43,13 @@ function relativeTime(iso) {
   return then.toLocaleDateString();
 }
 
-export default function HomeV2() {
+export default function MyRuns() {
   const navigate = useNavigate();
-  const location = useLocation();
   const onNewRun = () => navigate("/runs/new");
   const onOpenRun = (runId) => navigate(`/runs/${runId}`);
 
-  // A run just reported from the Result page lands here with an ack flag; show
-  // it once, then clear the history state so a refresh doesn't repeat it.
-  const [reportedAck, setReportedAck] = useState(Boolean(location.state?.reported));
-  useEffect(() => {
-    if (location.state?.reported) {
-      navigate(".", { replace: true, state: null });
-    }
-  }, [location.state, navigate]);
+  // The set of run ids this browser remembers — read once on mount.
+  const myIds = useMemo(() => new Set(getMyRunIds()), []);
 
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +58,11 @@ export default function HomeV2() {
   useEffect(() => {
     let active = true;
     async function load() {
+      // Nothing to fetch if this browser has no remembered runs.
+      if (myIds.size === 0) {
+        setLoading(false);
+        return;
+      }
       try {
         const res = await fetch(`${API_BASE}/runs?limit=${FEED_LIMIT}`);
         if (!res.ok) {
@@ -71,7 +70,8 @@ export default function HomeV2() {
           return;
         }
         const data = await res.json();
-        if (active) setRuns(Array.isArray(data) ? data : []);
+        const feed = Array.isArray(data) ? data : [];
+        if (active) setRuns(feed.filter((run) => myIds.has(run.run_id)));
       } catch (err) {
         if (active) setError(err?.message || "Could not reach the engine. Is the backend running?");
       } finally {
@@ -82,56 +82,18 @@ export default function HomeV2() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [myIds]);
 
   return (
     <div className="tie-page tie-page--narrow">
-      {reportedAck && (
-        <div
-          role="status"
-          style={{
-            marginTop: "1.25rem",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "1rem",
-            padding: ".9rem 1.2rem",
-            background: "var(--tie-surface-soft)",
-            border: "1px solid var(--tie-border-strong)",
-            borderRadius: "var(--tie-radius-md)",
-            color: "var(--tie-fg-2)",
-            fontSize: ".9rem",
-          }}
-        >
-          <span>Thanks — that run has been reported and hidden pending review.</span>
-          <button
-            type="button"
-            onClick={() => setReportedAck(false)}
-            aria-label="Dismiss"
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--tie-fg-3)",
-              cursor: "pointer",
-              fontSize: "1.05rem",
-              lineHeight: 1,
-              padding: 0,
-              flexShrink: 0,
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
         <div className="tie-hero-eyebrow">Trend Insight Engine</div>
         <h1 className="tie-hero-title" style={{ fontSize: "2.25rem", marginBottom: ".5rem" }}>
-          Idea in, grounded gaps out.
+          My runs
         </h1>
         <p className="tie-hero-sub">
-          Submit one idea. We read complaints across real competitors and return ranked,
-          evidence-backed gaps — every one grounded in verbatim, redacted quotes.
+          Runs you started in this browser. There are no accounts in v1 — this list
+          lives only on this device, so clearing site data clears it.
         </p>
         <div style={{ marginTop: "1.75rem" }}>
           <PrimaryButton onClick={onNewRun}>Start a new run →</PrimaryButton>
@@ -139,22 +101,18 @@ export default function HomeV2() {
       </div>
 
       <div style={{ marginTop: "2.5rem" }}>
-        <h2 style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--tie-fg-1)", margin: "0 0 1rem" }}>
-          Recent runs
-        </h2>
-
         {loading ? (
           <div style={{ display: "flex", alignItems: "center", gap: ".75rem", color: "var(--tie-fg-3)" }}>
-            <Spinner size={20} /> Loading recent runs…
+            <Spinner size={20} /> Loading your runs…
           </div>
         ) : error ? (
-          <ErrorBanner title="Couldn’t load recent runs">{error}</ErrorBanner>
+          <ErrorBanner title="Couldn’t load your runs">{error}</ErrorBanner>
         ) : runs.length === 0 ? (
-          <EmptyState onNewRun={onNewRun} />
+          <EmptyState onNewRun={onNewRun} onBrowse={() => navigate("/")} />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: ".75rem" }}>
             {runs.map((run) => (
-              <RunRow key={run.run_id} run={run} onOpen={() => onOpenRun?.(run.run_id)} />
+              <RunRow key={run.run_id} run={run} onOpen={() => onOpenRun(run.run_id)} />
             ))}
           </div>
         )}
@@ -213,7 +171,7 @@ function RunRow({ run, onOpen }) {
   );
 }
 
-function EmptyState({ onNewRun }) {
+function EmptyState({ onNewRun, onBrowse }) {
   return (
     <div
       style={{
@@ -226,9 +184,13 @@ function EmptyState({ onNewRun }) {
       }}
     >
       <p style={{ margin: "0 0 1.1rem", fontSize: ".95rem", lineHeight: 1.5 }}>
-        No completed runs yet. Submit an idea to see grounded gaps here.
+        No runs from this browser yet. Once you submit an idea and it completes, it
+        shows up here.
       </p>
-      <PrimaryButton onClick={onNewRun}>Start a new run →</PrimaryButton>
+      <div style={{ display: "flex", gap: ".5rem", justifyContent: "center" }}>
+        <PrimaryButton onClick={onNewRun}>Start a new run →</PrimaryButton>
+        <SecondaryButton onClick={onBrowse}>Browse all runs</SecondaryButton>
+      </div>
     </div>
   );
 }

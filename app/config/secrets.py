@@ -18,3 +18,13 @@ SUPABASE_SERVICE_ROLE_KEY = keyChecker("SUPABASE_SERVICE_ROLE_KEY")
 
 RAG_WRITE_ENABLED: bool = os.getenv("RAG_WRITE_ENABLED", "false").lower() == "true"
 RAG_READ_ENABLED: bool = os.getenv("RAG_READ_ENABLED", "false").lower() == "true"
+
+# Daily OpenAI spend ceiling in USD (PRD §8, US-S5, slice 2 §6). When the
+# in-process running spend total for the current UTC day reaches this value,
+# POST /runs returns 429 budget_exhausted. Optional: unset → no cap (the guard
+# is disabled), which is the lenient failure mode for local/dev. The running
+# total lives in app/clients/openai.py and resets at UTC midnight.
+_daily_budget_raw = os.getenv("OPENAI_DAILY_BUDGET_USD")
+OPENAI_DAILY_BUDGET_USD: float | None = (
+    float(_daily_budget_raw) if _daily_budget_raw else None
+)

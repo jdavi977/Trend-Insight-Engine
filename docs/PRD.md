@@ -3,11 +3,12 @@
 | | |
 |---|---|
 | **Version** | 2.2 |
-| **Status** | Draft (pre-flight validated 2026-05-22) |
-| **Last updated** | 2026-05-27 |
+| **Status** | Draft — slice 1 (end-to-end happy path) shipped 2026-06-01; slice 2 (lifecycle hardening) specced |
+| **Last updated** | 2026-06-02 |
 | **Owner** | John Lowen David |
 | **Supersedes** | v2.1 — added §7.8 selection-bias mitigations, `coverage` field in §7.4, §15 cost-tradeoff table. v2.2 adds §7.9 evaluation harness, §10.1 model routing, promotes golden eval seed to v1 scope |
 | **Pre-flight validation** | PASS — see [findings memo](../planning/prototypes/preflight/findings.md) |
+| **Implementation** | 3-slice build plan, see [§15 status table](#15-v11-roadmap--known-limitations). This PRD remains the v1 *target*; built state is tracked there. |
 
 ---
 
@@ -476,6 +477,22 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
 21. **Model routing as config (v1)** — All LLM calls route through a single `(stage_name) → model` resolver (§10.1). v1 maps everything to gpt-4o. Swapping a model per stage requires one config change + eval harness validation — no pipeline code changes. Rationale: makes agent orchestration (multi-model, cold-model critique) a deployment decision, not an architecture change.
 
 ## 15. v1.1 Roadmap & Known Limitations
+
+### Implementation status (3-slice v1 build)
+
+v1 is built in three vertical slices against this PRD — each a tracer bullet through the §10 architecture, additive (not corrective) over the last. This PRD describes the v1 *target*; the table below is the source of truth for what is actually built.
+
+| Slice | Scope | Status |
+|---|---|---|
+| **Slice 1 — end-to-end happy path** | Idea → pre-flight → approve → parallel per-source extraction → quote-then-claim synthesis → grounded gaps, persisted to Supabase and read in the browser. Endpoints `POST /runs`, `POST /runs/:id/approve`, `GET /runs/:id`, `GET /runs`; pages Home, New Run, Run Result; model-routing resolver (§10.1), idea-blinded extraction (§7.8), persist-time PII redaction (§8), coverage + citation counts (§7.4, §7.8). | **Shipped** 2026-06-01 — [spec](../planning/specs/v2-slice-1-end-to-end_spec.md) |
+| **Slice 2 — lifecycle hardening** | Makes the system safe to expose to an untrusted user: §6 sad paths US-S1…S7 and §8 non-functional requirements — source retry + ≥70% partial-source threshold, server-restart → `failed`, per-IP rate limit, daily budget cap, concurrency guard; `POST /runs/:id/feedback` + `POST /runs/:id/report` (the §4 feedback loop); `react-router-dom` migration to shareable `/runs/:id` URLs (below); My Runs. | **Specced** — [spec](../planning/specs/v2-slice-2-lifecycle-hardening_spec.md) |
+| **Slice 3 — eval + v1 removal** | Eval harness + 5-idea seed set (§7.9), `quality_signals` field (§7.9), removal of the legacy `/analyze/*` endpoints, weekly jobs, `automatic_table*`, and the unlinked v1 frontend pages; retirement of the v1-only `create_response` LLM helper still reached by those endpoints; removal of the LLM-guessed `signal_strength` **gate** (see note below); pre-flight robustness deferred from the slice-2 review — Pydantic validation of the `generate_queries` output and optional parallelization of the `preflight_service.run` search fan-out (see slice-2 spec §3). | Planned |
+
+Until slice 2 lands, the §6 sad paths, §8 abuse/cost guards, the §4 feedback indicators, and `partial_sources` handling are **not yet wired** — slice 1 is the developer-driven happy path only, explicitly not shippable to a real user.
+
+**Note — `signal_strength` gate removal (slice 3).** Today the low-signal gate (§7.2 approve `400`, §7.3 step (b), §7.6 acknowledgement) keys off an *LLM-guessed* `signal_strength` produced by the `PREFLIGHT_GENERATE_QUERIES` call **before any search runs**. That guess is biased and redundant: it's generated in the same call that produces the queries (motivated to rate its own queries favourably), its rubric examples conflate searchability with consumer-vs-B2B category, and it predicts an outcome — *"will the App Store + YouTube return real competitors?"* — that materialises seconds later in the same function as the actual candidate count (`preflight_service.run` already logs `len(raw_apps)`, `len(raw_videos)`, `len(candidates)`). The guess can pass a 0-candidate run or block one with 8 real competitors. Slice 3 removes the LLM grade as a **gate** and keys the acknowledgement on the observed candidate count instead. `signal_reasoning` is **retained** as displayed pre-flight copy (§7.6) — useful UX, just not load-bearing. (Note: US-S1 "zero competitors found" is already the count-based sad path; this folds the low-signal gate into the same evidence.)
+
+### Deferred to v1.1
 
 Deferred from v1, in rough priority (note: eval harness + seed set promoted to v1 scope in §7.9):
 
