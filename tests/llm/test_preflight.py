@@ -79,3 +79,53 @@ def test_rank_candidates_uses_preflight_rank_stage(mocker):
     system_msg = kwargs["messages"][0]["content"]
     assert "let's-plays" in system_msg.lower() or "lets-plays" in system_msg.lower()
     assert "trailer" in system_msg.lower()
+
+
+class TestGenerateQueriesResult:
+    """Validation of the `generate_queries` payload shape (slice 3 §7.1).
+
+    Defined in sub-milestone 1; wired into the call path in sub-milestone 3.
+    Here we only assert it accepts a well-formed payload and rejects malformed
+    ones, so the later `ValidationError → internal_error` mapping has a contract.
+    """
+
+    def _payload(self, **overrides):
+        base = {
+            "appstore": ["notes app", "markdown notes"],
+            "youtube": ["best notes app review"],
+            "category": "note-taking",
+            "signal_strength": "high",
+            "signal_reasoning": "established consumer category.",
+        }
+        return {**base, **overrides}
+
+    def test_accepts_well_formed_payload(self):
+        result = preflight.GenerateQueriesResult.model_validate(self._payload())
+        assert result.category == "note-taking"
+        assert result.signal_strength == "high"
+        assert result.appstore == ["notes app", "markdown notes"]
+
+    def test_query_lists_default_to_empty(self):
+        result = preflight.GenerateQueriesResult.model_validate(
+            {"category": "c", "signal_strength": "low", "signal_reasoning": "r"}
+        )
+        assert result.appstore == []
+        assert result.youtube == []
+
+    def test_rejects_unknown_signal_strength(self):
+        import pytest
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            preflight.GenerateQueriesResult.model_validate(
+                self._payload(signal_strength="strong")
+            )
+
+    def test_rejects_missing_category(self):
+        import pytest
+        from pydantic import ValidationError
+
+        payload = self._payload()
+        del payload["category"]
+        with pytest.raises(ValidationError):
+            preflight.GenerateQueriesResult.model_validate(payload)

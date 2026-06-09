@@ -15,12 +15,31 @@ from __future__ import annotations
 
 import json
 
+from pydantic import BaseModel, Field
+
 from app.clients.openai import get_openai_client
 from app.config.promptTemplates import (
     PREFLIGHT_GENERATE_QUERIES_SYSTEM,
     PREFLIGHT_RANK_SYSTEM,
 )
 from app.llm.router import resolve
+from app.schemas.runs import SignalStrength
+
+
+class GenerateQueriesResult(BaseModel):
+    """Validated shape of the `generate_queries` payload (slice 3 §7.1).
+
+    Wrapping the raw `json.loads` so a malformed grade raises `ValidationError`
+    (mapped to a clean `internal_error`) instead of a bare `KeyError` out of
+    `preflight_service.run`. Defined here in slice-3 sub-milestone 1; it is wired
+    into the call path in sub-milestone 3 — no behaviour change yet.
+    """
+
+    appstore: list[str] = Field(default_factory=list)
+    youtube: list[str] = Field(default_factory=list)
+    category: str = Field(min_length=1)
+    signal_strength: SignalStrength
+    signal_reasoning: str = Field(min_length=1)
 
 
 def generate_queries(idea: str) -> dict:
