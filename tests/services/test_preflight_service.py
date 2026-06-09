@@ -1,13 +1,17 @@
 """Orchestration tests for `app.services.preflight_service` (spec §7)."""
 from __future__ import annotations
 
+from app.llm.preflight import GenerateQueriesResult
 from app.schemas.runs import PreflightResult
 from app.services import preflight_service
 
 
 def _stub_pipeline(mocker, queries, apps_by_query, videos_by_query, ranked):
+    # generate_queries now returns a validated GenerateQueriesResult (§7.1); the
+    # stub validates the dict so the test exercises the same attribute contract.
     mocker.patch.object(
-        preflight_service, "generate_queries", return_value=queries,
+        preflight_service, "generate_queries",
+        return_value=GenerateQueriesResult.model_validate(queries),
     )
     mocker.patch.object(
         preflight_service, "itunes_search",

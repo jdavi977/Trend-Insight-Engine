@@ -18,6 +18,7 @@ from app.clients.supabase import (
     insert_idea_run,
     list_done_idea_runs,
     list_gaps_for_run,
+    update_idea_run_failed,
     update_idea_run_failed_if_running,
     update_idea_run_preflight,
     update_idea_run_reported,
@@ -40,7 +41,20 @@ def create_run(request: RunCreate) -> RunCreateResponse:
     row = insert_idea_run(request.idea, request.target_gap)
     run_id = row["id"]
 
-    preflight = preflight_service.run(request.idea)
+    # The pre-flight call runs synchronously inside the request (spec §6). Without
+    # this guard a pre-flight LLM/network failure — or the §7.1 ValidationError on
+    # a malformed grade — would strand the row at `pending` forever, leaving the
+    # New Run page on a spinner that never resolves (slice 3 §7.2). On any failure
+    # we transition the row to `failed` + `internal_error` and surface a clean 500.
+    try:
+        preflight = preflight_service.run(request.idea)
+    except Exception:
+        update_idea_run_failed(run_id, FailureReason.internal_error.value)
+        logger.exception("run_preflight_failed run_id=%s", run_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="internal_error",
+        ) from None
 
     update_idea_run_preflight(
         run_id=run_id,

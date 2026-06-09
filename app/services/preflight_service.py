@@ -84,12 +84,12 @@ def run(idea: str) -> PreflightResult:
     queries = generate_queries(idea)
 
     raw_apps: list[dict] = []
-    for q in queries.get("appstore", []):
+    for q in queries.appstore:
         raw_apps.extend(itunes_search(q))
     raw_apps = _dedupe_apps(raw_apps)[:_RAW_CANDIDATE_CAP]
 
     raw_videos: list[dict] = []
-    for q in queries.get("youtube", []):
+    for q in queries.youtube:
         raw_videos.extend(search_videos(q))
     raw_videos = _dedupe_videos(raw_videos)[:_RAW_CANDIDATE_CAP]
 
@@ -98,12 +98,12 @@ def run(idea: str) -> PreflightResult:
 
     logger.info(
         "preflight idea=%r signal=%s raw_apps=%d raw_videos=%d candidates=%d",
-        idea, queries.get("signal_strength"), len(raw_apps), len(raw_videos), len(candidates),
+        idea, queries.signal_strength, len(raw_apps), len(raw_videos), len(candidates),
     )
 
     return PreflightResult(
-        category=queries["category"],
-        signal_strength=queries["signal_strength"],
-        signal_reasoning=queries["signal_reasoning"],
+        category=queries.category,
+        signal_strength=queries.signal_strength,
+        signal_reasoning=queries.signal_reasoning,
         candidates=candidates,
     )

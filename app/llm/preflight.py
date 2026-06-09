@@ -31,8 +31,8 @@ class GenerateQueriesResult(BaseModel):
 
     Wrapping the raw `json.loads` so a malformed grade raises `ValidationError`
     (mapped to a clean `internal_error`) instead of a bare `KeyError` out of
-    `preflight_service.run`. Defined here in slice-3 sub-milestone 1; it is wired
-    into the call path in sub-milestone 3 — no behaviour change yet.
+    `preflight_service.run`. Defined in slice-3 sub-milestone 1; wired into the
+    `generate_queries` return path in sub-milestone 3 (issue #68).
     """
 
     appstore: list[str] = Field(default_factory=list)
@@ -42,8 +42,14 @@ class GenerateQueriesResult(BaseModel):
     signal_reasoning: str = Field(min_length=1)
 
 
-def generate_queries(idea: str) -> dict:
-    """Return ``{appstore, youtube, category, signal_strength, signal_reasoning}``."""
+def generate_queries(idea: str) -> GenerateQueriesResult:
+    """Return the validated ``GenerateQueriesResult`` for one idea.
+
+    The LLM JSON is validated through ``GenerateQueriesResult`` (§7.1) so a
+    malformed grade raises ``ValidationError`` here — caught upstream and mapped
+    to a clean ``internal_error`` (§7.2) — instead of a bare ``KeyError`` leaking
+    out of ``preflight_service.run``.
+    """
     cfg = resolve("preflight_classify")
     client = get_openai_client()
     response = client.chat.completions.create(
@@ -56,7 +62,9 @@ def generate_queries(idea: str) -> dict:
             {"role": "user", "content": f"Idea: {idea}"},
         ],
     )
-    return json.loads(response.choices[0].message.content)
+    return GenerateQueriesResult.model_validate(
+        json.loads(response.choices[0].message.content)
+    )
 
 
 def rank_candidates(idea: str, apps: list[dict], videos: list[dict]) -> dict:

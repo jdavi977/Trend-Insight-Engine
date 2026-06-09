@@ -27,14 +27,35 @@ def test_generate_queries_routes_through_resolver(mocker):
 
     result = preflight.generate_queries("note-taking app with better offline sync")
 
-    assert result["signal_strength"] == "high"
-    assert result["category"] == "note-taking"
+    # generate_queries returns a validated GenerateQueriesResult (§7.1), not a
+    # raw dict — attribute access, and a malformed grade would have raised here.
+    assert isinstance(result, preflight.GenerateQueriesResult)
+    assert result.signal_strength == "high"
+    assert result.category == "note-taking"
 
     kwargs = client.chat.completions.create.call_args.kwargs
     assert kwargs["model"] == "gpt-4o"  # spec §9: v1 routes every stage to gpt-4o
     assert kwargs["response_format"] == {"type": "json_object"}
     system_msg = kwargs["messages"][0]["content"]
     assert "signal-strength rubric" in system_msg.lower()
+
+
+def test_generate_queries_raises_on_malformed_payload(mocker):
+    """A malformed grade (unknown signal_strength) raises ValidationError out of
+    generate_queries (§7.1) — upstream maps it to a clean internal_error (§7.2)."""
+    import pytest
+    from pydantic import ValidationError
+
+    _stub_openai(mocker, {
+        "appstore": ["notes app"],
+        "youtube": ["best notes app review"],
+        "category": "note-taking",
+        "signal_strength": "strong",  # not in {high, medium, low}
+        "signal_reasoning": "established consumer category.",
+    })
+
+    with pytest.raises(ValidationError):
+        preflight.generate_queries("note-taking app")
 
 
 def test_rank_candidates_resolves_urls_server_side(mocker):

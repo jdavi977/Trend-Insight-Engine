@@ -11,8 +11,10 @@ from datetime import datetime, timezone
 import pytest
 from fastapi import HTTPException
 
-from app.schemas.runs import RunFeedback, RunReport
-from app.services import idea_run_service, run_pipeline_service
+from pydantic import ValidationError
+
+from app.schemas.runs import RunCreate, RunFeedback, RunReport
+from app.services import idea_run_service, preflight_service, run_pipeline_service
 
 
 def _running_row(run_id: str = "r1") -> dict:
@@ -125,6 +127,52 @@ def test_submit_feedback_unknown_gap_ids_raises_400(mocker):
 
     assert exc.value.status_code == 400
     insert.assert_not_called()
+
+
+# --- create_run pre-flight robustness (slice 3 §7.2, issue #68) -------------
+
+
+def test_create_run_marks_failed_when_preflight_raises(mocker):
+    """A pre-flight exception transitions the row off `pending` → failed +
+    internal_error and surfaces a clean 500 (no row stranded at `pending`)."""
+    mocker.patch.object(
+        idea_run_service, "insert_idea_run", return_value={"id": "r1"}
+    )
+    mocker.patch.object(
+        preflight_service, "run", side_effect=RuntimeError("openai down")
+    )
+    failed = mocker.patch.object(idea_run_service, "update_idea_run_failed")
+    preflight_update = mocker.patch.object(
+        idea_run_service, "update_idea_run_preflight"
+    )
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.create_run(RunCreate(idea="an idea"))
+
+    assert exc.value.status_code == 500
+    assert exc.value.detail == "internal_error"
+    failed.assert_called_once_with("r1", "internal_error")
+    preflight_update.assert_not_called()
+
+
+def test_create_run_marks_failed_on_malformed_preflight_payload(mocker):
+    """A malformed generate_queries grade surfaces as a ValidationError out of
+    preflight_service.run; create_run maps it to the same internal_error (§7.1)."""
+    mocker.patch.object(
+        idea_run_service, "insert_idea_run", return_value={"id": "r2"}
+    )
+    validation_error = ValidationError.from_exception_data("GenerateQueriesResult", [])
+    mocker.patch.object(
+        preflight_service, "run", side_effect=validation_error
+    )
+    failed = mocker.patch.object(idea_run_service, "update_idea_run_failed")
+
+    with pytest.raises(HTTPException) as exc:
+        idea_run_service.create_run(RunCreate(idea="an idea"))
+
+    assert exc.value.status_code == 500
+    assert exc.value.detail == "internal_error"
+    failed.assert_called_once_with("r2", "internal_error")
 
 
 # --- report (US-S7, spec §7, issue #62) -------------------------------------
