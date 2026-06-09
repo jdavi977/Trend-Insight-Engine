@@ -239,6 +239,32 @@ def test_get_run_does_not_reconcile_non_running_status(mocker):
     assert state.status == "done"
 
 
+def test_get_run_surfaces_quality_signals_on_done_view(mocker):
+    """quality_signals_json (slice 3 §5) is exposed in GET /runs/:id."""
+    done_row = {
+        **_running_row(),
+        "status": "done",
+        "quality_signals_json": {
+            "quote_source_diversity": 0.5,
+            "severity_distribution": [0, 1, 0, 2, 0],
+            "single_source_gap_count": 1,
+            "extraction_yield": [
+                {"source": "youtube", "comment_count": 100, "pain_item_count": 4},
+            ],
+        },
+    }
+    mocker.patch.object(idea_run_service, "get_idea_run", return_value=done_row)
+    mocker.patch.object(idea_run_service, "list_gaps_for_run", return_value=[])
+    mocker.patch.object(run_pipeline_service, "is_pipeline_live", return_value=True)
+
+    state = idea_run_service.get_run("r1")
+
+    assert state.quality_signals is not None
+    assert state.quality_signals.quote_source_diversity == 0.5
+    assert state.quality_signals.severity_distribution == [0, 1, 0, 2, 0]
+    assert state.quality_signals.extraction_yield[0].comment_count == 100
+
+
 def test_get_run_integration_orphaned_running_via_real_jobs_registry(mocker):
     """End-to-end through the real `_jobs` registry: an orphaned `running` row
     (no entry in `_jobs`, as after a restart) reconciles to failed on next read."""

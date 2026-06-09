@@ -153,12 +153,17 @@ def update_idea_run_done(
     coverage: dict,
     idea_match: Optional[dict],
     partial_sources: Optional[dict] = None,
+    quality_signals: Optional[dict] = None,
 ) -> dict:
     """Write the terminal happy-path result. `status='done'` is set last (spec §8).
 
     `partial_sources` (slice 2 §5.1) is the partial-completion summary written to
     `partial_sources_json` — `None` on a fully-successful run, populated when the
     run completed `done` despite ≥1 source failing above the 70% threshold.
+
+    `quality_signals` (slice 3 §5) is the per-run observability bundle written to
+    `quality_signals_json` — `None` when its computation failed (it is never
+    load-bearing for completion).
     """
     response = supabase_client.table("idea_runs").update({
         "status": "done",
@@ -166,6 +171,7 @@ def update_idea_run_done(
         "coverage_json": coverage,
         "idea_match_json": idea_match,
         "partial_sources_json": partial_sources,
+        "quality_signals_json": quality_signals,
     }).eq("id", run_id).execute()
     return _one_updated_row(response, run_id)
 
