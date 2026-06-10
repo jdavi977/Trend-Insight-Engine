@@ -45,7 +45,15 @@ def _gap(gap_id="gap_001", evidence=("q01", "q02")):
                    evidence_quote_ids=list(evidence))
 
 
-def _row(status_="preflight_ready", signal_strength="high", target_gap=None):
+def _row(
+    status_="preflight_ready",
+    signal_strength="high",
+    target_gap=None,
+    candidate_count=5,
+):
+    """Build an `idea_runs` row. `candidate_count` is the pre-flight candidate
+    pool size persisted to `competitors_json` — the low-signal gate (issue #69)
+    keys off its length, so it defaults to >= LOW_SIGNAL_CANDIDATE_THRESHOLD."""
     return {
         "id": RUN_ID,
         "idea": "note-taking app with better offline sync",
@@ -53,6 +61,10 @@ def _row(status_="preflight_ready", signal_strength="high", target_gap=None):
         "status": status_,
         "category": "productivity",
         "signal_strength": signal_strength,
+        "competitors_json": [
+            _competitor(identifier=f"vid_{i}").model_dump()
+            for i in range(candidate_count)
+        ],
     }
 
 
@@ -104,8 +116,9 @@ class TestApprove:
 
         assert exc.value.status_code == 409
 
-    def test_low_signal_without_ack_400(self, mocker):
-        mocker.patch.object(svc, "get_idea_run", return_value=_row(signal_strength="low"))
+    def test_below_threshold_without_ack_400(self, mocker):
+        # Below LOW_SIGNAL_CANDIDATE_THRESHOLD (4) candidates → ack required.
+        mocker.patch.object(svc, "get_idea_run", return_value=_row(candidate_count=3))
         update_running = mocker.patch.object(svc, "update_idea_run_running")
 
         with pytest.raises(HTTPException) as exc:
@@ -114,8 +127,8 @@ class TestApprove:
         assert exc.value.status_code == 400
         update_running.assert_not_called()
 
-    def test_low_signal_with_ack_proceeds(self, mocker):
-        mocker.patch.object(svc, "get_idea_run", return_value=_row(signal_strength="low"))
+    def test_below_threshold_with_ack_proceeds(self, mocker):
+        mocker.patch.object(svc, "get_idea_run", return_value=_row(candidate_count=3))
         mocker.patch.object(svc, "update_idea_run_running")
         mocker.patch.object(svc, "run_pipeline")
 
@@ -126,6 +139,34 @@ class TestApprove:
         )
 
         assert result["status"] == "running"
+
+    def test_at_threshold_proceeds_without_ack(self, mocker):
+        # >= threshold candidates approve freely regardless of the LLM grade.
+        mocker.patch.object(
+            svc,
+            "get_idea_run",
+            return_value=_row(signal_strength="low", candidate_count=4),
+        )
+        mocker.patch.object(svc, "update_idea_run_running")
+        run_pipeline = mocker.patch.object(svc, "run_pipeline")
+
+        result = svc.approve(
+            RUN_ID, RunApprove(competitors=[_competitor()]), BackgroundTasks()
+        )
+
+        assert result["status"] == "running"
+        run_pipeline.assert_not_called()  # enqueued via BackgroundTasks, not called
+
+    def test_zero_candidates_without_ack_400(self, mocker):
+        # US-S1 no-sources band (0 candidates) is below threshold → still gated.
+        mocker.patch.object(svc, "get_idea_run", return_value=_row(candidate_count=0))
+        update_running = mocker.patch.object(svc, "update_idea_run_running")
+
+        with pytest.raises(HTTPException) as exc:
+            svc.approve(RUN_ID, RunApprove(competitors=[_competitor()]), BackgroundTasks())
+
+        assert exc.value.status_code == 400
+        update_running.assert_not_called()
 
 
 # --- run_pipeline() ---------------------------------------------------------

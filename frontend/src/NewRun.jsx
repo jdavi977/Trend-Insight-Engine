@@ -146,7 +146,9 @@ export default function NewRun() {
 
   async function handleApprove() {
     const pf = preflight?.preflight;
-    const isLow = pf?.signal_strength === "low";
+    // Low-signal ack triggers on the backend's count-derived `low_signal` flag,
+    // not the LLM `signal_strength` grade (slice 3 §6, issue #69).
+    const isLow = pf?.low_signal === true;
     if (!preflight || competitors.length === 0 || (isLow && !acknowledged) || approving) return;
     setError("");
     setApproving(true);
@@ -287,7 +289,9 @@ function PreflightReview({ runIdea, preflight, competitors, setCompetitors, ackn
   // `no_sources` reflects the original backend result and stays true even after
   // the user adds competitors, so the context line persists while they paste.
   const noSources = preflight.no_sources === true;
-  const isLow = !noSources && preflight.signal_strength === "low";
+  // Acknowledgement is driven by the count-derived `low_signal` flag (slice 3 §6,
+  // issue #69); `signal_strength` stays below only as displayed copy.
+  const isLow = !noSources && preflight.low_signal === true;
   const blocked = (isLow && !acknowledged) || competitors.length === 0 || approving;
 
   return (

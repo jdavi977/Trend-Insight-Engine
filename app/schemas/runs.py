@@ -11,6 +11,8 @@ from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
+from app.config.constants import LOW_SIGNAL_CANDIDATE_THRESHOLD
+
 SourceLiteral = Literal["youtube", "appstore"]
 SignalStrength = Literal["high", "medium", "low"]
 # `reported` (slice 2 §4): a run hidden from the public surface by POST /runs/:id/report.
@@ -150,6 +152,20 @@ class PreflightResult(BaseModel):
         """US-S1 (slice 2 §6): zero candidates → the frontend renders the
         "No public sources found" state instead of an unrunnable approve flow."""
         return len(self.candidates) == 0
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def low_signal(self) -> bool:
+        """Count-derived low-signal flag (slice 3 §6, issue #69).
+
+        True when pre-flight found *some* but **fewer than
+        `LOW_SIGNAL_CANDIDATE_THRESHOLD`** candidates — the band that requires an
+        explicit `acknowledged_low_signal` to approve. Mutually exclusive with
+        `no_sources` (0 candidates): the frontend reads this flag to drive the
+        acknowledgement so it never re-implements the threshold, and reads
+        `no_sources` for the US-S1 state. Same gate the backend enforces in
+        `run_pipeline_service.approve`."""
+        return 0 < len(self.candidates) < LOW_SIGNAL_CANDIDATE_THRESHOLD
 
 
 class ExtractionYield(BaseModel):

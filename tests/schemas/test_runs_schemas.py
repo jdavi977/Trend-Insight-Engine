@@ -188,6 +188,34 @@ class TestPreflightResult:
         assert pr.no_sources is True
         assert pr.model_dump()["no_sources"] is True
 
+    def _pr(self, n_candidates, signal_strength="high"):
+        return PreflightResult(
+            category="notes",
+            signal_strength=signal_strength,
+            signal_reasoning="r",
+            candidates=[
+                _competitor(identifier=f"c{i}") for i in range(n_candidates)
+            ],
+        )
+
+    def test_low_signal_true_below_threshold(self):
+        # 1..threshold-1 candidates → the low-signal acknowledgement band (issue #69).
+        pr = self._pr(3)
+        assert pr.low_signal is True
+        assert pr.model_dump()["low_signal"] is True
+
+    def test_low_signal_false_at_threshold(self):
+        # >= threshold (4) candidates proceed freely regardless of LLM grade.
+        pr = self._pr(4, signal_strength="low")
+        assert pr.low_signal is False
+        assert pr.model_dump()["low_signal"] is False
+
+    def test_low_signal_false_when_zero_candidates(self):
+        # 0 candidates is the US-S1 no-sources band, not low-signal — mutually exclusive.
+        pr = self._pr(0)
+        assert pr.low_signal is False
+        assert pr.no_sources is True
+
 
 class TestRunFeedback:
     def test_all_fields_optional(self):

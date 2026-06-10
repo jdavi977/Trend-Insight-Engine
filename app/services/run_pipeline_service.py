@@ -46,6 +46,7 @@ from app.clients.supabase import (
 )
 from app.config.constants import (
     APP_REVIEW_PAGES,
+    LOW_SIGNAL_CANDIDATE_THRESHOLD,
     PARTIAL_SOURCE_THRESHOLD,
     SOURCE_RETRY_ATTEMPTS,
     SOURCE_RETRY_BACKOFF_BASE_SECONDS,
@@ -127,7 +128,8 @@ def approve(
     Returns ``{run_id, status: 'running'}`` (spec §6). Raises:
     - 404 if the run does not exist
     - 409 if the run is not in `preflight_ready`
-    - 400 if pre-flight was `low` and `acknowledged_low_signal` isn't true
+    - 400 if pre-flight produced fewer than `LOW_SIGNAL_CANDIDATE_THRESHOLD`
+      candidates and `acknowledged_low_signal` isn't true
     """
     row = get_idea_run(run_id)
     if row is None:
@@ -139,7 +141,16 @@ def approve(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Run is '{row['status']}', expected 'preflight_ready'",
         )
-    if row.get("signal_strength") == "low" and request.acknowledged_low_signal is not True:
+    # Low-signal gate re-keyed off the *observed* pre-flight candidate count, not
+    # the LLM-guessed `signal_strength` (slice 3 §6, issue #69). At this point
+    # `competitors_json` still holds the pre-flight candidate pool — the approve
+    # body's selection hasn't been persisted yet. Same axis as US-S1: a thin run
+    # (below threshold) needs an explicit acknowledgement before it can proceed.
+    candidate_count = len(row.get("competitors_json") or [])
+    if (
+        candidate_count < LOW_SIGNAL_CANDIDATE_THRESHOLD
+        and request.acknowledged_low_signal is not True
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Low-signal run requires acknowledged_low_signal=true",

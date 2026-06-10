@@ -20,6 +20,15 @@ APPLE_COUNTRY = "us"
 # pipeline (issue #60 acceptance criterion).
 PARTIAL_SOURCE_THRESHOLD = 0.70
 
+# Low-signal acknowledgement threshold (slice 3 §6, US-S1 fold-in, issue #69,
+# Open Question 4). Re-keys the approve-time gate off the *observed* pre-flight
+# candidate count instead of the LLM-guessed `signal_strength`. One evidence
+# axis: 0 candidates → US-S1 no-sources state; 1..threshold-1 → low-signal
+# acknowledgement required to approve; >= threshold → proceed freely. Hardcoded
+# in config (proposed 4; the pre-flight validation per-idea floor was 15/15, so 4
+# flags genuinely thin runs without false-flagging healthy ones).
+LOW_SIGNAL_CANDIDATE_THRESHOLD = 4
+
 # Per-source retry policy (slice 2 §5.1, PRD §8: "one retry with exponential
 # backoff"). A source is attempted SOURCE_RETRY_ATTEMPTS times total; the wait
 # before retry N (0-indexed) is SOURCE_RETRY_BACKOFF_BASE_SECONDS * 2**N. A

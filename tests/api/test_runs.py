@@ -281,6 +281,12 @@ def _competitor_body() -> dict:
     }
 
 
+def _candidates(n: int) -> list[dict]:
+    """Build *n* pre-flight candidate rows for `competitors_json` — the pool the
+    low-signal gate (issue #69) counts to decide whether an ack is required."""
+    return [{**_competitor_body(), "identifier": f"c{i}"} for i in range(n)]
+
+
 def test_approve_validates_body_requires_competitors(client):
     response = client.post("/runs/abc/approve", json={"competitors": []})
 
@@ -291,7 +297,8 @@ def test_approve_happy_path_returns_running_and_enqueues(client, mocker):
     mocker.patch(
         "app.services.run_pipeline_service.get_idea_run",
         return_value=_row(status_="preflight_ready", category="productivity",
-                          signal_strength="high", signal_reasoning="r"),
+                          signal_strength="high", signal_reasoning="r",
+                          competitors=_candidates(5)),
     )
     mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
     # Stub the background task so the pipeline doesn't actually run under TestClient.
@@ -310,11 +317,13 @@ def test_approve_happy_path_returns_running_and_enqueues(client, mocker):
     pipeline.assert_called_once()  # ran as a background task after the response
 
 
-def test_approve_low_signal_without_ack_returns_400(client, mocker):
+def test_approve_below_threshold_without_ack_returns_400(client, mocker):
+    # Fewer than LOW_SIGNAL_CANDIDATE_THRESHOLD pre-flight candidates → ack required.
     mocker.patch(
         "app.services.run_pipeline_service.get_idea_run",
         return_value=_row(status_="preflight_ready", category="b2b-saas",
-                          signal_strength="low", signal_reasoning="thin"),
+                          signal_strength="high", signal_reasoning="thin",
+                          competitors=_candidates(2)),
     )
     running = mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
 
@@ -327,11 +336,12 @@ def test_approve_low_signal_without_ack_returns_400(client, mocker):
     running.assert_not_called()
 
 
-def test_approve_low_signal_with_ack_proceeds(client, mocker):
+def test_approve_below_threshold_with_ack_proceeds(client, mocker):
     mocker.patch(
         "app.services.run_pipeline_service.get_idea_run",
         return_value=_row(status_="preflight_ready", category="b2b-saas",
-                          signal_strength="low", signal_reasoning="thin"),
+                          signal_strength="high", signal_reasoning="thin",
+                          competitors=_candidates(2)),
     )
     mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
     mocker.patch("app.services.run_pipeline_service.run_pipeline")
@@ -339,6 +349,26 @@ def test_approve_low_signal_with_ack_proceeds(client, mocker):
     response = client.post(
         "/runs/11111111-1111-1111-1111-111111111111/approve",
         json={"competitors": [_competitor_body()], "acknowledged_low_signal": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+
+
+def test_approve_at_threshold_proceeds_without_ack_despite_low_grade(client, mocker):
+    # >= threshold candidates approve freely even when the LLM graded the run "low".
+    mocker.patch(
+        "app.services.run_pipeline_service.get_idea_run",
+        return_value=_row(status_="preflight_ready", category="b2b-saas",
+                          signal_strength="low", signal_reasoning="r",
+                          competitors=_candidates(4)),
+    )
+    mocker.patch("app.services.run_pipeline_service.update_idea_run_running")
+    mocker.patch("app.services.run_pipeline_service.run_pipeline")
+
+    response = client.post(
+        "/runs/11111111-1111-1111-1111-111111111111/approve",
+        json={"competitors": [_competitor_body()]},
     )
 
     assert response.status_code == 200
