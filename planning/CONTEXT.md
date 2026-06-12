@@ -61,22 +61,22 @@ admin-hidden). `failed` terminal with structured `failure_reason`.
   quote-source diversity, extraction yield) — §7.8 / §7.9.
 
 ## Current Priorities
-- v2.2 slice-1 landed: `POST/GET /runs`, `/runs/:id/approve`, preflight,
-  per-source extraction, redact, synthesis, idea-match, model router (see recent
-  commits + [specs/v2-slice-1-end-to-end_spec.md](specs/v2-slice-1-end-to-end_spec.md)).
-- Remaining v1 scope: feedback + report endpoints, Supabase-backed persistence
-  (currently in-memory registry), rate limiting + budget cap, partial_sources
-  banner, eval harness + 5-idea seed set (§7.9), frontend v2 pages.
-- **Slice 2 (before public exposure):** hardening — retry-once + ≥70% partial-
-  source threshold, rate limits + budget cap, `feedback`/`report` endpoints and
-  their result-page controls, plus the **client-side router migration**
-  (`react-router-dom`; `/`, `/runs/new`, `/runs/:id`). Do the router conversion
-  *first* so the new feedback/report UI isn't built twice on the interim
-  state-based nav. This delivers US-4 (leave/return via URL) and US-5 (share) —
-  see [decisions/2026-06-01-frontend-routing-state-vs-router.md](decisions/2026-06-01-frontend-routing-state-vs-router.md).
-  Until then v2 navigates in-session only.
-- **Slice 3:** remove legacy v1 routers/jobs/pages (migrate any survivors to
-  `services/`); deletes the `currentPage` switch the router replaces.
+- **v1 is complete** (2026-06-11): all three v2.2 slices shipped — the PRD §15
+  status table is the source of truth.
+  - Slice 1 — end-to-end happy path
+    ([spec](specs/v2-slice-1-end-to-end_spec.md), shipped 2026-06-01).
+  - Slice 2 — lifecycle hardening: sad paths, rate limit + budget cap,
+    feedback/report, `react-router-dom` shareable URLs, My Runs
+    ([spec](specs/v2-slice-2-lifecycle-hardening_spec.md), shipped 2026-06-06).
+  - Slice 3 — eval harness + 5-idea seed set, `quality_signals`, count-based
+    low-signal gate, pre-flight robustness, v1 legacy teardown
+    ([spec](specs/v2-slice-3-eval-and-v1-removal_spec.md), shipped 2026-06-11).
+- The legacy v1 surface is gone: `/analyze/*` endpoints, weekly jobs,
+  `automatic_table*`, RAG surface, and the unlinked v1 frontend pages are
+  deleted; `create_app` mounts only the v2 routers.
+- **Next: v1.1 roadmap (PRD §15)** — full golden eval corpus (15–20 ideas) +
+  CI regression gate, queue UX with ETA, longitudinal outcome tracking, user
+  research on the §2 workflow, Reddit/HN sources.
 
 ## Known Constraints
 - Pre-flight ≤10s (user waits); full run ≤5 min p50; cap 5 concurrent OpenAI calls.

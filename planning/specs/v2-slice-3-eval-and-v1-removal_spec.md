@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Draft |
+| **Status** | Shipped 2026-06-11 |
 | **Created** | 2026-06-06 |
 | **Owner** | John Lowen David |
 | **Parent** | [PRD v2.2](../../docs/PRD.md) |
@@ -488,20 +488,29 @@ teardown, gated on 1–6 being green. PR 9 closes v1.
   statistically meaningful. The v1.1 corpus is where calibration matters.
 
 ## 15. References
+
+*All three slices are shipped (PRD §15 status table) — v1 is complete; pointers
+below reflect the shipped state.*
+
 - [PRD v2.2](../../docs/PRD.md) — §7.9 (eval harness, seed set, quality signals),
-  §7.2 / §9 (v1 removal), §10.1 (model routing — last hardcoded exception closes
+  §7.2 / §9 (v1 removal), §10.1 (model routing — last hardcoded exception closed
   here), §15 (slice-3 scope + `signal_strength`-gate note + v1.1 deferrals).
 - [v2 Slice 1 spec](v2-slice-1-end-to-end_spec.md) — §9 `create_response` carve-out
-  (issue #54) retired here; §11 invariants must still hold.
+  (issue #54) retired here; §11 invariants re-verified at slice exit.
 - [v2 Slice 2 spec](v2-slice-2-lifecycle-hardening_spec.md) — §3 deferred items
-  (pre-flight robustness, orphaned `pending`) are pulled into this slice; §11
-  invariants must still hold.
-- [run_pipeline_service.py](../../app/services/run_pipeline_service.py) — gate
-  re-key (§6) + `quality_signals` computation (§5).
+  (pre-flight robustness, orphaned `pending`) were pulled into this slice and
+  shipped here; §11 invariants re-verified at slice exit.
+- [app/eval/](../../app/eval/) — shipped harness (`harness.py`), the four §7.9
+  metric scorers (`metrics.py`), 5-idea seed set (`seed/`), report output
+  (`reports/`).
+- [run_pipeline_service.py](../../app/services/run_pipeline_service.py) —
+  count-based gate re-key (§6) + `quality_signals` computation (§5).
 - [preflight_service.py](../../app/services/preflight_service.py),
-  [app/llm/preflight.py](../../app/llm/preflight.py) — robustness work (§7).
+  [app/llm/preflight.py](../../app/llm/preflight.py) — `generate_queries`
+  validation + robustness work (§7).
 - [idea_run_service.py](../../app/services/idea_run_service.py) — orphaned-`pending`
   wrap (§7.2).
-- [app/main.py](../../app/main.py) — router-mount teardown (§9).
+- [app/main.py](../../app/main.py) — post-teardown, mounts only the health + v2
+  `runs` routers (§9).
 - [memory: slice1-tables-no-checked-in-migration](../../../.claude/projects/-home-john-Dev-Projects-Trend-Insight-Engine/memory/slice1-tables-no-checked-in-migration.md)
   — migrations must be additive/idempotent.
