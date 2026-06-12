@@ -1,50 +1,11 @@
 """Behavior tests for `app.clients.supabase`.
 
-PR 5 merges `app/lib/db.py` + `app/lib/supabaseClient.py` into a single
-`app/clients/supabase.py`. These tests pin the public surface (the four DB
-helpers) so the move is safe.
+The v1 `automatic_table*` accessors were removed with the weekly pipeline in
+slice 3 (issue #72); only the v2 `idea_runs`/`gaps`/`feedback_events` surface
+remains. The accessor behavior is exercised through the service tests; this
+file pins client-level contracts that services rely on.
 """
 from __future__ import annotations
-
-import pytest
-
-
-def test_check_youtube_id_returns_rows_when_present(mocker):
-    from app.clients import supabase as sb
-
-    fake_response = mocker.Mock(data=[{"key": "abc", "title": "x"}])
-    table = mocker.Mock()
-    table.select.return_value.eq.return_value.execute.return_value = fake_response
-    mocker.patch.object(sb, "supabase_client", mocker.Mock(table=mocker.Mock(return_value=table)))
-
-    assert sb.check_youtube_id("abc") == [{"key": "abc", "title": "x"}]
-
-
-def test_check_youtube_id_returns_empty_list_when_absent(mocker):
-    from app.clients import supabase as sb
-
-    fake_response = mocker.Mock(data=[])
-    table = mocker.Mock()
-    table.select.return_value.eq.return_value.execute.return_value = fake_response
-    mocker.patch.object(sb, "supabase_client", mocker.Mock(table=mocker.Mock(return_value=table)))
-
-    assert sb.check_youtube_id("missing") == []
-
-
-def test_update_automatic_trend_inserts_into_automatic_table(mocker):
-    from app.clients import supabase as sb
-
-    table = mocker.Mock()
-    client = mocker.Mock()
-    client.table.return_value = table
-    mocker.patch.object(sb, "supabase_client", client)
-
-    payload = [{"key": "abc"}]
-    sb.update_automatic_trend(payload)
-
-    client.table.assert_called_once_with("automatic_table")
-    table.insert.assert_called_once_with(payload)
-    table.insert.return_value.execute.assert_called_once_with()
 
 
 def test_insert_feedback_event_appends_to_feedback_events(mocker):
@@ -76,23 +37,3 @@ def test_insert_feedback_event_appends_to_feedback_events(mocker):
     table.update.assert_not_called()
     table.upsert.assert_not_called()
     table.delete.assert_not_called()
-
-
-def test_get_weekly_ids_filters_by_sunday_date_and_category(mocker):
-    from app.clients import supabase as sb
-
-    mocker.patch.object(sb, "getSundayDate", return_value="2026-04-26")
-    fake_response = mocker.Mock(data=[{"key": "x"}])
-    select = mocker.Mock()
-    select.eq.return_value.eq.return_value.execute.return_value = fake_response
-    table = mocker.Mock()
-    table.select.return_value = select
-    client = mocker.Mock()
-    client.table.return_value = table
-    mocker.patch.object(sb, "supabase_client", client)
-
-    result = sb.get_weekly_ids(20)
-
-    assert result == [{"key": "x"}]
-    select.eq.assert_called_once_with("date", "2026-04-26")
-    select.eq.return_value.eq.assert_called_once_with("category", 20)

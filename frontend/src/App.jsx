@@ -1,19 +1,13 @@
 import "./App.css";
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
-import YouTubePage from "./YouTubePage";
-import AppStorePage from "./AppStorePage";
-import HomePage from "./HomePage";
-import InsightsPage from "./InsightsPage";
+import { NavLink, Route, Routes } from "react-router-dom";
 import HomeV2 from "./HomeV2";
 import NewRun from "./NewRun";
 import RunResult from "./RunResult";
 import MyRuns from "./MyRuns";
 
-// v2 nav only points at the new run-lifecycle pages. Navigation is real
-// client-side routing via react-router-dom (ADR 2026-06-01 / issue #58) —
-// replacing the slice-1 `currentPage` state switch. The legacy v1 pages
-// (HomePage, InsightsPage, YouTubePage, AppStorePage) stay mounted on
-// /legacy/* routes but are unlinked from nav — removal is slice 3 (spec §9.1).
+// Navigation is real client-side routing via react-router-dom
+// (ADR 2026-06-01 / issue #58) — replacing the slice-1 `currentPage`
+// state switch.
 const NAV_ITEMS = [
   {
     to: "/",
@@ -43,14 +37,6 @@ const NAV_ITEMS = [
     ),
   },
 ];
-
-// Legacy pages addressed paths via string keys ("insights", "youtube", …);
-// adapt that to /legacy/* routes so the unlinked pages keep working until
-// slice-3 removal.
-function LegacyHomePage() {
-  const navigate = useNavigate();
-  return <HomePage onNavigate={(page) => navigate(`/legacy/${page}`)} />;
-}
 
 function App() {
   return (
@@ -85,12 +71,6 @@ function App() {
               ranking, so My Runs resolves before the dynamic run route. */}
           <Route path="/runs/mine" element={<MyRuns />} />
           <Route path="/runs/:id" element={<RunResult />} />
-          {/* Legacy v1 pages — unlinked from nav, mounted until slice 3 removal. */}
-          <Route path="/legacy/home" element={<LegacyHomePage />} />
-          <Route path="/legacy/homepage" element={<LegacyHomePage />} />
-          <Route path="/legacy/insights" element={<InsightsPage />} />
-          <Route path="/legacy/youtube" element={<YouTubePage />} />
-          <Route path="/legacy/appstore" element={<AppStorePage />} />
         </Routes>
       </main>
 

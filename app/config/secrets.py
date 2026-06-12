@@ -16,9 +16,6 @@ OPENAI_KEY = keyChecker("OPENAI_KEY")
 SUPABASE_URL = keyChecker("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = keyChecker("SUPABASE_SERVICE_ROLE_KEY")
 
-RAG_WRITE_ENABLED: bool = os.getenv("RAG_WRITE_ENABLED", "false").lower() == "true"
-RAG_READ_ENABLED: bool = os.getenv("RAG_READ_ENABLED", "false").lower() == "true"
-
 # Daily OpenAI spend ceiling in USD (PRD §8, US-S5, slice 2 §6). When the
 # in-process running spend total for the current UTC day reaches this value,
 # POST /runs returns 429 budget_exhausted. Optional: unset → no cap (the guard

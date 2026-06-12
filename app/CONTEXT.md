@@ -2,22 +2,21 @@
 
 > Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) +
 > [planning/specs/v2-slice-1-end-to-end_spec.md](../planning/specs/v2-slice-1-end-to-end_spec.md).
-> v2 = **idea-in → cross-competitor gaps-out**. Legacy v1 single-URL + weekly
-> routers/jobs still exist in tree but are slated for removal/migration to
-> `services/` (PRD §7.2).
+> v2 = **idea-in → cross-competitor gaps-out**. The legacy v1 single-URL +
+> weekly surface (routers, jobs, RAG) was deleted in slice 3 (issue #72).
 
 ## Module Map
 | Folder         | Role                                                                 |
 |----------------|---------------------------------------------------------------------|
 | config/        | Constants/tunables, prompts, regex, secrets. `constants.py` holds `MODEL_ROUTING` (§10.1) + engagement filters |
-| clients/       | One file per external service — `appstore.py`, `youtube.py`, `openai.py`, `supabase.py`, `pgvector.py` |
+| clients/       | One file per external service — `appstore.py`, `youtube.py`, `openai.py`, `supabase.py` |
 | ingestion/     | YouTube comment fetch + App Store review fetch                       |
 | preprocessing/ | `reviewPipeline.py`, `validateUrl.py`, `redact.py` (regex + NER PII strip) |
-| llm/           | `preflight.py`, `per-source extract` (`extractInsights.py`), `synthesis.py`, `idea_match.py`, `router.py` (stage→model resolver) |
-| schemas/       | Pydantic boundary models — `runs.py` (v2 domain), `api.py`, `llm.py` |
-| api/           | One router per resource. v2: `runs.py`. Legacy: `youtube/appstore/home/insights`. Plus `errors.py`, `internal.py` |
-| services/      | Orchestration — `idea_run_service`, `run_pipeline_service`, `preflight_service`, `per_source_extraction_service`, `persistence_service` |
-| jobs/          | Runnable entrypoints. `preflight_smoke.py`. Legacy `automatic*.py` (weekly — removed in v2) |
+| llm/           | `preflight.py`, `synthesis.py`, `idea_match.py`, `router.py` (stage→model resolver). Per-source extraction lives in `services/per_source_extraction_service.py` |
+| schemas/       | Pydantic boundary models — `runs.py` (v2 domain) |
+| api/           | One router per resource. `runs.py`, `health.py` (`GET /` liveness). Plus `errors.py` |
+| services/      | Orchestration — `idea_run_service`, `run_pipeline_service`, `preflight_service`, `per_source_extraction_service` |
+| jobs/          | Runnable entrypoints. `preflight_smoke.py` |
 | eval/          | PRD §7.9 measurement: `harness.py` drives the real pipeline on a `seed/` idea; `metrics.py` = the four pure scorers; reports → gitignored `reports/`. Outside the request path |
 | utilities/     | Cross-cutting helpers only                                           |
 | main.py        | App factory: `create_app()`, CORS, X-Robots-Tag middleware, routers, exception handlers |
@@ -42,7 +41,8 @@
 - `GET /runs` — paginated public feed of completed runs (drives Home).
 
 All `/runs` responses get `X-Robots-Tag: noindex, nofollow` (main.py middleware).
-Legacy `/analyze/*`, `/get/homePage` are **removed** in v2 (still in tree pending cleanup).
+Legacy `/analyze/*`, `/get/homePage`, `/data/send`, `/insights/similar` are
+**deleted** (slice 3, issue #72); `GET /` returns a tiny static health payload.
 
 ## Run Lifecycle
 `pending → preflight_ready → running → done | failed` (+ `reported`).

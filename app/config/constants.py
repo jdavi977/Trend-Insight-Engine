@@ -1,5 +1,4 @@
 APP_REVIEW_PAGES = 10
-MANUAL_REVIEW_PAGES = 2
 GAME_CATEGORY_ID = 20
 SCIENCE_TECH_ID = 28
 HOW_TO_STYLE_ID = 26
@@ -10,8 +9,6 @@ YOUTUBE_VIDEO_AMOUNT = 5
 APPLE_GAMES_GENRE_ID = 6014
 APPLE_SOCIAL_GENRE_ID = 6005
 APPLE_UTILITIES_GENRE_ID = 6002
-APPLE_TOP_APPS_LIMIT = 5
-APPLE_COUNTRY = "us"
 
 # Partial-completion threshold (slice 2 §5.1, US-S3, issue #60). A run survives
 # as `done` (with a partial_sources banner) only when at least this fraction of
@@ -36,12 +33,6 @@ LOW_SIGNAL_CANDIDATE_THRESHOLD = 4
 SOURCE_RETRY_ATTEMPTS = 2
 SOURCE_RETRY_BACKOFF_BASE_SECONDS = 0.5
 
-RAG_QUERY_MAX_CHARS = 2000
-RAG_TOP_K = 5
-RAG_MIN_SIMILARITY = 0.60
-RAG_DEDUP_SIMILARITY = 0.75
-RAG_COLLECTION = "insights"
-
 # Model routing for v2 pipeline (PRD §10.1, spec §9). Every LLM call in slice 1
 # goes through app/llm/router.py::resolve(stage); v1 ships gpt-4o for every stage.
 MODEL_ROUTING = {
@@ -61,10 +52,9 @@ MODEL_ROUTING = {
 # DEFAULT_OPENAI_PRICE (conservative, non-zero) so a model swap can't silently
 # zero out budget accounting.
 OPENAI_PRICES = {
-    "gpt-4o":                 {"input": 0.0025,  "output": 0.01},
-    "gpt-4o-mini":            {"input": 0.00015, "output": 0.0006},
-    "gpt-5-mini":             {"input": 0.00025, "output": 0.002},
-    "text-embedding-3-small": {"input": 0.00002, "output": 0.0},
+    "gpt-4o":      {"input": 0.0025,  "output": 0.01},
+    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
+    "gpt-5-mini":  {"input": 0.00025, "output": 0.002},
 }
 DEFAULT_OPENAI_PRICE = {"input": 0.0025, "output": 0.01}
 

@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import appstore, errors, home, insights, internal, runs, youtube
+from app.api import errors, health, runs
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
@@ -42,11 +42,7 @@ def create_app() -> FastAPI:
             response.headers["X-Robots-Tag"] = "noindex, nofollow"
         return response
 
-    app.include_router(youtube.router)
-    app.include_router(appstore.router)
-    app.include_router(home.router)
-    app.include_router(internal.router)
-    app.include_router(insights.router)
+    app.include_router(health.router)
     app.include_router(runs.router)
 
     errors.register_exception_handlers(app)
