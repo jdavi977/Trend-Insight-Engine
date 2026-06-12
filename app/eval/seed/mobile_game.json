@@ -1,0 +1,11 @@
+{
+  "idea": "roguelike deckbuilder",
+  "target_gap": null,
+  "category": "mobile-game",
+  "expected_gaps": [
+    { "gap": "runs feel repetitive with too little card or content variety", "severity_range": [3, 4] },
+    { "gap": "difficulty balance spikes or relies on unfair RNG", "severity_range": [3, 5] },
+    { "gap": "aggressive monetization and ads interrupt runs", "severity_range": [4, 5] },
+    { "gap": "progress is lost or does not sync across devices", "severity_range": [3, 5] }
+  ]
+}

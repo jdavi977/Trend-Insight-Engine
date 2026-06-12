@@ -1,0 +1,10 @@
+{
+  "idea": "tool for prompt engineers to manage prompts",
+  "target_gap": null,
+  "category": "low-signal",
+  "expected_gaps": [
+    { "gap": "no versioning or history for prompt changes", "severity_range": [3, 4] },
+    { "gap": "hard to organize, search, and reuse saved prompts", "severity_range": [2, 4] },
+    { "gap": "no way to test prompts across models side by side", "severity_range": [2, 4] }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "idea": "habit tracker that uses streaks",
+  "target_gap": null,
+  "category": "productivity",
+  "expected_gaps": [
+    { "gap": "losing a streak is demotivating and feels punishing", "severity_range": [3, 5] },
+    { "gap": "reminders and notifications are unreliable or missed", "severity_range": [4, 5] },
+    { "gap": "core tracking features gated behind a paywall", "severity_range": [3, 4] },
+    { "gap": "no flexible scheduling for non-daily or skip days", "severity_range": [2, 4] }
+  ]
+}

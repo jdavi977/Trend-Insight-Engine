@@ -1,0 +1,11 @@
+{
+  "idea": "note-taking app with better offline sync",
+  "target_gap": null,
+  "category": "consumer-app",
+  "expected_gaps": [
+    { "gap": "offline edits fail to sync or silently get lost", "severity_range": [4, 5] },
+    { "gap": "sync conflicts overwrite notes without warning", "severity_range": [4, 5] },
+    { "gap": "slow or stuck syncing across devices", "severity_range": [3, 4] },
+    { "gap": "search does not work reliably offline", "severity_range": [2, 4] }
+  ]
+}

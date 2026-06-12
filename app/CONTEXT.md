@@ -18,6 +18,7 @@
 | api/           | One router per resource. v2: `runs.py`. Legacy: `youtube/appstore/home/insights`. Plus `errors.py`, `internal.py` |
 | services/      | Orchestration — `idea_run_service`, `run_pipeline_service`, `preflight_service`, `per_source_extraction_service`, `persistence_service` |
 | jobs/          | Runnable entrypoints. `preflight_smoke.py`. Legacy `automatic*.py` (weekly — removed in v2) |
+| eval/          | PRD §7.9 measurement: `harness.py` drives the real pipeline on a `seed/` idea; `metrics.py` = the four pure scorers; reports → gitignored `reports/`. Outside the request path |
 | utilities/     | Cross-cutting helpers only                                           |
 | main.py        | App factory: `create_app()`, CORS, X-Robots-Tag middleware, routers, exception handlers |
 
