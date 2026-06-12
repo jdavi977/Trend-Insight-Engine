@@ -38,7 +38,7 @@ import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -68,11 +68,20 @@ class SeedIdea(BaseModel):
 
     `category` is the seed-set bucket (consumer-app, mobile-game, …), not the
     LLM-derived pre-flight category — it is operator metadata for the report.
+
+    `label_status` records who authored the `expected_gaps`. The spec (§4) makes
+    hand-labelling a human task; the slice-3 seed set was *drafted by the agent*
+    from the pre-flight validation set, so it defaults to ``"agent_drafted"`` —
+    a recall number scored against an `agent_drafted` seed is provisional until
+    the owner reviews the labels and flips the field to ``"human_reviewed"``.
+    The default is the unconfirmed value so an unmarked file is never mistaken
+    for a vetted one.
     """
 
     idea: str = Field(min_length=1)
     target_gap: Optional[str] = None
     category: str = Field(min_length=1)
+    label_status: Literal["agent_drafted", "human_reviewed"] = "agent_drafted"
     expected_gaps: list[ExpectedGap] = Field(default_factory=list)
 
 
@@ -211,6 +220,7 @@ def score(seed: SeedIdea, result: RunResult) -> dict:
     return {
         "idea": seed.idea,
         "category": seed.category,
+        "label_status": seed.label_status,
         "expected_gaps": [g.model_dump() for g in seed.expected_gaps],
         "output_gaps": [
             {
@@ -243,6 +253,7 @@ def _failure_report(seed: SeedIdea, reason: str) -> dict:
     return {
         "idea": seed.idea,
         "category": seed.category,
+        "label_status": seed.label_status,
         "expected_gaps": [g.model_dump() for g in seed.expected_gaps],
         "output_gaps": [],
         "gap_recall": {"hit": 0, "miss": len(seed.expected_gaps), "per_gap": []},

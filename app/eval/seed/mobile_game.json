@@ -2,6 +2,7 @@
   "idea": "roguelike deckbuilder",
   "target_gap": null,
   "category": "mobile-game",
+  "label_status": "agent_drafted",
   "expected_gaps": [
     { "gap": "runs feel repetitive with too little card or content variety", "severity_range": [3, 4] },
     { "gap": "difficulty balance spikes or relies on unfair RNG", "severity_range": [3, 5] },

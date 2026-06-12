@@ -2,6 +2,7 @@
   "idea": "video editor for short-form creators",
   "target_gap": null,
   "category": "creator-tool",
+  "label_status": "agent_drafted",
   "expected_gaps": [
     { "gap": "exported video quality is degraded or watermarked", "severity_range": [4, 5] },
     { "gap": "app crashes or loses the project mid-edit", "severity_range": [4, 5] },

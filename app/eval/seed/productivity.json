@@ -2,6 +2,7 @@
   "idea": "habit tracker that uses streaks",
   "target_gap": null,
   "category": "productivity",
+  "label_status": "agent_drafted",
   "expected_gaps": [
     { "gap": "losing a streak is demotivating and feels punishing", "severity_range": [3, 5] },
     { "gap": "reminders and notifications are unreliable or missed", "severity_range": [4, 5] },

@@ -2,6 +2,7 @@
   "idea": "tool for prompt engineers to manage prompts",
   "target_gap": null,
   "category": "low-signal",
+  "label_status": "agent_drafted",
   "expected_gaps": [
     { "gap": "no versioning or history for prompt changes", "severity_range": [3, 4] },
     { "gap": "hard to organize, search, and reuse saved prompts", "severity_range": [2, 4] },

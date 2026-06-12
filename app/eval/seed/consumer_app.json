@@ -2,6 +2,7 @@
   "idea": "note-taking app with better offline sync",
   "target_gap": null,
   "category": "consumer-app",
+  "label_status": "agent_drafted",
   "expected_gaps": [
     { "gap": "offline edits fail to sync or silently get lost", "severity_range": [4, 5] },
     { "gap": "sync conflicts overwrite notes without warning", "severity_range": [4, 5] },
