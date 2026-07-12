@@ -184,6 +184,7 @@ class TestRoutingAndPromptShape:
         assert kwargs["model"] == "gpt-4o"
         assert kwargs["temperature"] == pytest.approx(0.3)
         assert kwargs["max_tokens"] == 6000
+        assert kwargs["response_format"] == {"type": "json_object"}
 
     def test_user_message_includes_idea_target_gap_and_every_quote_id(self, pool, mocker):
         mock_call = mocker.patch(
@@ -233,6 +234,21 @@ class TestDegenerateLLMOutput:
 
         assert len(gaps) == 1
         assert gaps[0].gap == "wrapped"
+
+    def test_markdown_fenced_json_response_still_parses(self, pool, mocker):
+        """Regression: models sometimes wrap JSON in a ```json ... ``` fence
+        even under response_format=json_object. Before the fence-stripping
+        fallback, this silently degraded to gaps=[] with no warning — seen in
+        production logs (2026-07-11) across an entire run."""
+        fenced = "```json\n" + json.dumps({"gaps": [
+            {"gap": "fenced gap", "severity": 3, "evidence_quote_ids": ["q01", "q05"]},
+        ]}) + "\n```"
+        mocker.patch(MOCK_TARGET, return_value=fenced)
+
+        gaps, _ = synthesize(**pool)
+
+        assert len(gaps) == 1
+        assert gaps[0].gap == "fenced gap"
 
     def test_empty_pool_yields_zero_ratio_no_divide_by_zero(self, mocker):
         mocker.patch(MOCK_TARGET, return_value=json.dumps({"gaps": []}))

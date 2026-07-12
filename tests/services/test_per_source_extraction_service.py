@@ -201,6 +201,7 @@ class TestRoutingAndPromptShape:
         assert kwargs["model"] == "gpt-4o"
         assert kwargs["temperature"] == pytest.approx(0.3)
         assert kwargs["max_tokens"] == 4000
+        assert kwargs["response_format"] == {"type": "json_object"}
 
     def test_user_message_contains_every_quote_id_and_source_metadata(self, fixture, mocker):
         mock_call = _mock_llm(mocker, [])
@@ -268,3 +269,22 @@ class TestDegenerateLLMOutput:
 
         assert len(pain_items) == 1
         assert pain_items[0].text == "wrapped list"
+
+    def test_markdown_fenced_json_response_still_parses(self, fixture, mocker):
+        """Regression: models sometimes wrap JSON in a ```json ... ``` fence
+        even under response_format=json_object. Before the fence-stripping
+        fallback, this silently degraded to pain_items=[] with no warning —
+        seen in production logs (2026-07-11) across an entire run."""
+        _mock_llm(mocker, [])
+        _, pool = extract_per_source(fixture["comments"], fixture["metadata"])
+        good_ids = [pool[0].quote_id, pool[1].quote_id]
+
+        fenced = "```json\n" + json.dumps({
+            "pain_items": [{"text": "fenced response", "quote_ids": good_ids}],
+        }) + "\n```"
+        mocker.patch(LLM_TARGET, return_value=fenced)
+
+        pain_items, _ = extract_per_source(fixture["comments"], fixture["metadata"])
+
+        assert len(pain_items) == 1
+        assert pain_items[0].text == "fenced response"

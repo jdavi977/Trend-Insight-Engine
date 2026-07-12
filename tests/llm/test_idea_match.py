@@ -135,6 +135,7 @@ def test_routing_and_prompt_shape(context, mocker):
     assert kwargs["model"] == "gpt-4o"
     assert kwargs["temperature"] == pytest.approx(0.2)
     assert kwargs["max_tokens"] == 1500
+    assert kwargs["response_format"] == {"type": "json_object"}
 
     user_msg = kwargs["messages"][1]["content"]
     assert context["idea"] in user_msg
@@ -142,3 +143,21 @@ def test_routing_and_prompt_shape(context, mocker):
     assert "gap_001" in user_msg
     for q in context["quotes"]:
         assert q.quote_id in user_msg
+
+
+def test_markdown_fenced_json_response_still_parses(context, mocker):
+    """Regression: models sometimes wrap JSON in a ```json ... ``` fence even
+    under response_format=json_object. Before the fence-stripping fallback,
+    this silently fell through to the invalid-JSON default — seen in
+    production logs (2026-07-11) across an entire run of a sibling stage."""
+    fenced = "```json\n" + json.dumps({
+        "gap_id": "gap_001", "verdict": "matches",
+        "evidence_quote_ids": ["q01", "q02"],
+    }) + "\n```"
+    mocker.patch(MOCK_TARGET, return_value=fenced)
+
+    result = match_idea(**context)
+
+    assert result.gap_id == "gap_001"
+    assert result.verdict == "matches"
+    assert result.evidence_quote_ids == ["q01", "q02"]

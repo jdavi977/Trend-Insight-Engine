@@ -5,6 +5,11 @@ and drops the `__main__` scratch block.
 """
 from __future__ import annotations
 
+import json
+
+import pytest
+from googleapiclient.errors import HttpError
+
 
 def _build_categories_service(mocker, items):
     response = {"items": items}
@@ -94,6 +99,63 @@ def test_list_comment_threads_maps_vendor_json_to_domain_rows(mocker):
         order="relevance",
         textFormat="plainText",
     )
+    service.close.assert_called_once_with()
+
+
+class _FakeResp:
+    def __init__(self, status):
+        self.status = status
+        self.reason = "Forbidden" if status == 403 else "Not Found"
+
+
+def _http_error(status, reason):
+    body = {
+        "error": {
+            "code": status,
+            "message": f"vendor message for {reason}",
+            "errors": [{"message": "x", "domain": "youtube.commentThread", "reason": reason}],
+        }
+    }
+    return HttpError(_FakeResp(status), json.dumps(body).encode("utf-8"))
+
+
+def _build_erroring_comment_threads_service(mocker, status, reason):
+    request = mocker.Mock()
+    request.execute.side_effect = _http_error(status, reason)
+    service = mocker.Mock()
+    service.commentThreads.return_value.list.return_value = request
+    return service
+
+
+@pytest.mark.parametrize(
+    "status,reason",
+    [(403, "commentsDisabled"), (404, "videoNotFound")],
+)
+def test_list_comment_threads_returns_empty_for_benign_reasons(mocker, status, reason):
+    from app.clients import youtube as yt
+
+    service = _build_erroring_comment_threads_service(mocker, status, reason)
+    mocker.patch.object(yt, "build", return_value=service)
+
+    result = yt.list_comment_threads("vid123", "relevance", 100)
+
+    assert result == []
+    service.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    "status,reason",
+    [(403, "quotaExceeded"), (403, "forbidden"), (404, "someOtherReason")],
+)
+def test_list_comment_threads_reraises_non_benign_errors(mocker, status, reason):
+    from app.clients import youtube as yt
+
+    service = _build_erroring_comment_threads_service(mocker, status, reason)
+    mocker.patch.object(yt, "build", return_value=service)
+
+    with pytest.raises(HttpError):
+        yt.list_comment_threads("vid123", "relevance", 100)
+
     service.close.assert_called_once_with()
 
 
