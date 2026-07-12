@@ -11,5 +11,6 @@ node_modules/
 
 ops/deploy/
 data/invalid_data/*
+logs/
 
 trend-v2/*

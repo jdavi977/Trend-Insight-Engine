@@ -86,14 +86,14 @@ BUSY_RETRY_AFTER_SECONDS = 60
 # threshold for the run's category to enter the quote pool. Unknown categories
 # fall back to "other". Per-run tuning is a v1.1 candidate (PRD §15).
 ENGAGEMENT_FILTERS = {
-    "consumer-app": {"youtube": 50, "appstore": 6},
-    "mobile-game":  {"youtube": 30, "appstore": 4},
-    "creator-tool": {"youtube": 25, "appstore": 3},
-    "productivity": {"youtube": 50, "appstore": 6},
+    "consumer-app": {"youtube": 10, "appstore": 6},
+    "mobile-game":  {"youtube": 10, "appstore": 4},
+    "creator-tool": {"youtube": 10, "appstore": 3},
+    "productivity": {"youtube": 10, "appstore": 6},
     "b2b-saas":     {"youtube": 10, "appstore": 2},
     "devtools":     {"youtube": 10, "appstore": 2},
     "enterprise":   {"youtube": 10, "appstore": 2},
-    "other":        {"youtube": 50, "appstore": 6},
+    "other":        {"youtube": 10, "appstore": 6},
 }
 
 
