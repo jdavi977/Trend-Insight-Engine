@@ -69,3 +69,20 @@ These features dont solve the target issue which was to help validate if a build
 Version 2.2:
 - User inputs their idea and pipeline returns a ranked list of evidence-backed canidate gaps validated through quoted complaints.
 
+July 10:
+_set_stage in run_pipeline_service is not being used
+
+quote_pool is quite low, need to test using len to compare between filtered and quote_pool
+
+pain_items is where it does not pass the grounding bar, could be due to low quote_pool amount or too strict of pain_items comparison
+
+noticed inconsistent retrieved quotes cited despite having the exact same prompt, probably due to the difference in competitors
+
+there are a lot of comments being filtered to [].
+
+A lot of youtubbe comments are returning a [].
+
+Goals: Finish mapping out code architecture. 
+
+After: 
+Need to simplify pipeline, look into eval harness and see if it is needed in current state. Look into stratified sampling for using reviews/comments with most likes. Introduce quota guard for openAI call. Reduce noise in comments.
