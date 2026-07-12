@@ -34,6 +34,7 @@ import logging
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import BackgroundTasks, HTTPException, status
 
@@ -72,6 +73,19 @@ from app.schemas.runs import (
 from app.services.per_source_extraction_service import extract_per_source
 
 logger = logging.getLogger(__name__)
+
+# Debug trace for this stage only: mirrors the per-source extraction debug log,
+# into its own file so per-run pipeline detail can be inspected after the fact
+# regardless of the process-wide LOG_LEVEL.
+_DEBUG_LOG_PATH = Path("logs/run_pipeline_debug.log")
+if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+    _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _file_handler = logging.FileHandler(_DEBUG_LOG_PATH)
+    _file_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    )
+    logger.addHandler(_file_handler)
+    logger.setLevel(logging.DEBUG)
 
 # Spec §8: cap concurrent OpenAI calls while all sources fan out in parallel.
 _OPENAI_CONCURRENCY = 5
@@ -141,11 +155,7 @@ def approve(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Run is '{row['status']}', expected 'preflight_ready'",
         )
-    # Low-signal gate re-keyed off the *observed* pre-flight candidate count, not
-    # the LLM-guessed `signal_strength` (slice 3 §6, issue #69). At this point
-    # `competitors_json` still holds the pre-flight candidate pool — the approve
-    # body's selection hasn't been persisted yet. Same axis as US-S1: a thin run
-    # (below threshold) needs an explicit acknowledgement before it can proceed.
+    # Makes sure there are enough competitors to proceed
     candidate_count = len(row.get("competitors_json") or [])
     if (
         candidate_count < LOW_SIGNAL_CANDIDATE_THRESHOLD
@@ -196,7 +206,7 @@ def _ingest(competitor: Competitor) -> list[dict]:
         return getYoutubeComments(competitor.identifier, "relevance", competitor.name)
     return getAppReviews(
         _appstore_review_id(competitor),
-        "mostRecent",
+        "mostHelpful", #changed from mostRecent
         APP_REVIEW_PAGES,
         competitor.name,
     )
@@ -244,6 +254,10 @@ async def _process_source(
     (slice 3 §5) without re-ingesting.
     """
     comments = await asyncio.to_thread(_ingest, competitor)
+    logger.debug(
+        "source_comment_count source=%s name=%s count=%d",
+        competitor.source, competitor.name, len(comments),
+    )
     metadata = SourceMetadata(
         source=competitor.source,
         source_id=competitor.identifier,

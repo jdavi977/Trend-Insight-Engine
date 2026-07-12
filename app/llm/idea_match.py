@@ -20,6 +20,7 @@ import logging
 from collections import OrderedDict
 
 from app.clients.openai import create_chat_completion
+from app.llm.json_response import strip_code_fence
 from app.llm.router import resolve
 from app.schemas.runs import GapItem, IdeaMatch, Quote
 
@@ -81,6 +82,7 @@ def _call_llm(user_message: str) -> str:
         model=cfg.model,
         temperature=cfg.temperature,
         max_tokens=cfg.max_tokens,
+        response_format={"type": "json_object"},
     )
 
 
@@ -95,8 +97,9 @@ def _parse(raw: str, gaps: list[GapItem]) -> IdeaMatch:
     gaps_by_id = {g.gap_id: g for g in gaps}
 
     try:
-        parsed = json.loads(raw)
+        parsed = json.loads(strip_code_fence(raw))
     except (json.JSONDecodeError, ValueError):
+        logger.warning("idea_match: failed to parse LLM JSON: %r", raw)
         parsed = {}
     if not isinstance(parsed, dict):
         parsed = {}

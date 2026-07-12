@@ -13,14 +13,18 @@ issue #49 open-question resolution.
 from __future__ import annotations
 
 import json
+import logging
 from collections import OrderedDict
 from typing import Iterable
 
 from pydantic import ValidationError
 
 from app.clients.openai import create_chat_completion
+from app.llm.json_response import strip_code_fence
 from app.llm.router import resolve
 from app.schemas.runs import Coverage, GapItem, PainItem, Quote
+
+logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """You are a product-research synthesizer. You receive a pool of verbatim user quotes harvested from competing products (each quote has a stable quote_id), plus per-source pain items already extracted from those quotes. Optionally you also receive an idea the researcher is exploring, and a target_gap they want validated.
 
@@ -77,14 +81,16 @@ def _call_llm(user_message: str) -> str:
         model=cfg.model,
         temperature=cfg.temperature,
         max_tokens=cfg.max_tokens,
+        response_format={"type": "json_object"},
     )
 
 
 def _parse_candidates(raw: str) -> list[dict]:
     """Tolerate a couple of common LLM JSON shapes; return [] on anything else."""
     try:
-        parsed = json.loads(raw)
+        parsed = json.loads(strip_code_fence(raw))
     except (json.JSONDecodeError, ValueError):
+        logger.warning("synthesis: failed to parse LLM JSON: %r", raw)
         return []
     if isinstance(parsed, list):
         parsed = {"gaps": parsed}

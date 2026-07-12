@@ -26,15 +26,30 @@ import hashlib
 import json
 import logging
 from collections import OrderedDict
+from pathlib import Path
 
 from pydantic import ValidationError
 
 from app.clients.openai import create_chat_completion
 from app.config.constants import engagement_threshold
+from app.llm.json_response import strip_code_fence
 from app.llm.router import resolve
 from app.schemas.runs import PainItem, Quote, SourceMetadata
 
 logger = logging.getLogger(__name__)
+
+# Debug trace for this stage only: mirrors the ad-hoc print()s that used to
+# live in extract_per_source, but into a file instead of stdout so a full
+# run's output can be inspected after the fact without console truncation.
+_DEBUG_LOG_PATH = Path("logs/per_source_extraction_debug.log")
+if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+    _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _file_handler = logging.FileHandler(_DEBUG_LOG_PATH)
+    _file_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    )
+    logger.addHandler(_file_handler)
+    logger.setLevel(logging.DEBUG)
 
 
 _SYSTEM_PROMPT = """You analyse a batch of verbatim user feedback about ONE product (a YouTube video discussion or an App Store app) and extract concrete PAIN ITEMS — recurring complaints, frustrations, or unmet needs.
@@ -159,14 +174,16 @@ def _call_llm(user_message: str) -> str:
         model=cfg.model,
         temperature=cfg.temperature,
         max_tokens=cfg.max_tokens,
+        response_format={"type": "json_object"},
     )
 
 
 def _parse_pain_items(raw: str) -> list[dict]:
     """Tolerate the same JSON shapes the synthesis parser handles."""
     try:
-        parsed = json.loads(raw)
+        parsed = json.loads(strip_code_fence(raw))
     except (json.JSONDecodeError, ValueError):
+        logger.warning("per_source_extract: failed to parse LLM JSON: %r", raw)
         return []
     if isinstance(parsed, list):
         parsed = {"pain_items": parsed}
@@ -226,15 +243,24 @@ def extract_per_source(
         member of `{q.quote_id for q in quotes}`. Returns `([], [])` when no
         comment clears the engagement threshold.
     """
+    logger.debug("source: %s", source_metadata.source)
+    logger.debug("comments: %r", comments)
     filtered = _filter_by_engagement(
         comments, source_metadata.source, source_metadata.category
     )
+    logger.debug("filtered: %r", filtered)
     quote_pool = _build_quote_pool(filtered, source_metadata)
     if not quote_pool:
         return ([], [])
 
+    logger.debug("quote_pool: %r", quote_pool)
     raw = _call_llm(_build_user_message(quote_pool, source_metadata))
+
+    logger.debug("raw: %r", raw)
+
     pain_items = _validate_pain_items(
         _parse_pain_items(raw), quote_pool, source_metadata
     )
+    logger.debug("pain_items: %r", pain_items)
+
     return (pain_items, quote_pool)

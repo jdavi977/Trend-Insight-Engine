@@ -1,3 +1,6 @@
+import logging
+from pathlib import Path
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -5,9 +8,45 @@ from app.config.secrets import keyChecker
 
 YOUTUBE_API = keyChecker("YOUTUBE_API")
 
+logger = logging.getLogger(__name__)
+
+# Debug trace for this client only: mirrors the run_pipeline / per_source_extraction
+# debug logs, into its own file so swallowed-vs-raised HttpError decisions can be
+# inspected after the fact regardless of the process-wide LOG_LEVEL.
+_DEBUG_LOG_PATH = Path("logs/youtube_client_debug.log")
+if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+    _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _file_handler = logging.FileHandler(_DEBUG_LOG_PATH)
+    _file_handler.setFormatter(
+        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+    )
+    logger.addHandler(_file_handler)
+    logger.setLevel(logging.DEBUG)
+
+# Reasons where "no comments" is a legitimate, expected API response — safe to
+# swallow into []. Any other 403/404 (quotaExceeded, forbidden, keyInvalid, …)
+# is a real failure and must propagate so the pipeline's retry / partial-source
+# accounting (run_pipeline_service._process_source_resilient) can see it,
+# instead of it silently masquerading as a source with zero comments.
+_BENIGN_COMMENT_ERROR_REASONS = {"commentsDisabled", "videoNotFound"}
+
 
 def _service():
     return build("youtube", "v3", developerKey=YOUTUBE_API)
+
+
+def _http_error_reason(e: HttpError) -> str:
+    """Best-effort extraction of the vendor `reason` code (e.g. `commentsDisabled`).
+
+    Falls back to `e.reason` (the human-readable message) when the structured
+    `errors[]` list isn't present in the response body.
+    """
+    details = e.error_details
+    if isinstance(details, list) and details:
+        first = details[0]
+        if isinstance(first, dict):
+            return first.get("reason", "") or e.reason
+    return e.reason
 
 
 def _pick_largest_thumbnail(thumbs: dict) -> dict | None:
@@ -30,8 +69,17 @@ def list_comment_threads(video_id, order, max_results):
         try:
             response = request.execute()
         except HttpError as e:
-            if e.status_code in (403, 404):
+            reason = _http_error_reason(e)
+            if e.status_code in (403, 404) and reason in _BENIGN_COMMENT_ERROR_REASONS:
+                logger.info(
+                    "list_comment_threads: no comments video_id=%s reason=%s",
+                    video_id, reason,
+                )
                 return []
+            logger.warning(
+                "list_comment_threads: HttpError status=%s reason=%s video_id=%s",
+                e.status_code, reason, video_id,
+            )
             raise
         rows = []
         for item in response.get("items", []):
