@@ -93,17 +93,25 @@ def create_chat_completion(
     model: str,
     temperature: float,
     max_tokens: int,
+    response_format: dict | None = None,
 ) -> str:
     """Generic chat-completion call used by v2 LLM stages.
 
     Callers obtain `(model, temperature, max_tokens)` from `app.llm.router.resolve(stage)`.
+
+    `response_format` is forwarded as-is when given (e.g.
+    `{"type": "json_object"}`) — callers that parse the reply as JSON should
+    pass it so the model can't wrap the object in a markdown code fence and
+    silently break `json.loads`.
     """
     client = get_openai_client()
+    kwargs = {} if response_format is None else {"response_format": response_format}
     response = client.chat.completions.create(
         model=model,
         temperature=temperature,
         max_tokens=max_tokens,
         messages=messages,
+        **kwargs,
     )
     _record_usage(model, getattr(response, "usage", None))
     return response.choices[0].message.content
