@@ -86,3 +86,36 @@ Goals: Finish mapping out code architecture.
 
 After: 
 Need to simplify pipeline, look into eval harness and see if it is needed in current state. Look into stratified sampling for using reviews/comments with most likes. Introduce quota guard for openAI call. Reduce noise in comments.
+
+July 12:
+Extraction logs are confusing due to the competitors being ran concurrently, resulting in different task logs being submitted for different competitors at the same time.
+
+Updating this so it is easier debug and optimize pipeline. 
+
+Issues to note of:
+Some apps/videos recommended dont have any reviews/comments
+Change the way we filter, not just based on engagment
+Too many reviews/comments for popular videos/apps: probably due to only filtering based on engagement
+In synthesis, the llm receives an idea but does not use it to help target the gaps around the idea
+Investigate candidate gap being fewer than 2 citations, what if it only has one citation but a lot of engagement, will still be rejected.
+
+there are alot of _call_llm and _build_user_message functions, can make a shared utility class for this
+
+investigate partial_sources_json and preflight_raw_json as they have been NULL in supabase
+
+idea_match_json only works when a target gap is provided
+
+remove feedback events for now
+
+look into the need of quality_signals, right now it is only being recorded in backend
+
+Work on my Claude workflow for better information gathering
+
+
+Based on my current issues I want to scope down as much as possible to make the pipeline more simpler.
+
+Next steps:
+1. Go through current Claude workflow, optimize it which will also help me understand the current code architecture better.
+2. Scope down project
+3. Optimize pipeline based on the issues i found earlier
+4. Go through code and make sure it fits best practices, noticed a lot of redundant code
