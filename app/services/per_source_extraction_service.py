@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import time
 from collections import OrderedDict
 from pathlib import Path
 
@@ -38,18 +39,89 @@ from app.schemas.runs import PainItem, Quote, SourceMetadata
 
 logger = logging.getLogger(__name__)
 
+
+class _DefaultSourceTag(logging.Filter):
+    """Backstop so records logged without a bound source (module-level
+    warnings, etc.) still satisfy the formatter's `%(source_tag)s` field."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "source_tag"):
+            record.source_tag = "-"
+        return True
+
+
 # Debug trace for this stage only: mirrors the ad-hoc print()s that used to
 # live in extract_per_source, but into a file instead of stdout so a full
 # run's output can be inspected after the fact without console truncation.
+#
+# The orchestrator runs one worker thread per competitor concurrently
+# (`asyncio.gather` + `asyncio.to_thread` in run_pipeline_service.py), so
+# logging each stage the instant it happens lets other sources' lines land
+# mid-block. `_SourceTrace` (below) buffers one source's lines in memory and
+# emits them as a single record when the source finishes — one write, so the
+# file handler's lock makes it atomic and no other thread can splice into the
+# middle of it. Each block also carries a `+N.NNNs` offset per line (elapsed
+# since that source started) to make slow stages (ingestion vs. the LLM call)
+# visible at a glance.
 _DEBUG_LOG_PATH = Path("logs/per_source_extraction_debug.log")
 if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
     _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     _file_handler = logging.FileHandler(_DEBUG_LOG_PATH)
     _file_handler.setFormatter(
-        logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+        logging.Formatter(
+            "%(asctime)s | %(levelname)s | source_tag=%(source_tag)s | %(message)s"
+        )
     )
     logger.addHandler(_file_handler)
+    logger.addFilter(_DefaultSourceTag())
     logger.setLevel(logging.DEBUG)
+
+
+class _SourceTrace:
+    """Buffers one source's debug lines, flushed as a single atomic write.
+
+    Blocks land in the file in whatever order sources *finish* (not the order
+    they started), but each block is always contiguous top-to-bottom — no
+    grep needed to reassemble one source's story.
+    """
+
+    def __init__(self, metadata: SourceMetadata) -> None:
+        self._tag = f"{metadata.source}:{metadata.source_id}"
+        self._start = time.monotonic()
+        self._lines: list[str] = []
+        self._level = logging.DEBUG
+
+    def _record(self, level: int, name: str, msg: str, *args: object) -> None:
+        text = msg % args if args else msg
+        elapsed = time.monotonic() - self._start
+        self._lines.append(f"  +{elapsed:7.3f}s {name:<7} {text}")
+        self._level = max(self._level, level)
+
+    def debug(self, msg: str, *args: object) -> None:
+        self._record(logging.DEBUG, "DEBUG", msg, *args)
+
+    def info(self, msg: str, *args: object) -> None:
+        self._record(logging.INFO, "INFO", msg, *args)
+
+    def warning(self, msg: str, *args: object) -> None:
+        self._record(logging.WARNING, "WARNING", msg, *args)
+
+    def flush(self) -> None:
+        """Emit the buffered block as one record, then reset.
+
+        One `logger.log` call = one `FileHandler.emit` = one lock-protected
+        write, which is what keeps the block from being interleaved with a
+        concurrently-running source's lines. Emitted at the highest severity
+        any line in the block recorded (spec §11 criterion 4: the constructed
+        prompt is an INFO-level line, so if a consumer sets this logger to
+        INFO — dropping DEBUG noise — the block, and the prompt inside it,
+        must still survive rather than being dropped by the DEBUG-only path).
+        """
+        if not self._lines:
+            return
+        block = "\n".join(self._lines)
+        logger.log(self._level, block, extra={"source_tag": self._tag})
+        self._lines.clear()
 
 
 _SYSTEM_PROMPT = """You analyse a batch of verbatim user feedback about ONE product (a YouTube video discussion or an App Store app) and extract concrete PAIN ITEMS — recurring complaints, frustrations, or unmet needs.
@@ -157,12 +229,12 @@ def _build_user_message(
     )
 
 
-def _call_llm(user_message: str) -> str:
+def _call_llm(user_message: str, log: "_SourceTrace") -> str:
     cfg = resolve("per_source_extract")
     # Spec §11 criterion 4 + §13: log the constructed prompt so the no-idea
     # property is grep-verifiable from logs. The function signature already
     # guarantees absence; the log lets a reviewer confirm post-hoc.
-    logger.info(
+    log.info(
         "per_source_extract prompt | system=%r | user=%r",
         _SYSTEM_PROMPT, user_message,
     )
@@ -178,12 +250,12 @@ def _call_llm(user_message: str) -> str:
     )
 
 
-def _parse_pain_items(raw: str) -> list[dict]:
+def _parse_pain_items(raw: str, log: "_SourceTrace") -> list[dict]:
     """Tolerate the same JSON shapes the synthesis parser handles."""
     try:
         parsed = json.loads(strip_code_fence(raw))
     except (json.JSONDecodeError, ValueError):
-        logger.warning("per_source_extract: failed to parse LLM JSON: %r", raw)
+        log.warning("per_source_extract: failed to parse LLM JSON: %r", raw)
         return []
     if isinstance(parsed, list):
         parsed = {"pain_items": parsed}
@@ -243,24 +315,28 @@ def extract_per_source(
         member of `{q.quote_id for q in quotes}`. Returns `([], [])` when no
         comment clears the engagement threshold.
     """
-    logger.debug("source: %s", source_metadata.source)
-    logger.debug("comments: %r", comments)
-    filtered = _filter_by_engagement(
-        comments, source_metadata.source, source_metadata.category
-    )
-    logger.debug("filtered: %r", filtered)
-    quote_pool = _build_quote_pool(filtered, source_metadata)
-    if not quote_pool:
-        return ([], [])
+    log = _SourceTrace(source_metadata)
+    try:
+        log.debug("source: %s", source_metadata.source)
+        log.debug("comments: %r", comments)
+        filtered = _filter_by_engagement(
+            comments, source_metadata.source, source_metadata.category
+        )
+        log.debug("filtered: %r", filtered)
+        quote_pool = _build_quote_pool(filtered, source_metadata)
+        if not quote_pool:
+            return ([], [])
 
-    logger.debug("quote_pool: %r", quote_pool)
-    raw = _call_llm(_build_user_message(quote_pool, source_metadata))
+        log.debug("quote_pool: %r", quote_pool)
+        raw = _call_llm(_build_user_message(quote_pool, source_metadata), log)
 
-    logger.debug("raw: %r", raw)
+        log.debug("raw: %r", raw)
 
-    pain_items = _validate_pain_items(
-        _parse_pain_items(raw), quote_pool, source_metadata
-    )
-    logger.debug("pain_items: %r", pain_items)
+        pain_items = _validate_pain_items(
+            _parse_pain_items(raw, log), quote_pool, source_metadata
+        )
+        log.debug("pain_items: %r", pain_items)
 
-    return (pain_items, quote_pool)
+        return (pain_items, quote_pool)
+    finally:
+        log.flush()
