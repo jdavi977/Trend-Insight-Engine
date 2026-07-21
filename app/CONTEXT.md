@@ -1,6 +1,7 @@
 # Backend Context — app/
 
-> Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) +
+> Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) §7.1–§7.5, §7.7–§7.9, §8, §9,
+> §10.1 (read those sections, not the whole file) +
 > [planning/specs/v2-slice-1-end-to-end_spec.md](../planning/specs/v2-slice-1-end-to-end_spec.md).
 > v2 = **idea-in → cross-competitor gaps-out**. The legacy v1 single-URL +
 > weekly surface (routers, jobs, RAG) was deleted in slice 3 (issue #72).

@@ -1,6 +1,8 @@
 # Planning Context — Trend Insight Engine
 
-> Authority: [docs/PRD.md](../docs/PRD.md) (v2.2). This file summarises; the PRD governs.
+> Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) — Background, §1–§3, §7.1,
+> §7.3, §7.5, §7.7–§7.9, §8, §10.1, §15. This file summarises those sections;
+> the PRD governs. Read the named sections, not the whole file.
 
 ## What This App Does (v2)
 Takes a builder's **idea** (vague or specific) and returns a ranked list of

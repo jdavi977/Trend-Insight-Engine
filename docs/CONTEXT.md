@@ -1,8 +1,9 @@
 # Docs Context — docs/
 
-> Authority: [PRD.md](PRD.md) is the v2.2 product spec (idea-in → gaps-out) and
-> the source of truth for product behaviour. API/guide docs describe the `/runs`
-> surface; the v1 single-URL + weekly-trending surface is removed.
+> Authority: [PRD.md](PRD.md) (v2.2, idea-in → gaps-out) §7.1–§7.2, §7.4 — the
+> run lifecycle, the `/runs` endpoints, and the output schema this folder
+> documents. Read those sections, not the whole file. API/guide docs describe
+> the `/runs` surface; the v1 single-URL + weekly-trending surface is removed.
 
 ## Audiences
 - api/      → developers integrating or extending the backend (the `/runs` API)

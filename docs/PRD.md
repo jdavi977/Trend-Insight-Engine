@@ -503,7 +503,7 @@ Deferred from v1, in rough priority (note: eval harness + seed set promoted to v
 5. **Per-run engagement-filter tuning** if §7.5 defaults prove wrong.
 6. **Reddit + HN sources.** Broadens signal for B2B/devtools/developer-tool categories where App Store + YouTube are thin.
 
-**Note — shareable / deep-linkable run URLs are v1 (slice 2), not v1.1.** Slice-1 frontend shipped on in-session state-based navigation (`currentPage` + `activeRunId`, no client router), so a run currently can't be bookmarked, shared, or reopened across a reload — only revisited within the session via the feed or "My Runs." Real URLs (`/`, `/runs/new`, `/runs/:id`) require a router (`react-router-dom`) and converting the three run-lifecycle pages; this lands in **slice 2** (done before the slice-2 feedback/report UI so that UI isn't built twice), and delivers US-4 ("return via a saved URL") and US-5 sharing. Captured in [ADR 2026-06-01-frontend-routing-state-vs-router](../planning/decisions/2026-06-01-frontend-routing-state-vs-router.md).
+**Note — shareable / deep-linkable run URLs are v1 (slice 2), not v1.1.** Slice-1 frontend shipped on in-session state-based navigation (`currentPage` + `activeRunId`, no client router), so a run currently can't be bookmarked, shared, or reopened across a reload — only revisited within the session via the feed or "My Runs." Real URLs (`/`, `/runs/new`, `/runs/:id`) require a router (`react-router-dom`) and converting the three run-lifecycle pages; this lands in **slice 2** (done before the slice-2 feedback/report UI so that UI isn't built twice), and delivers US-4 ("return via a saved URL") and US-5 sharing. Captured in ADR 2026-06-01 (frontend routing: state vs. router).
 
 ### Selection-bias mitigations beyond v1
 

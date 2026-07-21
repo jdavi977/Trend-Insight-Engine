@@ -1,6 +1,7 @@
 # Frontend Context — frontend/
 
-> Authority: [docs/PRD.md](../docs/PRD.md) §7.6 (v2.2). v2 = **idea-in →
+> Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) §6 (US-4, US-5), §7.1, §7.6,
+> §7.8 — read those sections, not the whole file. v2 = **idea-in →
 > gaps-out**. The old 4-page weekly-trending / single-URL SPA (Home, Insights,
 > YouTube, App Store) is **replaced**. Legacy pages remain in `src/` pending the
 > v2 rebuild.
@@ -36,8 +37,7 @@ non-terminal (`pending` / `preflight_ready` / `running`) and stops on
   `/runs/:id`). Pages own their own navigation via `useNavigate()`; the Result
   page reads its run id from the route via `useParams()` — no `onOpenRun` /
   `runId` props, no `currentPage` state switch. This is the one sanctioned
-  routing library: the exception is authorized by **ADR 2026-06-01**
-  (planning/decisions/2026-06-01-frontend-routing-state-vs-router.md), which
+  routing library: the exception is authorized by **ADR 2026-06-01**, which
   supersedes the old "no router" rule and delivers US-4 / US-5.
 - All API calls use Fetch against the `/runs` endpoints; base URL from a config
   constant (`import.meta.env.VITE_API_BASE`), never hardcoded.

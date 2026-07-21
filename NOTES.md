@@ -119,3 +119,5 @@ Next steps:
 2. Scope down project
 3. Optimize pipeline based on the issues i found earlier
 4. Go through code and make sure it fits best practices, noticed a lot of redundant code
+
+thoughts: make target gap part of main idea
