@@ -15,16 +15,32 @@ see [docs/PRD.md](docs/PRD.md) (v2.2) — the source of truth.
 - Data Sources: YouTube Data API v3, iTunes RSS / App Store Search API
 - Server: Uvicorn (ASGI)
 
-## Workspaces
+## Workspaces (code domains)
 - /planning   — Feature specs, architecture decisions, pipeline design
 - /app        — Backend pipeline code (ingestion, preprocessing, LLM, API)
 - /frontend   — React SPA (Home, New Run, Pre-flight, Run/Result, My Runs)
 - /docs       — API reference, guides, changelog
 - /ops        — Deployment, Supabase setup, run execution
 
+## ICM Workspaces
+Staged, gated workflows under `/icm`. These are *not* code domains — each is a
+sequence of stages with review gates that produces artifacts into the domains
+above.
+
+- /icm/feature-planning — Plan a feature end-to-end: frame → spec → architecture
+  map → issues → TDD plan. Enter it when taking a feature from "this is
+  friction" all the way to grabbable issues. Read
+  [icm/feature-planning/CONTEXT.md](icm/feature-planning/CONTEXT.md).
+
+The routing table below is for **one-off** tasks — a single grill, a single
+architecture map, a single breakdown into issues. `/icm/feature-planning` is the
+**sequenced, gated** version of that same work, invoking the same skills in
+order. Same tools; the workspace adds ordering and the stage-01 kill gate.
+
 ## Routing Table
 | Task                        | Go to     | Read               | Skills                                      |
 |-----------------------------|-----------|--------------------|---------------------------------------------|
+| Plan a feature end-to-end   | /icm/feature-planning | icm/feature-planning/CONTEXT.md | (sequences the skills below) |
 | Plan a new feature          | /planning | planning/CONTEXT.md| grill-with-docs, to-issues                  |
 | Stress-test a design        | /planning | planning/CONTEXT.md| grill-me                                    |
 | Write backend code          | /app      | app/CONTEXT.md     | tdd, python-code-review                          |
