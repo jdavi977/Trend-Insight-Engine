@@ -237,14 +237,18 @@ framework, no component library (see [Declined](#8-declined-and-why)).
 
 ## 6. Documentation and decision records
 
-- **⚠️ ADRs live in `planning/decisions/`, one home, full stop.** The `write-adr`
-  skill is already correct. `grill-with-docs` and `improve-codebase-architecture`
-  point at `docs/adr/` and must be repointed — `grill-with-docs` creates that
-  directory lazily *and* is stage 02 of the feature-planning workspace, so
-  running the workspace can spawn a second ADR home.
+- **✅ ADRs live in `planning/decisions/`, one home, full stop.** All three
+  skills that touch ADRs agree: `write-adr` scaffolds there, and
+  `grill-with-docs` (plus its `ADR-FORMAT.md`) and
+  `improve-codebase-architecture` were repointed there in the alignment spec's
+  Slice 4 — each now carries an explicit *never create `docs/adr/`*. That
+  mattered because `grill-with-docs` created the directory lazily *and* is stage
+  02 of the feature-planning workspace, so running the workspace could spawn a
+  second ADR home. Filenames follow root `CLAUDE.md`'s
+  `YYYY-MM-DD-<subject>.md`; the sequential `0001-slug.md` scheme
+  `ADR-FORMAT.md` carried is gone.
   *Enforced by: reviewer judgment; `scripts/check_context_refs.py` catches
-  citations of ADRs that do not exist. Repointing the two skills is part of the
-  alignment spec's Slice 4.*
+  citations of ADRs that do not exist.*
 
 - **✅ Naming conventions are root `CLAUDE.md`'s** — specs
   `feature-name_spec.md`; architecture docs and decision records
