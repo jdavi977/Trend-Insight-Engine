@@ -15,6 +15,12 @@ see [docs/PRD.md](docs/PRD.md) (v2.2) — the source of truth.
 - Data Sources: YouTube Data API v3, iTunes RSS / App Store Search API
 - Server: Uvicorn (ASGI)
 
+## Engineering Standards
+How this repo's code, layout, tooling, and docs should look — naming, config,
+errors/logging, frontend, testing, ADRs, tooling/CI, and what was deliberately
+declined — is [docs/engineering-standards.md](docs/engineering-standards.md).
+It is the authority; cite it by path, never restate it here or in a skill.
+
 ## Workspaces (code domains)
 - /planning   — Feature specs, architecture decisions, pipeline design
 - /app        — Backend pipeline code (ingestion, preprocessing, LLM, API)
@@ -55,7 +61,8 @@ order. Same tools; the workspace adds ordering and the stage-01 kill gate.
 - Specs:            feature-name_spec.md
 - Architecture:     YYYY-MM-DD-topic.md
 - Decision records: YYYY-MM-DD-decision-title.md
-- Backend modules:  camelCase.py (existing pattern, e.g. commentClean.py)
+- Backend modules:  snake_case.py per PEP 8 (e.g. run_pipeline_service.py); the
+                    surviving v1 camelCase modules are a tracked delta
 - Frontend comps:   PascalCase.jsx
 - API endpoints:    resource-oriented run lifecycle (e.g. POST /runs, GET /runs/:id)
 - Supabase tables:  idea_runs, gaps, feedback_events (v2; automatic_table removed)
