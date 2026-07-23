@@ -65,14 +65,15 @@ admin-hidden). `failed` terminal with structured `failure_reason`.
 ## Current Priorities
 - **v1 is complete** (2026-06-11): all three v2.2 slices shipped — the PRD §15
   status table is the source of truth.
-  - Slice 1 — end-to-end happy path
-    ([spec](specs/v2-slice-1-end-to-end_spec.md), shipped 2026-06-01).
+  - Slice 1 — end-to-end happy path (shipped 2026-06-01).
   - Slice 2 — lifecycle hardening: sad paths, rate limit + budget cap,
     feedback/report, `react-router-dom` shareable URLs, My Runs
-    ([spec](specs/v2-slice-2-lifecycle-hardening_spec.md), shipped 2026-06-06).
+    (shipped 2026-06-06).
   - Slice 3 — eval harness + 5-idea seed set, `quality_signals`, count-based
     low-signal gate, pre-flight robustness, v1 legacy teardown
-    ([spec](specs/v2-slice-3-eval-and-v1-removal_spec.md), shipped 2026-06-11).
+    (shipped 2026-06-11).
+  - The three slice specs were retired with the v2 build; PRD §15 is the
+    surviving record.
 - The legacy v1 surface is gone: `/analyze/*` endpoints, weekly jobs,
   `automatic_table*`, RAG surface, and the unlinked v1 frontend pages are
   deleted; `create_app` mounts only the v2 routers.

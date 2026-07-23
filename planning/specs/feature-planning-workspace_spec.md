@@ -158,8 +158,8 @@ the kill gate never fires. (Sibling of the F13 drift; surfaced by the
   skills, and `frontend/CONTEXT.md`'s ADR citation — none exist. Stage 03 writes
   to `architecture/`, so this is load-bearing. (`planning/specs/` now exists.)
 - **U2 — Delete `.github/workflows/weekly-youtube.yml` and
-  `weekly-appstore.yml`.** Both invoke `python -m ops.scripts.weekly*`, and
-  `ops/scripts/` was deleted in the v1→v2 teardown. Last successful run
+  `weekly-appstore.yml`.** Both invoke weekly job modules that were deleted in
+  the v1→v2 teardown, from a workspace that no longer exists. Last successful run
   2026-05-24, before slice 3 shipped 2026-06-11. Dead CI pointing at dead code,
   still cron-scheduled `0 8 * * 0`. `test.yml` stays.
 - **U3 — Scope the PRD citations.** All four `CONTEXT.md` files name the

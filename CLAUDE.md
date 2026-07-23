@@ -26,36 +26,38 @@ It is the authority; cite it by path, never restate it here or in a skill.
 - /app        — Backend pipeline code (ingestion, preprocessing, LLM, API)
 - /frontend   — React SPA (Home, New Run, Pre-flight, Run/Result, My Runs)
 - /docs       — API reference, guides, changelog
-- /ops        — Deployment, Supabase setup, run execution
+
+Run and deploy from the [Makefile](Makefile); there is no `ops` workspace.
 
 ## ICM Workspaces
-Staged, gated workflows under `/icm`. These are *not* code domains — each is a
-sequence of stages with review gates that produces artifacts into the domains
-above.
+Staged, gated workflows under `/icm` — *not* code domains. Each is a sequence of
+stages with review gates producing artifacts into the domains above.
 
-- /icm/feature-planning — Plan a feature end-to-end: frame → spec → architecture
-  map → issues → TDD plan. Enter it when taking a feature from "this is
-  friction" all the way to grabbable issues. Read
+- /icm/feature-planning — frame → spec → architecture map → issues → TDD plan.
+  Enter it to take a feature from "this is friction" to grabbable issues. Read
   [icm/feature-planning/CONTEXT.md](icm/feature-planning/CONTEXT.md).
 
-The routing table below is for **one-off** tasks — a single grill, a single
-architecture map, a single breakdown into issues. `/icm/feature-planning` is the
-**sequenced, gated** version of that same work, invoking the same skills in
-order. Same tools; the workspace adds ordering and the stage-01 kill gate.
+Routing-table rows are **one task, one artifact**; the workspace is the
+**sequenced, gated** version of the same skills, plus the stage-01 kill gate.
 
 ## Routing Table
-| Task                        | Go to     | Read               | Skills                                      |
-|-----------------------------|-----------|--------------------|---------------------------------------------|
-| Plan a feature end-to-end   | /icm/feature-planning | icm/feature-planning/CONTEXT.md | (sequences the skills below) |
-| Plan a new feature          | /planning | planning/CONTEXT.md| grill-with-docs, to-issues                  |
-| Stress-test a design        | /planning | planning/CONTEXT.md| grill-me                                    |
-| Write backend code          | /app      | app/CONTEXT.md     | tdd, python-code-review                          |
-| Debug a pipeline failure    | /app      | app/CONTEXT.md     | triage, python-code-review                          |
-| Refactor a module           | /app      | app/CONTEXT.md     | tdd, python-code-review                          |
-| Modify LLM prompts          | /app/llm  | app/CONTEXT.md     | prompt-engineering                          |
-| Build frontend feature      | /frontend | frontend/CONTEXT.md| frontend-component-standards                |
-| Write API or user docs      | /docs     | docs/CONTEXT.md    | doc-authoring                               |
-| Deploy or run the pipeline  | /ops      | ops/CONTEXT.md     | —                                           |
+| Task                             | Go to     | Read               | Skills                       |
+|----------------------------------|-----------|--------------------|------------------------------|
+| Plan a feature end-to-end (gated)| /icm/feature-planning | icm/feature-planning/CONTEXT.md | (stages sequence the rows below) |
+| Stress-test a design (one-off)   | /planning | planning/CONTEXT.md| grill-me                     |
+| Map a component or data flow     | /planning | planning/CONTEXT.md| map-architecture             |
+| Record a decision                | /planning | planning/CONTEXT.md| write-adr                    |
+| Break a spec into issues         | /planning | planning/CONTEXT.md| to-issues                    |
+| Write or refactor backend code   | /app      | app/CONTEXT.md     | tdd, python-code-review      |
+| Debug a pipeline failure         | /app      | app/CONTEXT.md     | triage, python-code-review   |
+| Find refactoring opportunities   | /app      | app/CONTEXT.md     | improve-codebase-architecture|
+| Modify LLM prompts               | /app/llm  | app/CONTEXT.md     | python-code-review           |
+| Build frontend feature           | /frontend | frontend/CONTEXT.md| frontend-component-standards |
+| Write API or user docs           | /docs     | docs/CONTEXT.md    | —                            |
+
+`grill-with-docs` is the domain-aware grill (challenges terminology, updates
+`CONTEXT.md` / ADRs inline); it is explicit-invoke only, so ask for it by name.
+Deliberately unrouted: `caveman`, `write-a-skill` — invoke by name.
 
 ## Naming Conventions
 - Specs:            feature-name_spec.md

@@ -100,7 +100,7 @@ Frontend runs on `http://localhost:5173` (Vite default).
 The RAG layer and the weekly pipeline both need a Supabase project with `pgvector` enabled.
 
 1. Enable the `pgvector` extension in your Supabase project: **Database → Extensions → vector**
-2. Run the migration scripts in `ops/` to create the `automatic_table` and `insights` tables (see `ops/CONTEXT.md` for details)
+2. Create the tables in the Supabase dashboard (there are no checked-in migration scripts)
 3. Make sure your `.env` has both `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set
 
 ---
@@ -155,6 +155,5 @@ frontend/
     components/ Reusable UI components
     pages/      Home, Insights, YouTube, AppStore
 docs/           API reference, guides, changelog
-ops/            Deployment scripts, Supabase migrations
 planning/       Feature specs, architecture decisions
 ```
