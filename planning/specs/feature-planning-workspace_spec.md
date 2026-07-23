@@ -75,6 +75,17 @@ This spec builds the sequencing layer (§4) and fixes the drift it depends on
 - **D6 — The spec file is the maturing artifact.** Stage 01 opens it with §1–§2
   only; stage 02 fills it out. One artifact that matures across the gate, rather
   than a frame document the spec immediately supersedes.
+- **D7 — A stage-04 mismatch patches the spec in place; the workflow stays at
+  04.** (Closes OQ1.) It does not bounce back to 02 and re-grill. The spec is
+  the maturing artifact (D6), and a mismatch surfacing that late is nearly
+  always a spec gap rather than a bad frame.
+- **D8 — Stage 05's plan lives in the issue body, and stage 05 is plan-only.**
+  (Closes OQ2.) The `tdd` plan is per-issue anyway and issues are where an
+  implementer looks, so there is no `impl-plan.md` and no new path convention.
+  Stage 05 invokes `tdd` §1 (planning) only and stops; the red-green loop runs
+  during implementation, which re-enters via root `CLAUDE.md`'s routing table.
+  Without that exit marker an agent runs the loop inside the *planning*
+  workspace.
 
 ## 4. The workspace — `icm/feature-planning/`
 
@@ -104,7 +115,12 @@ repo. Everything else the workflow needs is cited by path.
 | 02 | **Spec** | `grill-with-docs` skill | same file, filled out | built into the skill (it is an interview) |
 | 03 | **Map** | `map-architecture` skill | `planning/architecture/YYYY-MM-DD-<slug>.md` | light verify |
 | 04 | **Issues** | `to-issues` skill | GitHub issues titled `[spec: <slug>]` | built into the skill (step 4 quizzes on the slice breakdown) |
-| 05 | **Impl plan** | `tdd` skill | `impl-plan.md` (see OQ2) | light verify |
+| 05 | **Impl plan** | `tdd` skill (**§1 planning only**) | TDD plan folded into each `[spec: <slug>]` issue body | light verify |
+
+There is no `impl-plan.md` — stage 05's plan goes where an implementer actually
+looks, in the issue body (D8). Stage 05 is **plan-only**: it does not enter the
+`tdd` red-green loop. Implementation re-enters via root `CLAUDE.md`'s routing
+table once an issue is grabbed.
 
 **Gate design.** Only stage 01 needs a gate the workflow itself enforces —
 02 and 04 are interactive inside their skills, and 03/05 are verify-only. This
@@ -126,6 +142,14 @@ building, how well must it work, how do systems talk, what data is involved,
 | complete | 03 |
 | `planning/architecture/*-<slug>.md` exists | 04 |
 | `gh issue list --search "[spec: <slug>]"` non-empty | 05 |
+
+The "complete ⇒ 03" row is a heuristic on the artifact, and it cannot tell a
+spec this workflow produced from one authored outside it. `CONTEXT.md`
+therefore carries the exception: **a complete spec that stages 01–02 did not
+produce enters at 01 as a confirm-pass** — the six questions walked against
+what the spec already says, ending in explicit approval — because otherwise
+the kill gate never fires. (Sibling of the F13 drift; surfaced by the
+2026-07-22 run.)
 
 ## 5. Drift fixes (prerequisites)
 
@@ -184,13 +208,11 @@ building, how well must it work, how do systems talk, what data is involved,
 
 ## 9. Open questions / risks
 
-- **OQ1 — Gate rejection loop.** When stage 04's slice breakdown doesn't match
-  the spec, does the workflow return to 02 (re-grill) or patch the spec in
-  place? Decide before Slice 3.
-- **OQ2 — Where does `impl-plan.md` live?** It is the one stage-05 artifact with
-  no home in the existing conventions. Candidates: `planning/specs/<slug>_impl-plan.md`,
-  or fold it into each GitHub issue body (the `tdd` plan is per-issue anyway,
-  and issues are where an implementer looks). Leaning fold-in; decide at Slice 1.
+- ~~**OQ1 — Gate rejection loop.**~~ **Closed at Slice 1 → D7.** A stage-04
+  mismatch patches the spec in place and stays at 04.
+- ~~**OQ2 — Where does `impl-plan.md` live?**~~ **Closed at Slice 1 → D8.** It
+  does not exist; the plan folds into each `[spec: <slug>]` issue body, and
+  stage 05 is plan-only.
 - **R1 — The stage table is shaped for additions; #76 is a removal.** Expected to
   expose a gap on the first run. That is a reason to run it, not to avoid it —
   but budget for amending `CONTEXT.md` after Slice 3.

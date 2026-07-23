@@ -41,7 +41,7 @@ the `feature-name` in `feature-name_spec.md`.
 | 02 | **Spec**      | `grill-with-docs` skill        | the same file, filled out                                                             | built into the skill — it is an interview  |
 | 03 | **Map**       | `map-architecture` skill       | `planning/architecture/YYYY-MM-DD-<slug>.md`                                          | light verify                               |
 | 04 | **Issues**    | `to-issues` skill              | GitHub issues titled `[spec: <slug>]`                                                 | built into the skill — its step 4 quizzes on the breakdown |
-| 05 | **Impl plan** | `tdd` skill                    | TDD plan folded into each `[spec: <slug>]` issue body                                 | light verify                               |
+| 05 | **Impl plan** | `tdd` skill (**§1 planning only**) | TDD plan folded into each `[spec: <slug>]` issue body                              | light verify                               |
 
 The spec file is the maturing artifact: stage 01 opens it with §1–§2 only,
 stage 02 fills it out. There is no separate frame document, and no
@@ -62,6 +62,18 @@ This is a real kill gate. Question 6 — *should this feature be built at all?* 
 is allowed to end the workflow: if the answer is no, record why in
 [NOTES.md](../../NOTES.md) and stop. Do not soften a "no" into a smaller
 feature without the user saying so.
+
+### Stage 05 is plan-only
+
+Stage 05 invokes the `tdd` skill for its **§1 Planning** step only: produce the
+TDD plan and fold it into each `[spec: <slug>]` issue body. **Do NOT enter the
+red-green-refactor loop** (`tdd` §2–4) here. This workspace plans features; it
+does not implement them, and no stage writes code under `app/` or `frontend/`.
+
+**Handoff.** Stage 05 ends the workflow. Implementation re-enters through the
+root [CLAUDE.md](../../CLAUDE.md) routing table — a grabbed `[spec: <slug>]`
+issue routes to `/app` or `/frontend` by its domain, and the `tdd` red-green
+loop runs *there*, against that issue's plan.
 
 ### Stage 03 and 05 verify
 
@@ -94,6 +106,17 @@ checks in order and stop at the first one that matches:
 ls planning/specs/<slug>_spec.md planning/architecture/*-<slug>.md 2>/dev/null
 gh issue list --search "[spec: <slug>]"
 ```
+
+**Specs authored outside this workflow enter at 01, not 03.** The table's
+"complete ⇒ 03" row is a *completeness heuristic*, and it reads a spec written
+elsewhere — pasted in, carried over from another repo, drafted ad hoc — as
+though stages 01–02 had run. They didn't, so the kill gate never fired. If the
+spec was not produced by stages 01–02 of this workspace, run stage 01 as a
+**confirm-pass**: walk the six questions against what the spec already says,
+confirm or correct §1–§2, and get explicit approval — including on question 6,
+*should this be built at all?* It is faster than a cold frame because the
+answers are mostly already on the page, but it is a real gate and may still
+kill the feature. Only then continue to 03.
 
 Stage 05 has no file artifact by design — its resume check is "the
 `[spec: <slug>]` issues carry a plan section", not a path on disk.
