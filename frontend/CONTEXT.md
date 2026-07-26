@@ -37,8 +37,9 @@ non-terminal (`pending` / `preflight_ready` / `running`) and stops on
   `/runs/:id`). Pages own their own navigation via `useNavigate()`; the Result
   page reads its run id from the route via `useParams()` — no `onOpenRun` /
   `runId` props, no `currentPage` state switch. This is the one sanctioned
-  routing library: the exception is authorized by **ADR 2026-06-01**, which
-  supersedes the old "no router" rule and delivers US-4 / US-5.
+  routing library; it supersedes the old "no router" rule to deliver US-4 / US-5
+  ([docs/PRD.md](../docs/PRD.md) §6). A formal routing ADR is still to be
+  recorded.
 - All API calls use Fetch against the `/runs` endpoints; base URL from a config
   constant (`import.meta.env.VITE_API_BASE`), never hardcoded.
 - Components are PascalCase.jsx. Each page is a top-level component; shared UI in
@@ -47,8 +48,8 @@ non-terminal (`pending` / `preflight_ready` / `running`) and stops on
 
 ## Patterns to Avoid
 - Do NOT add a state management library.
-- Do NOT add a *second* routing library or replace `react-router-dom`; routing
-  is settled by ADR 2026-06-01. (The prior "no router at all" rule is lifted.)
+- Do NOT add a *second* routing library or replace `react-router-dom`; the
+  single-router rule is settled. (The prior "no router at all" rule is lifted.)
 - Do NOT create a `src/pages/` directory; pages are flat in `src/`.
 - Do NOT call the backend from child components — lift to page level.
 - Do NOT hardcode the backend URL.

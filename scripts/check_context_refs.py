@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -41,34 +41,33 @@ EXTERNAL_SCHEMES = ("http://", "https://", "mailto:")
 
 
 @dataclass(frozen=True)
-class BrokenRef:
-    """One reference edge whose target is absent on disk."""
-
-    source: str  # repo-relative file holding the reference
-    line: int  # 1-indexed line the reference sits on
-    kind: str  # what sort of edge it is (link, skill, ...)
-    target: str  # the reference exactly as written
-    expected: str  # repo-relative path that did not resolve
-
-
-@dataclass(frozen=True)
 class _Ref:
-    """A reference before its target has been checked."""
+    """A reference from the context system to a target that must exist on disk.
 
-    line: int
-    kind: str
-    target: str
+    The extractors build one before checking; `find_dangling_refs` keeps the ones
+    that do not resolve, stamping each with the `source` file it sits in and the
+    `expected` target that is missing. A dangling reference is just a `_Ref` with
+    those two fields set — there is no separate broken-reference type.
+    """
+
+    line: int  # 1-indexed line the reference sits on
+    kind: str  # what sort of edge it is (link, workspace, doc, skill, adr)
+    target: str  # the reference exactly as written
     path: Path
     # Repo-relative glob, for targets whose exact filename is the author's choice
     # (an ADR is dated, but the slug after the date is free text).
     glob: str | None = None
+    # Filled in only for dangling refs, by find_dangling_refs (see class docstring).
+    source: str = ""  # repo-relative file holding the reference
+    expected: str = ""  # repo-relative path (or glob) that did not resolve
 
     def resolves(self, repo_root: Path) -> bool:
         if self.glob is not None:
             return any(repo_root.glob(self.glob))
         return self.path.exists()
 
-    def expected(self, repo_root: Path) -> str:
+    def _expected_target(self, repo_root: Path) -> str:
+        """Repo-relative target that must exist for this reference to resolve."""
         if self.glob is not None:
             return self.glob
         return _relative(self.path, repo_root)
@@ -76,23 +75,21 @@ class _Ref:
 
 def find_dangling_refs(
     roots: Iterable[Path], repo_root: Path
-) -> list[BrokenRef]:
-    """Return every reference in `roots` that does not resolve under `repo_root`."""
+) -> list[_Ref]:
+    """Return every reference in `roots` that does not resolve under `repo_root`.
+
+    Each returned `_Ref` is stamped with its `source` file and the `expected`
+    target that is missing, so it is a self-describing worklist row for the report.
+    """
     repo_root = repo_root.resolve()
-    broken: list[BrokenRef] = []
+    broken: list[_Ref] = []
     for root in roots:
         source = _relative(root.resolve(), repo_root)
         for ref in _extract_refs(root, repo_root):
             if ref.resolves(repo_root):
                 continue
             broken.append(
-                BrokenRef(
-                    source=source,
-                    line=ref.line,
-                    kind=ref.kind,
-                    target=ref.target,
-                    expected=ref.expected(repo_root),
-                )
+                replace(ref, source=source, expected=ref._expected_target(repo_root))
             )
     return broken
 
@@ -285,7 +282,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 1 if broken else 0
 
 
-def _report(broken: Sequence[BrokenRef], checked: int) -> str:
+def _report(broken: Sequence[_Ref], checked: int) -> str:
     """One block per broken edge — file, line, kind, and the path that is missing."""
     if not broken:
         return f"check-refs: {checked} file(s) checked, every reference resolves."
