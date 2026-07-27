@@ -4,8 +4,8 @@
  * every 5s while the run is non-terminal (pending / running / preflight_ready)
  * and stops once `done` or `failed`. Three render states:
  *   - running  → progress shell ("Running across N sources…")
- *   - done     → signal banner, coverage line, optional idea_match card, ranked
- *                gap list with verbatim quotes inline + citation count per gap
+ *   - done     → signal banner, coverage line, ranked gap list with verbatim
+ *                quotes inline + citation count per gap
  *   - failed   → failure_reason surfaced (never a silent blank)
  *
  * Page-level component owns all state and is the only thing that talks to the
@@ -309,10 +309,6 @@ function DoneState({ run, runId, navigate, onNewRun }) {
         {run.partial_sources && <PartialSourcesBanner partial={run.partial_sources} />}
         {run.coverage && <CoverageLine coverage={run.coverage} />}
 
-        {run.idea_match && (
-          <IdeaMatchCard match={run.idea_match} targetGap={run.target_gap} quotes={quotes} />
-        )}
-
         {gaps.length === 0 ? (
           <div
             style={{
@@ -608,45 +604,6 @@ function CoverageLine({ coverage }) {
       <strong style={{ color: "var(--tie-fg-2)", fontWeight: 600 }}>{quotes_retrieved}</strong> retrieved
       quotes were cited ({pct}%).
     </p>
-  );
-}
-
-const IDEA_MATCH_LABEL = {
-  matches: "Matches your target gap",
-  partial: "Partially matches your target gap",
-  no_match: "Doesn’t match your target gap",
-};
-
-function IdeaMatchCard({ match, targetGap, quotes }) {
-  const cited = (match.evidence_quote_ids ?? []).map((id) => quotes[id]).filter(Boolean);
-  return (
-    <div
-      style={{
-        background: "var(--tie-surface)",
-        border: "1px solid var(--tie-border-strong)",
-        borderRadius: "var(--tie-radius-md)",
-        padding: "1.25rem 1.4rem",
-      }}
-    >
-      <div style={{ fontSize: ".72rem", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, color: "var(--tie-fg-3)", marginBottom: ".5rem" }}>
-        Your target gap
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--tie-fg-1)" }}>
-          {IDEA_MATCH_LABEL[match.verdict] ?? match.verdict}
-        </span>
-      </div>
-      {targetGap && (
-        <p style={{ margin: ".5rem 0 0", color: "var(--tie-fg-2)", fontSize: ".92rem", lineHeight: 1.5 }}>
-          “{targetGap}”
-        </p>
-      )}
-      {cited.length > 0 && (
-        <div style={{ marginTop: ".9rem" }}>
-          <QuoteList quotes={cited} />
-        </div>
-      )}
-    </div>
   );
 }
 

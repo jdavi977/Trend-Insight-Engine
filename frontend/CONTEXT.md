@@ -10,7 +10,7 @@
 React 19 + Vite SPA, organised around the run lifecycle:
 - **Home** → public feed of recent completed runs (idea text, completed-at, link)
   + "Start a new run" CTA. Replaces old weekly-trending Home.
-- **New Run** → submit form (idea + optional target gap) → pre-flight loading →
+- **New Run** → submit form (idea — the only field) → pre-flight loading →
   **pre-flight review** (signal-strength panel + competitor list editor).
 - **Run Status / Result** → in-session live progress while `running`, full
   result when `done`. Reached by approving a run or opening one from the feed,
