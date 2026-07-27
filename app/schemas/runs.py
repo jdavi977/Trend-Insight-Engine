@@ -19,7 +19,6 @@ SignalStrength = Literal["high", "medium", "low"]
 RunStatus = Literal[
     "pending", "preflight_ready", "running", "done", "failed", "reported"
 ]
-IdeaMatchVerdict = Literal["matches", "partial", "no_match"]
 
 # Feedback direction (slice 2 §7): the builder's read on their idea after seeing gaps.
 Direction = Literal["continue", "shift", "drop", "need_more_research"]
@@ -41,7 +40,6 @@ class FailureReason(str, Enum):
 
 class RunCreate(BaseModel):
     idea: str = Field(min_length=1)
-    target_gap: Optional[str] = None
 
 
 class Competitor(BaseModel):
@@ -75,8 +73,8 @@ class SourceMetadata(BaseModel):
     """Per-source descriptor for the idea-blinded extractor (spec §8 / §13).
 
     Lives here because the extractor's signature is part of the v2 boundary —
-    it physically excludes `idea` / `target_gap` so confirmation bias cannot
-    leak into per-source prompts.
+    it physically excludes `idea` so confirmation bias cannot leak into
+    per-source prompts.
     """
     source: SourceLiteral
     source_id: str = Field(min_length=1)
@@ -98,12 +96,6 @@ class Coverage(BaseModel):
     quotes_retrieved: int = Field(ge=0)
     quotes_cited: int = Field(ge=0)
     citation_ratio: float = Field(ge=0.0, le=1.0)
-
-
-class IdeaMatch(BaseModel):
-    gap_id: str = Field(min_length=1)
-    verdict: IdeaMatchVerdict
-    evidence_quote_ids: List[str] = Field(default_factory=list)
 
 
 class FailedSource(BaseModel):
@@ -171,7 +163,6 @@ class PreflightResult(BaseModel):
 class RunResult(BaseModel):
     run_id: str
     idea: str
-    target_gap: Optional[str] = None
     created_at: datetime
     category: str
     signal_strength: SignalStrength
@@ -180,7 +171,6 @@ class RunResult(BaseModel):
     gaps: List[GapItem]
     quotes: dict[str, Quote]
     coverage: Coverage
-    idea_match: Optional[IdeaMatch] = None
     partial_sources: Optional[PartialSources] = None
 
 
@@ -193,15 +183,14 @@ class RunCreateResponse(BaseModel):
 class RunStateResponse(BaseModel):
     """Permissive view of a single `idea_runs` row at any lifecycle stage.
 
-    Fields populated by later pipeline stages (gaps, coverage, idea_match) are
-    optional so a `preflight_ready` row serialises cleanly. Once slice 1's
-    background pipeline lands, the `done` view is the union of this shape and
-    the `gaps` table — RunResult stays the strict "terminal" view.
+    Fields populated by later pipeline stages (gaps, coverage) are optional so a
+    `preflight_ready` row serialises cleanly. Once slice 1's background pipeline
+    lands, the `done` view is the union of this shape and the `gaps` table —
+    RunResult stays the strict "terminal" view.
     """
 
     run_id: str
     idea: str
-    target_gap: Optional[str] = None
     status: RunStatus
     created_at: datetime
     updated_at: datetime
@@ -212,7 +201,6 @@ class RunStateResponse(BaseModel):
     quotes: Dict[str, Quote] = Field(default_factory=dict)
     gaps: List[GapItem] = Field(default_factory=list)
     coverage: Optional[Coverage] = None
-    idea_match: Optional[IdeaMatch] = None
     partial_sources: Optional[PartialSources] = None
     failure_reason: Optional[str] = None
 

@@ -11,10 +11,9 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
-def insert_idea_run(idea: str, target_gap: Optional[str]) -> dict:
+def insert_idea_run(idea: str) -> dict:
     response = supabase_client.table("idea_runs").insert({
         "idea": idea,
-        "target_gap": target_gap,
         "status": "pending",
         "competitors_json": [],
         "quotes_json": {},
@@ -79,7 +78,6 @@ def update_idea_run_done(
     run_id: str,
     quotes: dict,
     coverage: dict,
-    idea_match: Optional[dict],
     partial_sources: Optional[dict] = None,
 ) -> dict:
     """Write the terminal happy-path result. `status='done'` is set last (spec §8).
@@ -92,7 +90,6 @@ def update_idea_run_done(
         "status": "done",
         "quotes_json": quotes,
         "coverage_json": coverage,
-        "idea_match_json": idea_match,
         "partial_sources_json": partial_sources,
     }).eq("id", run_id).execute()
     return _one_updated_row(response, run_id)

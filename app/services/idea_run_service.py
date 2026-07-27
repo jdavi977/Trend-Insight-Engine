@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_run(request: RunCreate) -> RunCreateResponse:
-    row = insert_idea_run(request.idea, request.target_gap)
+    row = insert_idea_run(request.idea)
     run_id = row["id"]
 
     # The pre-flight call runs synchronously inside the request (spec §6). Without
@@ -190,7 +190,6 @@ def _row_to_state(row: dict) -> RunStateResponse:
     return RunStateResponse(
         run_id=row["id"],
         idea=row["idea"],
-        target_gap=row.get("target_gap"),
         status=row["status"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
@@ -201,7 +200,6 @@ def _row_to_state(row: dict) -> RunStateResponse:
         quotes=row.get("quotes_json") or {},
         gaps=gaps,
         coverage=row.get("coverage_json"),
-        idea_match=row.get("idea_match_json"),
         partial_sources=row.get("partial_sources_json"),
         failure_reason=row.get("failure_reason"),
     )

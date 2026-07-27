@@ -36,13 +36,12 @@ def _mock_llm(mocker, pain_items_payload):
 
 class TestSignatureIdeaBlinded:
     """The structural guarantee from spec §13: the function physically cannot
-    see `idea` / `target_gap`. Verified by inspecting the signature so a future
-    refactor that adds those parameters fails CI loudly."""
+    see the `idea`. Verified by inspecting the signature so a future refactor
+    that adds that parameter fails CI loudly."""
 
     def test_signature_has_no_idea_parameter(self):
         params = set(inspect.signature(extract_per_source).parameters)
         assert "idea" not in params
-        assert "target_gap" not in params
 
     def test_signature_accepts_only_comments_and_metadata(self):
         params = list(inspect.signature(extract_per_source).parameters)
@@ -224,7 +223,6 @@ class TestIdeaBlindingObservable:
 
     def test_prompt_logged_and_does_not_contain_idea(self, fixture, mocker, caplog):
         idea = "note-taking app with better offline sync"
-        target_gap = "offline reliability"
         _mock_llm(mocker, [])
 
         with caplog.at_level(logging.INFO, logger=svc.logger.name):
@@ -234,7 +232,6 @@ class TestIdeaBlindingObservable:
         assert prompt_logs, "expected the constructed prompt to be logged"
         full = "\n".join(prompt_logs)
         assert idea not in full
-        assert target_gap not in full
 
 
 class TestDegenerateLLMOutput:

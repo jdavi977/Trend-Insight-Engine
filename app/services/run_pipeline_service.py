@@ -10,8 +10,8 @@ in-memory job, and hands the heavy work to FastAPI `BackgroundTasks`.
 `run_pipeline()` is the background coroutine. It fans out across the approved
 competitors concurrently (`asyncio.gather`), caps concurrent OpenAI calls with a
 semaphore, pools the per-source quotes + pain items, synthesises grounded gaps,
-optionally runs the idea-match step, redacts PII at the persist boundary, and
-writes `idea_runs` + `gaps`. `status='done'` is set last.
+redacts PII at the persist boundary, and writes `idea_runs` + `gaps`.
+`status='done'` is set last.
 
 **Source resilience (slice 2 §5.1, US-S3, issue #60).** Each source is wrapped
 in retry-once-with-backoff and isolated: a source that exhausts its retries is
@@ -23,9 +23,9 @@ failures; below it the run is `failed` (`sources_below_threshold`). Errors
 mid-run still leaves the row `running` — the on-read reconciliation that fixes
 that is a separate slice-2 item (§5.2).
 
-**Idea-blinding (spec §13).** `_process_source` does not receive `idea` or
-`target_gap`; `idea` is only in scope at the synthesis / idea-match call sites.
-A future edit cannot leak the idea into per-source prompts through this module.
+**Idea-blinding (spec §13).** `_process_source` does not receive `idea`; it is
+only in scope at the synthesis call site. A future edit cannot leak the idea
+into per-source prompts through this module.
 """
 from __future__ import annotations
 
@@ -54,7 +54,6 @@ from app.config.constants import (
 from app.ingestion.appStoreReviews import getAppReviews
 from app.ingestion.youtubeComments import getYoutubeComments
 from app.llm import synthesis as synthesis_stage
-from app.llm.idea_match import match_idea
 from app.preprocessing.redact import redact
 from app.schemas.runs import (
     Competitor,
@@ -179,13 +178,12 @@ def approve(
         "future": None,
     }
 
-    # `idea` / `target_gap` enter scope here only for synthesis + idea_match —
-    # never threaded into _process_source (spec §13 idea-blinding).
+    # `idea` enters scope here only for synthesis — never threaded into
+    # _process_source (spec §13 idea-blinding).
     background_tasks.add_task(
         run_pipeline,
         run_id=run_id,
         idea=row["idea"],
-        target_gap=row.get("target_gap"),
         category=row.get("category") or "other",
         competitors=request.competitors,
     )
@@ -241,7 +239,7 @@ async def _process_source(
 ) -> tuple[list[PainItem], list[Quote]]:
     """Ingest → extract (idea-blinded) → redact for one source.
 
-    No `idea` / `target_gap` in scope — the confirmation-bias guard (spec §13).
+    No `idea` in scope — the confirmation-bias guard (spec §13).
     The OpenAI call inside `extract_per_source` is bounded by `semaphore`; the
     blocking ingestion + extraction run in worker threads so the gather is real
     concurrency rather than serialised blocking calls.
@@ -355,7 +353,6 @@ def _gap_rows(run_id: str, gaps: list[GapItem]) -> list[dict]:
 async def run_pipeline(
     run_id: str,
     idea: str,
-    target_gap: str | None,
     category: str,
     competitors: list[Competitor],
 ) -> None:
@@ -416,15 +413,8 @@ async def run_pipeline(
 
         _set_stage(run_id, "synthesis")
         gaps, coverage = await asyncio.to_thread(
-            synthesis_stage.synthesize, idea, target_gap, all_quotes, all_pain
+            synthesis_stage.synthesize, idea, all_quotes, all_pain
         )
-
-        idea_match = None
-        if target_gap:
-            _set_stage(run_id, "idea_match")
-            idea_match = await asyncio.to_thread(
-                match_idea, idea, target_gap, gaps, all_quotes
-            )
 
         _set_stage(run_id, "persisting")
         quotes_map = {q.quote_id: q.model_dump() for q in all_quotes}
@@ -437,7 +427,6 @@ async def run_pipeline(
             run_id,
             quotes=quotes_map,
             coverage=coverage.model_dump(),
-            idea_match=idea_match.model_dump() if idea_match else None,
             partial_sources=partial_sources.model_dump() if partial_sources else None,
         )
 

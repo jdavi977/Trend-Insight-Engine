@@ -40,7 +40,6 @@ MODEL_ROUTING = {
     "preflight_rank":     {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 2000},
     "per_source_extract": {"model": "gpt-4o", "temperature": 0.3, "max_tokens": 4000},
     "synthesis":          {"model": "gpt-4o", "temperature": 0.3, "max_tokens": 6000},
-    "idea_match":         {"model": "gpt-4o", "temperature": 0.2, "max_tokens": 1500},
 }
 
 # Per-model OpenAI prices in USD per 1K tokens (slice 2 §6, issue #59, open

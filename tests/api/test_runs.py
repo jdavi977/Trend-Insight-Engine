@@ -32,7 +32,6 @@ def _row(
     return {
         "id": run_id,
         "idea": idea,
-        "target_gap": None,
         "status": status_,
         "category": category,
         "signal_strength": signal_strength,
@@ -40,7 +39,6 @@ def _row(
         "competitors_json": competitors or [],
         "quotes_json": {},
         "coverage_json": None,
-        "idea_match_json": None,
         "failure_reason": None,
         "created_at": "2026-05-28T10:00:00+00:00",
         "updated_at": updated_at,
@@ -88,7 +86,7 @@ def test_post_runs_inserts_row_runs_preflight_and_returns_preflight_ready(client
 
     response = client.post(
         "/runs",
-        json={"idea": "note-taking app with better offline sync", "target_gap": None},
+        json={"idea": "note-taking app with better offline sync"},
     )
 
     assert response.status_code == 200
@@ -99,7 +97,7 @@ def test_post_runs_inserts_row_runs_preflight_and_returns_preflight_ready(client
     assert body["preflight"]["signal_strength"] == "high"
     assert len(body["preflight"]["candidates"]) == 1
 
-    insert.assert_called_once_with("note-taking app with better offline sync", None)
+    insert.assert_called_once_with("note-taking app with better offline sync")
     update.assert_called_once()
     update_kwargs = update.call_args.kwargs
     assert update_kwargs["run_id"] == pending["id"]
@@ -108,6 +106,28 @@ def test_post_runs_inserts_row_runs_preflight_and_returns_preflight_ready(client
         "source": "appstore", "url": "https://apps.apple.com/obsidian",
         "name": "Obsidian", "identifier": "md.obsidian",
     }]
+
+
+def test_post_runs_ignores_a_stale_target_gap_field(client, mocker):
+    """`target_gap` folded into `idea` (#88, spec D5): the field is gone from the
+    contract, but a client still sending it must not hard-fail — Pydantic drops
+    the unknown key and the run is created from `idea` alone."""
+    pending = _row()
+    insert = mocker.patch(
+        "app.services.idea_run_service.insert_idea_run", return_value=pending,
+    )
+    mocker.patch("app.services.idea_run_service.update_idea_run_preflight")
+    mocker.patch(
+        "app.services.idea_run_service.preflight_service.run",
+        return_value=_preflight(),
+    )
+
+    response = client.post(
+        "/runs", json={"idea": "note app", "target_gap": "offline sync"},
+    )
+
+    assert response.status_code == 200
+    insert.assert_called_once_with("note app")
 
 
 def test_post_runs_then_get_runs_returns_current_state(client, mocker):
@@ -136,7 +156,7 @@ def test_post_runs_then_get_runs_returns_current_state(client, mocker):
         "app.services.idea_run_service.get_idea_run", return_value=ready,
     )
 
-    post = client.post("/runs", json={"idea": "idea", "target_gap": None})
+    post = client.post("/runs", json={"idea": "idea"})
     run_id = post.json()["run_id"]
 
     get = client.get(f"/runs/{run_id}")
@@ -422,7 +442,7 @@ def test_post_runs_busy_429_when_a_pipeline_is_running(client, mocker):
 
     run_pipeline_service._jobs["other-run"] = {"status": "running", "stage": "synthesis"}
 
-    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+    response = client.post("/runs", json={"idea": "x"})
 
     assert response.status_code == 429
     assert response.headers["X-RateLimit-Reason"] == "busy"
@@ -437,7 +457,7 @@ def test_post_runs_rate_limited_429_after_hourly_limit(client, mocker):
     for _ in range(RATE_LIMIT_PER_HOUR):
         rate_limit_service.record_run("testclient")
 
-    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+    response = client.post("/runs", json={"idea": "x"})
 
     assert response.status_code == 429
     assert response.headers["X-RateLimit-Reason"] == "rate_limited"
@@ -450,7 +470,7 @@ def test_post_runs_budget_exhausted_429(client, mocker):
         return_value=True,
     )
 
-    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+    response = client.post("/runs", json={"idea": "x"})
 
     assert response.status_code == 429
     assert response.headers["X-RateLimit-Reason"] == "budget_exhausted"
@@ -463,7 +483,7 @@ def test_post_runs_records_run_against_client_ip_on_success(client, mocker):
 
     response = client.post(
         "/runs",
-        json={"idea": "note-taking app with better offline sync", "target_gap": None},
+        json={"idea": "note-taking app with better offline sync"},
         headers={"X-Forwarded-For": "203.0.113.42"},
     )
 

@@ -17,7 +17,6 @@ from app.schemas.runs import (
     FailedSource,
     FailureReason,
     GapItem,
-    IdeaMatch,
     PainItem,
     PartialSources,
     PreflightResult,
@@ -69,12 +68,14 @@ class TestRunCreate:
         with pytest.raises(ValidationError):
             RunCreate(idea="")
 
-    def test_target_gap_optional(self):
-        rc = RunCreate(idea="note app")
-        assert rc.target_gap is None
+    def test_idea_is_the_only_field(self):
+        """`target_gap` was folded into `idea` (#88, spec D5) — a run is created
+        from one idea string, and a stale extra key is dropped, not rejected."""
+        rc = RunCreate(idea="note app", target_gap="offline sync")
+        assert rc.model_dump() == {"idea": "note app"}
 
     def test_round_trip(self):
-        rc = RunCreate(idea="note app", target_gap="offline sync")
+        rc = RunCreate(idea="note app")
         assert RunCreate.model_validate(rc.model_dump()) == rc
 
 
@@ -134,16 +135,6 @@ class TestCoverage:
     def test_happy_path(self):
         c = Coverage(quotes_retrieved=184, quotes_cited=12, citation_ratio=0.065)
         assert c.citation_ratio == pytest.approx(0.065)
-
-
-class TestIdeaMatch:
-    def test_verdict_must_be_known(self):
-        with pytest.raises(ValidationError):
-            IdeaMatch(gap_id="g1", verdict="maybe", evidence_quote_ids=[])
-
-    def test_partial_verdict_allowed(self):
-        m = IdeaMatch(gap_id="g1", verdict="partial", evidence_quote_ids=["q1"])
-        assert m.verdict == "partial"
 
 
 class TestPreflightResult:
@@ -280,7 +271,6 @@ class TestRunResult:
         rr = RunResult(
             run_id="11111111-1111-1111-1111-111111111111",
             idea="note app",
-            target_gap="offline sync",
             created_at=datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc),
             category="notes",
             signal_strength="high",
@@ -289,11 +279,12 @@ class TestRunResult:
             gaps=[_gap()],
             quotes={"q1": _quote("q1"), "q2": _quote("q2")},
             coverage=Coverage(quotes_retrieved=184, quotes_cited=12, citation_ratio=0.065),
-            idea_match=IdeaMatch(gap_id="g1", verdict="matches", evidence_quote_ids=["q1", "q2"]),
         )
         assert RunResult.model_validate(rr.model_dump()) == rr
 
-    def test_idea_match_optional(self):
+    def test_carries_no_idea_match(self):
+        """The idea-match stage was folded away (#88, spec A4) — a terminal
+        result is gaps + quotes + coverage, with no separate match verdict."""
         rr = RunResult(
             run_id="r",
             idea="x",
@@ -306,4 +297,4 @@ class TestRunResult:
             quotes={"q1": _quote("q1"), "q2": _quote("q2")},
             coverage=Coverage(quotes_retrieved=10, quotes_cited=2, citation_ratio=0.2),
         )
-        assert rr.idea_match is None
+        assert "idea_match" not in rr.model_dump()

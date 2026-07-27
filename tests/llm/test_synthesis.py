@@ -25,7 +25,6 @@ def pool():
     pain_items = [PainItem(**p) for p in raw["pain_items"]]
     return {
         "idea": raw["idea"],
-        "target_gap": raw["target_gap"],
         "quotes": quotes,
         "pain_items": pain_items,
     }
@@ -186,19 +185,20 @@ class TestRoutingAndPromptShape:
         assert kwargs["max_tokens"] == 6000
         assert kwargs["response_format"] == {"type": "json_object"}
 
-    def test_user_message_includes_idea_target_gap_and_every_quote_id(self, pool, mocker):
+    def test_user_message_includes_idea_and_every_quote_id(self, pool, mocker):
+        """Synthesis runs on `idea` alone (#88, spec §9 Q1) — the folded-away
+        `target_gap` no longer reaches the prompt."""
         mock_call = mocker.patch(
             MOCK_TARGET,
             return_value=json.dumps({"gaps": []}),
         )
-        pool["target_gap"] = "offline reliability"
 
         synthesize(**pool)
 
         user_msg = mock_call.call_args.kwargs["messages"][1]["content"]
         assert "idea:" in user_msg
         assert pool["idea"] in user_msg
-        assert "offline reliability" in user_msg
+        assert "target_gap" not in user_msg
         for q in pool["quotes"]:
             assert q.quote_id in user_msg
 
@@ -253,9 +253,7 @@ class TestDegenerateLLMOutput:
     def test_empty_pool_yields_zero_ratio_no_divide_by_zero(self, mocker):
         mocker.patch(MOCK_TARGET, return_value=json.dumps({"gaps": []}))
 
-        gaps, coverage = synthesize(
-            idea="x", target_gap=None, quotes=[], pain_items=[]
-        )
+        gaps, coverage = synthesize(idea="x", quotes=[], pain_items=[])
 
         assert gaps == []
         assert coverage.quotes_retrieved == 0

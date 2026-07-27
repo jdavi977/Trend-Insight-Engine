@@ -1,6 +1,5 @@
 {
   "idea": "note-taking app with better offline sync",
-  "target_gap": null,
   "quotes": [
     {"quote_id": "q01", "source": "youtube", "source_id": "notion_review", "text_redacted": "Notion is unusable when I'm on a flight. Edits I make offline get blown away when I reconnect.", "like_count": 142},
     {"quote_id": "q02", "source": "youtube", "source_id": "notion_review", "text_redacted": "The mobile app stutters badly once a page has more than a few hundred lines.", "like_count": 88},

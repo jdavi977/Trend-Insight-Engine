@@ -22,7 +22,6 @@ def _running_row(run_id: str = "r1") -> dict:
     return {
         "id": run_id,
         "idea": "an idea",
-        "target_gap": None,
         "status": "running",
         "created_at": now,
         "updated_at": now,
