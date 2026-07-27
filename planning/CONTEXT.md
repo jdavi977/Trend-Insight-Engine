@@ -37,11 +37,18 @@ scope-down cut is judged against
   surface it was the only real consumer of — the schema, the pipeline
   computation, and the `quality_signals_json` write. The **column itself still
   exists**; the physical drop is slice 5 (spec R5 — code stops writing first).
-- *Still live, scheduled for removal:* the `target_gap` field + `idea_match`
-  stage (folded into `idea`); `POST /runs/:id/feedback`, `POST /runs/:id/report`,
-  `feedback_events`, and the `reported` state; the dead `preflight_raw_json`
-  column. Each leaves in its own slice — this file is updated by the slice that
-  removes it, never ahead of it (spec D4).
+- *Removed (slice 3, [#88](https://github.com/jdavi977/Trend-Insight-Engine/issues/88)):*
+  the `target_gap` field, **folded into `idea`** — dropped from `POST /runs`, the
+  schemas, and the New Run form — and with it the whole `idea_match` stage
+  (`app/llm/idea_match.py`, its pipeline branch, model-routing entry, `IdeaMatch`
+  schema, and the Result page's `IdeaMatchCard`). `synthesize()` now runs on
+  `idea` alone (spec §9 Q1). The **`target_gap` and `idea_match_json` columns
+  still exist**; the physical drop is slice 5 (spec R5). Making synthesis
+  actually *use* the idea to target gaps is reliability work, not this cut (N2).
+- *Still live, scheduled for removal:* `POST /runs/:id/feedback`,
+  `POST /runs/:id/report`, `feedback_events`, and the `reported` state; the dead
+  `preflight_raw_json` column. Each leaves in its own slice — this file is
+  updated by the slice that removes it, never ahead of it (spec D4).
 
 **Cross-spec consequence of the harness cut** (spec D3, recorded here because
 this is where the reliability work will look): the deleted
@@ -81,7 +88,6 @@ Idea text
    ingestion → preprocessing → PII strip → idea-blinded LLM extract → pain list
    (retry once per source; ≥70% must succeed or run fails)
  → Quote-then-claim synthesis (1 LLM call): ranked gaps, each citing ≥2 quote IDs
- → Optional idea-match (if target_gap supplied)
  → Persist to Supabase → done (or done + partial_sources banner)
 ```
 
@@ -93,8 +99,8 @@ admin-hidden). `failed` terminal with structured `failure_reason`.
 - Layer rule: `api/ → services/` only. Pipeline modules don't import each other.
 - Every gap must cite ≥2 retrieved `quote_id`s; uncited/hallucinated-ID gaps
   rejected post-synthesis (PRD §7.7).
-- **Idea-blinded extraction:** per-source prompts exclude `idea`/`target_gap`;
-  only synthesis + idea-match see them (confirmation-bias mitigation, §7.8).
+- **Idea-blinded extraction:** per-source prompts exclude `idea`; only synthesis
+  sees it (confirmation-bias mitigation, §7.8).
 - Pydantic validates all boundaries; synthesis output additionally validated for
   quote-ID grounding.
 - PII redacted at persist time (regex + NER); raw text never persisted (§8).

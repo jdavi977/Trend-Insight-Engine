@@ -61,7 +61,7 @@ a tool that does not run yet.
   readability"*; *"mixedCase is allowed only in contexts where that's already the
   prevailing style … to retain backwards compatibility."* All v2 code complies
   (`per_source_extraction_service.py`, `run_pipeline_service.py`,
-  `idea_match.py`, `json_response.py`). This supersedes the `camelCase.py` line
+  `json_response.py`). This supersedes the `camelCase.py` line
   that root `CLAUDE.md` carried before 2026-07-22.
   *Enforced by: `ruff` `N999`/`N802` (adoption executed in
   `engineering-standards-tooling`); reviewer judgment until then.*

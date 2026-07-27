@@ -125,7 +125,7 @@ pending → preflight_ready → running → done | failed
 
 ### 7.2 Endpoints
 
-- **`POST /runs`** — `{ idea, target_gap? }`. Creates run in `pending`. Pre-flight runs synchronously; response held until pre-flight finishes (≤10s, §8), then flips to `preflight_ready`. Per-IP rate-limited.
+- **`POST /runs`** — `{ idea }`. Creates run in `pending`. Pre-flight runs synchronously; response held until pre-flight finishes (≤10s, §8), then flips to `preflight_ready`. Per-IP rate-limited.
 - **`POST /runs/:id/approve`** — `{ competitors: [{ source, url, name }], acknowledged_low_signal? }`. Validates edited list; `preflight_ready` → `running`; enqueues background pipeline. If pre-flight was `low` signal and the ack flag is missing, returns 400.
 - **`POST /runs/:id/feedback`** — `{ new_to_me_gap_ids?, direction?, time_saved_estimate_minutes? }`. Records §4 indicators. **Append-only**. Valid only when `done`.
 - **`POST /runs/:id/report`** — `{ reason }`. Hides run; queues for admin review.
@@ -167,7 +167,6 @@ Idea text
         - output: ranked gaps, each citing quote IDs from the input pool
         - gaps with no cited quotes are rejected
 
-  → If target_gap supplied: idea-match LLM call
 
   → Persist to Supabase → status `done` (or `done` + `partial_sources` banner)
 
@@ -182,13 +181,12 @@ Pre-flight was prototyped and graded against 15 ideas on 2026-05-22 — PASS on 
 
 ```
 {
-  run_id, idea, target_gap?, created_at,
+  run_id, idea, created_at,
   category, signal_strength, signal_reasoning,
   competitors: [...],
   gaps: [GapItem],
   per_app_pain: [AppPainBlock],
   per_video_pain: [VideoPainBlock],
-  idea_match?: { gap_id, verdict, evidence_quote_ids },
   coverage: { quotes_retrieved, quotes_cited, citation_ratio },  // §7.8
   partial_sources?: { failed: [{source, name, reason}],
                       succeeded_count, total_count },
@@ -245,7 +243,7 @@ Applied server-side based on category; not exposed in v1 UI. Per-run tuning is a
 ### 7.6 Frontend pages
 
 - **Home** — public feed of recent completed runs (idea text, completed-at, link) + "Start a new run" CTA. Replaces the old weekly-trending Home.
-- **New Run** — submit form (idea + optional target gap) → pre-flight loading → **pre-flight review:**
+- **New Run** — submit form (idea — the only field) → pre-flight loading → **pre-flight review:**
   - **Signal-strength panel.** Shows `signal_strength` + `signal_reasoning`. If `low`, prominent: primary CTA *"Continue anyway — I understand the signal will be thin"*, secondary *"Cancel and refine"*. Acknowledgement gates `approve`.
   - **Competitor list editor.** Add / remove / paste URL. Each candidate shows its search-API source ("found via App Store search for X").
 - **Run Status / Result** — live progress while `running` (the page polls and updates itself in-session), full result when `done`. The backend `GET /runs/:id` endpoint sets `X-Robots-Tag: noindex, nofollow`. *Navigation is state-based (no shareable/deep-linkable client URL in v2 — see §15); the run is reached in-session by approving it or opening it from the feed.* When `done`:
@@ -274,11 +272,11 @@ A formal golden eval set (15–20 ideas, hallucination-rate measured) is **defer
 
 - Articulate, emotionally-loaded complaints win over quiet but frequent friction.
 - The LLM's prior over "what categories of pain exist" shapes clustering.
-- If the per-source extractor sees `idea` or `target_gap`, it can over-promote pain matching the user's hypothesis (confirmation bias).
+- If the per-source extractor sees the `idea`, it can over-promote pain matching the user's hypothesis (confirmation bias).
 
 v1 ships three near-zero-cost mitigations:
 
-1. **Idea-blinded extraction.** Per-source prompts exclude `idea` and `target_gap`. Only synthesis sees them; `idea_match` runs after synthesis (§7.3). Removes confirmation bias at zero LLM cost.
+1. **Idea-blinded extraction.** Per-source prompts exclude the `idea`; only synthesis sees it (§7.3). Removes confirmation bias at zero LLM cost.
 2. **Coverage metrics in output.** `coverage: { quotes_retrieved, quotes_cited, citation_ratio }`. UI renders one line: *"12 of 184 retrieved quotes were cited (6%)"*. A run discarding 95% of evidence is structurally weaker than one citing 40%.
 3. **Citation count per gap.** UI shows `len(evidence_quote_ids)` next to severity — 2 citations is weaker than 12.
 
@@ -351,7 +349,7 @@ These signals are logged, not surfaced in the UI in v1. They feed the golden eva
 
 | Store | Used for | Notes |
 |---|---|---|
-| **Supabase `idea_runs`** | One row per run | `id`, `idea`, `target_gap`, `status`, `category`, `signal_strength`, `signal_reasoning`, `competitors_json`, `quotes_json`, `partial_sources_json`, `created_at`, `updated_at`, `failure_reason`, `reported_at`. Source of truth. |
+| **Supabase `idea_runs`** | One row per run | `id`, `idea`, `status`, `category`, `signal_strength`, `signal_reasoning`, `competitors_json`, `quotes_json`, `partial_sources_json`, `created_at`, `updated_at`, `failure_reason`, `reported_at`. Source of truth. The dead `target_gap` / `idea_match_json` columns survive #88 by one slice — physical drop is [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90) (spec R5: code stops writing first). |
 | **Supabase `gaps`** | One row per surfaced gap | `gap_id`, `run_id` (FK), `gap`, `severity`, `frequency`, `spread`, `competitors_present_json`, `evidence_quote_ids_json`. Promoted out of the run blob for cross-run analytics. |
 | **Supabase `feedback_events`** | Append-only feedback log | `id`, `run_id` (FK), `submitted_at`, `new_to_me_gap_ids_json`, `direction`, `time_saved_estimate_minutes`. Never overwritten. |
 | **In-memory job state** | Background task progress for active runs | Lost on restart; active runs → `failed` on next read. |
@@ -394,13 +392,12 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 | **Pre-flight** | 1 | Light (idea text + search results) | ≤10s user-facing | gpt-4o | Cheaper/faster (gpt-4o-mini, Haiku-class). Classification + ranking is a simpler task; accuracy must be validated before downgrading — the §7.9 harness that would have done it is removed (#87), so the downgrade owns its own evidence. |
 | **Per-source extraction** | 10 (parallel) | Heavy (hundreds of comments each) | Background; dominates total run time | gpt-4o | Same family. Token volume is the cost driver — stratified sampling (§15) reduces input before model routing helps. |
 | **Synthesis** | 1 | Heavy (entire pooled quote set) | Background; single largest call | gpt-4o | Reasoning model (o3-class, Opus with extended thinking). One call per run, highest-stakes output — a stronger model here has the best cost/accuracy ratio. |
-| **Idea-match** | 0–1 | Light (gap list + idea text) | Background | gpt-4o | Cheaper model viable; low-stakes relative to synthesis. |
 | **Adversarial pass** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different model family (Claude, Gemini). Same-family critique catches fewer blind spots. |
 | **Cold-model critique** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different family + low temperature. Independent audit of synthesis output. |
 
 **Implementation rule:** each pipeline stage resolves its model config through a single routing function — `resolve(stage_name) → (model, temperature, max_tokens)` — *before* it calls the LLM. The resolver returns config only; the SDK call itself stays in the stage module (e.g. `app/llm/preflight.py`), not inside the router. The discipline being enforced is "no stage hardcodes a model," not "all SDK calls live in one file." v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry — no pipeline code changes. Validating that the swap didn't degrade output is a separate problem the swapper owns: the §7.9 harness that used to answer it was removed (#87).
 
-**Cost-neutral orchestration path:** downgrading pre-flight and idea-match to a cheaper model frees ~10–15% of per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move *once there is evidence* the cheaper models maintain accuracy on those stages — evidence the removed harness no longer supplies.
+**Cost-neutral orchestration path:** downgrading pre-flight to a cheaper model frees a slice of the per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move *once there is evidence* the cheaper models maintain accuracy on those stages — evidence the removed harness no longer supplies.
 
 ## 11. Alternatives Considered
 
@@ -429,7 +426,7 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 
 - **Trend Insight Engine** — Product name. Legacy `TBN` references in code to be migrated.
 - **Idea** — Free-text input describing what to build. May be specific or vague.
-- **Target gap** *(optional)* — A specific pain the user thinks their idea addresses. Triggers idea-match step.
+- **Target gap** — *(removed 2026-07-27, scope-down slice 3, [#88](https://github.com/jdavi977/Trend-Insight-Engine/issues/88))* A specific pain the user thought their idea addressed, submitted as a second form field and scored by an `idea_match` LLM step after synthesis. Folded into `idea`: one input carries the gap intent, and synthesis runs on `idea` alone.
 - **Competitor** — App or video selected (by grounded search + user) as a source of user pain.
 - **Pre-flight** — Cheap LLM + grounded API search that turns an idea into a candidate competitor list.
 - **Pain item** — One problem extracted from one source, tagged with grounding `quote_id`s.
@@ -452,7 +449,7 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
 
 1. Weekly trending pipeline + old Home — removed; replaced by public feed (§7.6).
 2. Run privacy — public by URL with `noindex` + report link (§7.6, §8).
-3. Submit form — two fields: `idea` + optional `target_gap`.
+3. Submit form — two fields: `idea` + optional `target_gap`. **Reversed 2026-07-27 (#88):** `target_gap` was folded into `idea` and the `idea_match` stage it fed was removed — a separate field is extra contract and UI surface for an optional add-on outside the core loop.
 4. Product name — Trend Insight Engine throughout; legacy `TBN` to migrate.
 5. Cost / abuse — per-IP rate limit + daily OpenAI budget cap. No auth, no BYO-key in v1 (§8).
 6. B2B / devtools scope — warn + allow with explicit acknowledgement.
@@ -492,7 +489,7 @@ v1 is built in three vertical slices against this PRD — each a tracer bullet t
 
 All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 abuse/cost guards, §4 feedback indicators, and `partial_sources` handling are wired (slice 2); the count-based low-signal gate is in place and the legacy v1 surface is removed (slice 3). Remaining work is the v1.1 roadmap below.
 
-**Post-v1 scope-down (in progress, [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76)).** Parts of the shipped surface above are being cut back to the core loop — idea in, quote-grounded gaps out. Landed so far: slice 3's eval harness, 5-idea seed set, and `quality_signals` are **removed** (#87, 2026-07-27, §7.9). Still queued: `target_gap` + `idea_match`, the feedback/report endpoints + `feedback_events`, and four dead columns. [planning/CONTEXT.md](../planning/CONTEXT.md) tracks what has actually left, slice by slice; this PRD still describes the pre-scope-down target.
+**Post-v1 scope-down (in progress, [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76)).** Parts of the shipped surface above are being cut back to the core loop — idea in, quote-grounded gaps out. Landed so far: slice 3's eval harness, 5-idea seed set, and `quality_signals` are **removed** (#87, 2026-07-27, §7.9); `target_gap` is **folded into `idea`** and the `idea_match` stage is **removed** (#88, 2026-07-27, §7.2–§7.4). Still queued: the feedback/report endpoints + `feedback_events`, and the dead columns (#90). [planning/CONTEXT.md](../planning/CONTEXT.md) tracks what has actually left, slice by slice; this PRD still describes the pre-scope-down target.
 
 **Note — `signal_strength` gate removal (slice 3).** Before slice 3, the low-signal gate (§7.2 approve `400`, §7.3 step (b), §7.6 acknowledgement) keyed off an *LLM-guessed* `signal_strength` produced by the `PREFLIGHT_GENERATE_QUERIES` call **before any search runs**. That guess is biased and redundant: it's generated in the same call that produces the queries (motivated to rate its own queries favourably), its rubric examples conflate searchability with consumer-vs-B2B category, and it predicts an outcome — *"will the App Store + YouTube return real competitors?"* — that materialises seconds later in the same function as the actual candidate count (`preflight_service.run` already logs `len(raw_apps)`, `len(raw_videos)`, `len(candidates)`). The guess can pass a 0-candidate run or block one with 8 real competitors. Slice 3 removed the LLM grade as a **gate** and keyed the acknowledgement on the observed candidate count instead. `signal_reasoning` is **retained** as displayed pre-flight copy (§7.6) — useful UX, just not load-bearing. (Note: US-S1 "zero competitors found" is already the count-based sad path; this folds the low-signal gate into the same evidence.)
 
@@ -513,7 +510,7 @@ Deferred from v1, in rough priority:
 
 §7.8 ships the cheap measures. Higher-cost alternatives below, ordered by cost-to-value ratio.
 
-Cost is *additional LLM work per run* against a v1 baseline of ~12 calls (1 pre-flight + 10 per-source extraction + 1 synthesis; +1 if `target_gap` triggers `idea_match`). Token volume — not call count — drives spend: per-source extraction dominates (each call digests hundreds of comments), and synthesis is the single largest call (sees the entire pooled quote set). The §8 daily OpenAI budget cap is the binding constraint.
+Cost is *additional LLM work per run* against a v1 baseline of ~12 calls (1 pre-flight + 10 per-source extraction + 1 synthesis). Token volume — not call count — drives spend: per-source extraction dominates (each call digests hundreds of comments), and synthesis is the single largest call (sees the entire pooled quote set). The §8 daily OpenAI budget cap is the binding constraint.
 
 | Alternative | Extra work / run | Cost impact | Value |
 |---|---|---|---|

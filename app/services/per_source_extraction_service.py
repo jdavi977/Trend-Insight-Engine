@@ -10,7 +10,7 @@ One call handles one source (one YouTube video OR one App Store app). Pipeline:
     → parse + drop pain items citing IDs not in the pool
     → (PainItem[], Quote[])
 
-The function signature does **not** accept `idea` or `target_gap`. That is the
+The function signature does **not** accept the `idea`. That is the
 structural guarantee against confirmation-bias leakage (PRD §7.8 / spec §13):
 a future caller cannot leak the idea into per-source prompts because there is
 no parameter to leak it through. The orchestrator that calls this function
