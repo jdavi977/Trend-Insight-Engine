@@ -459,6 +459,10 @@ the follow-on `engineering-standards-tooling` spec, which owns the tooling work.
   seventh, `commentClean.py`, is already gone) plus imports and test files —
   is a conformance-dive change and **moves to the follow-on** (N6). Recommendation
   there stands: rename in one pass while nothing is in flight.
+  *Update 2026-07-27:* `scope-down-core-pipeline` (issue #86) deleted
+  `validateUrl` and `textCleaning` as dead code, so the follow-on's rename scope
+  is **four** modules — `promptTemplates`, `appStoreReviews`, `youtubeComments`,
+  `reviewPipeline` — plus `keyChecker()`.
 
 - **OQ2 — `grill-me` vs `grill-with-docs`: DECIDED — keep both.** `grill-with-docs`
   carries `disable-model-invocation: true`, so the model cannot auto-reach it;

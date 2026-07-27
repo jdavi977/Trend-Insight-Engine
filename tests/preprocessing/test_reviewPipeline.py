@@ -143,7 +143,7 @@ def test_keyword_filter_none_keeps_all_rows():
 def test_multi_keyword_match_row_appears_exactly_once():
     """A row whose Content matches multiple keywords in the filter is kept once.
 
-    The legacy ``textCleaning.keyword_filtering`` appended the row once per
+    The since-deleted ``textCleaning.keyword_filtering`` appended the row once per
     matched keyword, producing duplicates that were silently masked by a
     subsequent ``remove_duplicates`` call.  ``reviewPipeline.clean`` fixes
     this at the source by breaking on the first match.

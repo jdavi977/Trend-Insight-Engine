@@ -14,6 +14,35 @@ Framing: **decision support, not a verdict.** Best-fit categories are consumer
 apps, mobile games, creator tools, productivity. B2B/devtools/enterprise are
 warned as low-signal but allowed with explicit acknowledgement.
 
+## Core-Loop Foundation (the scope-down reference)
+The foundation this project scales back to is **one loop**: an **idea** goes in →
+**pre-flight** classifies it and proposes competitors → **ingest** pulls YouTube
+comments and App Store reviews per competitor → **clean** normalises and filters
+them → **redact** strips PII → **idea-blinded per-source extraction** turns each
+source into pain items without seeing the idea → **quote-then-claim synthesis**
+ranks those into candidate gaps → **persisted, quote-grounded gaps** come out.
+Everything not serving that loop is **opt-in-later**: cut cleanly and recoverable
+from git, never left half-maintained. This paragraph is the reference every
+scope-down cut is judged against
+([scope-down-core-pipeline_spec.md](specs/scope-down-core-pipeline_spec.md) G1).
+
+**Opt-in-later surfaces** — verdicts and reasons in that spec §5, logged on
+[#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76):
+
+- *Removed (this slice):* the empty v1-teardown shells `app/rag/`, `app/lib/`,
+  `tests/rag/`, `tests/jobs/`; the dead v1 modules
+  `preprocessing/validateUrl.py` (+ its test) and `utilities/textCleaning.py`.
+- *Still live, scheduled for removal:* the eval harness (`app/eval/`) +
+  `quality_signals`; the `target_gap` field + `idea_match` stage (folded into
+  `idea`); `POST /runs/:id/feedback`, `POST /runs/:id/report`, `feedback_events`,
+  and the `reported` state; the dead `preflight_raw_json` column. Each leaves in
+  its own slice — this file is updated by the slice that removes it, never ahead
+  of it (spec D4).
+
+**Kept, explicitly** (so a later sweep doesn't re-flag them): `partial_sources_json`
+(written + read), `preprocessing/redact.py`, `preprocessing/reviewPipeline.py`,
+`jobs/preflight_smoke.py`.
+
 ## The v1→v2 Pivot (why this version exists)
 v1 was **URL-in, problems-out** for a single source, plus a weekly trending
 cron. Two problems drove the pivot (PRD Background):

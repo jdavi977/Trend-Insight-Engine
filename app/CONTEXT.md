@@ -11,7 +11,7 @@
 | config/        | Constants/tunables, prompts, regex, secrets. `constants.py` holds `MODEL_ROUTING` (§10.1) + engagement filters |
 | clients/       | One file per external service — `appstore.py`, `youtube.py`, `openai.py`, `supabase.py` |
 | ingestion/     | YouTube comment fetch + App Store review fetch                       |
-| preprocessing/ | `reviewPipeline.py`, `validateUrl.py`, `redact.py` (regex + NER PII strip) |
+| preprocessing/ | `reviewPipeline.py`, `redact.py` (regex + NER PII strip)             |
 | llm/           | `preflight.py`, `synthesis.py`, `idea_match.py`, `router.py` (stage→model resolver). Per-source extraction lives in `services/per_source_extraction_service.py` |
 | schemas/       | Pydantic boundary models — `runs.py` (v2 domain) |
 | api/           | One router per resource. `runs.py`, `health.py` (`GET /` liveness). Plus `errors.py` |
@@ -80,7 +80,7 @@ Legacy `/analyze/*`, `/get/homePage`, `/data/send`, `/insights/similar` are
   `tests/services/`, `tests/llm/`, `tests/preprocessing/`).
 - Tooling: `pytest` + `pytest-mock` + `httpx.TestClient`.
 - Mock external services (YouTube, App Store, OpenAI, Supabase). Hit pure modules
-  (preprocessing, redact, validateUrl, schemas, llm/router) for real.
+  (preprocessing, redact, schemas, llm/router) for real.
 - Eval harness (PRD §7.9): runner scores pipeline output (gap recall,
   hallucination rate, citation ratio, severity calibration) against a 5-idea
   hand-labelled seed set. Manual in v1; CI gate is v1.1.

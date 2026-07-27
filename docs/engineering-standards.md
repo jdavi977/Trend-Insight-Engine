@@ -66,11 +66,13 @@ a tool that does not run yet.
   *Enforced by: `ruff` `N999`/`N802` (adoption executed in
   `engineering-standards-tooling`); reviewer judgment until then.*
 
-- **⚠️ Six v1 modules and one function are still camelCase** —
+- **⚠️ Four v1 modules and one function are still camelCase** —
   `config/promptTemplates.py`, `ingestion/appStoreReviews.py`,
-  `ingestion/youtubeComments.py`, `preprocessing/reviewPipeline.py`,
-  `preprocessing/validateUrl.py`, `utilities/textCleaning.py`, and
-  `keyChecker()` in `config/secrets.py`. The **rule** above is settled; the
+  `ingestion/youtubeComments.py`, `preprocessing/reviewPipeline.py`, and
+  `keyChecker()` in `config/secrets.py`. (`preprocessing/validateUrl.py` and
+  `utilities/textCleaning.py` were on this list until 2026-07-27, when
+  `scope-down-core-pipeline` deleted them as dead code — they leave the rename
+  scope rather than entering it.) The **rule** above is settled; the
   **rename migration** (modules, imports, and the matching test files) is
   deferred so it can land in one pass while nothing else is in flight.
   *Enforced by: `ruff` `N999`. **Rename executed in
@@ -215,8 +217,8 @@ framework, no component library (see [Declined](#8-declined-and-why)).
   (`python-code-review`).*
 
 - **✅ Mock external services; run pure modules for real.** YouTube, App Store,
-  OpenAI, and Supabase are mocked; `preprocessing`, `redact`, `validateUrl`,
-  `schemas`, and `llm/router` are exercised directly. A test that mocks a pure
+  OpenAI, and Supabase are mocked; `preprocessing`, `redact`, `schemas`, and
+  `llm/router` are exercised directly. A test that mocks a pure
   module is testing the mock. *Enforced by: reviewer judgment.*
 
 - **✅ Behaviour over implementation; vertical slices over horizontal layers.**
