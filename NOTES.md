@@ -107,7 +107,9 @@ idea_match_json only works when a target gap is provided
 
 remove feedback events for now
 
-look into the need of quality_signals, right now it is only being recorded in backend
+~~look into the need of quality_signals, right now it is only being recorded in backend~~
+DONE 2026-07-27 (#87) — there was no need. Cut with the eval harness, its only
+real consumer. Column drop is slice 5.
 
 Work on my Claude workflow for better information gathering
 

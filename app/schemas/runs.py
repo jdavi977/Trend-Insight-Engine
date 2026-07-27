@@ -168,34 +168,6 @@ class PreflightResult(BaseModel):
         return 0 < len(self.candidates) < LOW_SIGNAL_CANDIDATE_THRESHOLD
 
 
-class ExtractionYield(BaseModel):
-    """Per-source extraction throughput (slice 3 §5).
-
-    Collected during fan-out — how many comments/reviews a source contributed
-    and how many pain items the idea-blinded extractor emitted from them.
-    """
-
-    source: SourceLiteral
-    comment_count: int = Field(ge=0)
-    pain_item_count: int = Field(ge=0)
-
-
-class QualitySignals(BaseModel):
-    """Per-run observability signals (slice 3 §5 / PRD §7.9).
-
-    Computed post-synthesis on every production run, persisted to
-    `idea_runs.quality_signals_json`, and **logged — not surfaced in the v1 UI**.
-    Never load-bearing for completion: a computation error persists `null`
-    rather than failing the run.
-    """
-
-    quote_source_diversity: float = Field(ge=0.0, le=1.0)
-    # Length-5: count of gaps at severity [1,2,3,4,5].
-    severity_distribution: List[int] = Field(min_length=5, max_length=5)
-    single_source_gap_count: int = Field(ge=0)
-    extraction_yield: List[ExtractionYield] = Field(default_factory=list)
-
-
 class RunResult(BaseModel):
     run_id: str
     idea: str
@@ -210,7 +182,6 @@ class RunResult(BaseModel):
     coverage: Coverage
     idea_match: Optional[IdeaMatch] = None
     partial_sources: Optional[PartialSources] = None
-    quality_signals: Optional[QualitySignals] = None
 
 
 class RunCreateResponse(BaseModel):
@@ -243,7 +214,6 @@ class RunStateResponse(BaseModel):
     coverage: Optional[Coverage] = None
     idea_match: Optional[IdeaMatch] = None
     partial_sources: Optional[PartialSources] = None
-    quality_signals: Optional[QualitySignals] = None
     failure_reason: Optional[str] = None
 
 

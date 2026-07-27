@@ -29,15 +29,27 @@ scope-down cut is judged against
 **Opt-in-later surfaces** — verdicts and reasons in that spec §5, logged on
 [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76):
 
-- *Removed (this slice):* the empty v1-teardown shells `app/rag/`, `app/lib/`,
+- *Removed (slice 1):* the empty v1-teardown shells `app/rag/`, `app/lib/`,
   `tests/rag/`, `tests/jobs/`; the dead v1 modules
   `preprocessing/validateUrl.py` (+ its test) and `utilities/textCleaning.py`.
-- *Still live, scheduled for removal:* the eval harness (`app/eval/`) +
-  `quality_signals`; the `target_gap` field + `idea_match` stage (folded into
-  `idea`); `POST /runs/:id/feedback`, `POST /runs/:id/report`, `feedback_events`,
-  and the `reported` state; the dead `preflight_raw_json` column. Each leaves in
-  its own slice — this file is updated by the slice that removes it, never ahead
-  of it (spec D4).
+- *Removed (slice 2, [#87](https://github.com/jdavi977/Trend-Insight-Engine/issues/87)):*
+  the eval harness (`app/eval/` + `tests/eval/`) and the `quality_signals`
+  surface it was the only real consumer of — the schema, the pipeline
+  computation, and the `quality_signals_json` write. The **column itself still
+  exists**; the physical drop is slice 5 (spec R5 — code stops writing first).
+- *Still live, scheduled for removal:* the `target_gap` field + `idea_match`
+  stage (folded into `idea`); `POST /runs/:id/feedback`, `POST /runs/:id/report`,
+  `feedback_events`, and the `reported` state; the dead `preflight_raw_json`
+  column. Each leaves in its own slice — this file is updated by the slice that
+  removes it, never ahead of it (spec D4).
+
+**Cross-spec consequence of the harness cut** (spec D3, recorded here because
+this is where the reliability work will look): the deleted
+`pipeline-reliability-hardening` spec's **exit-criterion 5** — *"eval harness
+green post-retune, all 5 seed categories, recall not worse"* — is void, as is its
+planned `quality_signals` extension (`quotes_dropped_for_budget`). The eventual
+engagement-filter retune **must bring its own validation** and must not be filed
+citing exit-criterion 5.
 
 **Kept, explicitly** (so a later sweep doesn't re-flag them): `partial_sources_json`
 (written + read), `preprocessing/redact.py`, `preprocessing/reviewPipeline.py`,

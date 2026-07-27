@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -59,13 +58,11 @@ from app.llm.idea_match import match_idea
 from app.preprocessing.redact import redact
 from app.schemas.runs import (
     Competitor,
-    ExtractionYield,
     FailedSource,
     FailureReason,
     GapItem,
     PainItem,
     PartialSources,
-    QualitySignals,
     Quote,
     RunApprove,
     SourceMetadata,
@@ -241,17 +238,13 @@ async def _process_source(
     competitor: Competitor,
     category: str,
     semaphore: asyncio.Semaphore,
-) -> tuple[int, list[PainItem], list[Quote]]:
+) -> tuple[list[PainItem], list[Quote]]:
     """Ingest → extract (idea-blinded) → redact for one source.
 
     No `idea` / `target_gap` in scope — the confirmation-bias guard (spec §13).
     The OpenAI call inside `extract_per_source` is bounded by `semaphore`; the
     blocking ingestion + extraction run in worker threads so the gather is real
     concurrency rather than serialised blocking calls.
-
-    Returns the raw comment count alongside the extracted pain items + quotes so
-    the orchestrator can fold per-source extraction yield into `quality_signals`
-    (slice 3 §5) without re-ingesting.
     """
     comments = await asyncio.to_thread(_ingest, competitor)
     logger.debug(
@@ -269,7 +262,7 @@ async def _process_source(
             extract_per_source, comments, metadata
         )
     redacted = [_redact_quote(q) for q in quotes]
-    return len(comments), pain_items, redacted
+    return pain_items, redacted
 
 
 # --- per-source resilience (slice 2 §5.1, US-S3) ----------------------------
@@ -277,14 +270,9 @@ async def _process_source(
 
 @dataclass
 class _SourceSuccess:
-    """One source that survived (possibly after a retry); feeds the quote pool.
-
-    `comment_count` is the raw row count ingested before extraction — it feeds
-    the per-source `extraction_yield` in `quality_signals` (slice 3 §5).
-    """
+    """One source that survived (possibly after a retry); feeds the quote pool."""
 
     competitor: Competitor
-    comment_count: int
     pain_items: list[PainItem]
     quotes: list[Quote]
 
@@ -321,12 +309,11 @@ async def _process_source_resilient(
     last_exc: Exception | None = None
     for attempt in range(SOURCE_RETRY_ATTEMPTS):
         try:
-            comment_count, pain_items, quotes = await _process_source(
+            pain_items, quotes = await _process_source(
                 competitor, category, semaphore
             )
             return _SourceSuccess(
                 competitor=competitor,
-                comment_count=comment_count,
                 pain_items=pain_items,
                 quotes=quotes,
             )
@@ -363,67 +350,6 @@ def _gap_rows(run_id: str, gaps: list[GapItem]) -> list[dict]:
         }
         for ordinal, gap in enumerate(gaps, start=1)
     ]
-
-
-# --- quality signals (slice 3 §5 / PRD §7.9) --------------------------------
-
-
-def _compute_quality_signals(
-    gaps: list[GapItem],
-    quotes: list[Quote],
-    extraction_yield: list[ExtractionYield],
-) -> QualitySignals:
-    """Derive the per-run observability signals from the synthesised result.
-
-    - `quote_source_diversity` (OQ3): `1 - max_source_share` over the source
-      distribution of *cited* quotes (those referenced by some gap's
-      `evidence_quote_ids`). 0 when one source supplies every cited quote (or
-      there are no citations); approaches 1 as citations spread across sources.
-    - `severity_distribution`: length-5 count of gaps at severity [1..5].
-    - `single_source_gap_count`: gaps confined to one competitor (`spread == 1`).
-    - `extraction_yield`: passed through from the per-source fan-out.
-    """
-    source_by_quote = {q.quote_id: q.source for q in quotes}
-    cited_ids = {qid for gap in gaps for qid in gap.evidence_quote_ids}
-    source_counts = Counter(
-        source_by_quote[qid] for qid in cited_ids if qid in source_by_quote
-    )
-    total_cited = sum(source_counts.values())
-    diversity = 0.0 if total_cited == 0 else 1.0 - max(source_counts.values()) / total_cited
-
-    severity_distribution = [0, 0, 0, 0, 0]
-    for gap in gaps:
-        if 1 <= gap.severity <= 5:
-            severity_distribution[gap.severity - 1] += 1
-
-    return QualitySignals(
-        quote_source_diversity=round(diversity, 4),
-        severity_distribution=severity_distribution,
-        single_source_gap_count=sum(1 for gap in gaps if gap.spread == 1),
-        extraction_yield=extraction_yield,
-    )
-
-
-def _safe_quality_signals(
-    run_id: str,
-    gaps: list[GapItem],
-    quotes: list[Quote],
-    extraction_yield: list[ExtractionYield],
-) -> QualitySignals | None:
-    """Compute `quality_signals` defensively (slice 3 §5).
-
-    The field is observability, never load-bearing for completion: a computation
-    error is logged and persisted as `null` rather than failing an otherwise
-    successful run.
-    """
-    try:
-        return _compute_quality_signals(gaps, quotes, extraction_yield)
-    except Exception as exc:  # noqa: BLE001 — quality_signals must never fail a run.
-        logger.warning(
-            "quality_signals_failed run_id=%s reason=%s: %s",
-            run_id, type(exc).__name__, exc,
-        )
-        return None
 
 
 async def run_pipeline(
@@ -500,29 +426,6 @@ async def run_pipeline(
                 match_idea, idea, target_gap, gaps, all_quotes
             )
 
-        # Per-run observability (slice 3 §5 / PRD §7.9): yield per surviving
-        # source, then derive the post-synthesis signals. Logged, not rendered,
-        # and never load-bearing — a computation error persists `null`.
-        extraction_yield = [
-            ExtractionYield(
-                source=o.competitor.source,
-                comment_count=o.comment_count,
-                pain_item_count=len(o.pain_items),
-            )
-            for o in succeeded
-        ]
-        quality_signals = _safe_quality_signals(
-            run_id, gaps, all_quotes, extraction_yield
-        )
-        if quality_signals is not None:
-            logger.info(
-                "quality_signals run_id=%s diversity=%.4f severity=%s "
-                "single_source_gaps=%d",
-                run_id, quality_signals.quote_source_diversity,
-                quality_signals.severity_distribution,
-                quality_signals.single_source_gap_count,
-            )
-
         _set_stage(run_id, "persisting")
         quotes_map = {q.quote_id: q.model_dump() for q in all_quotes}
         # Gaps land BEFORE the status flip so `status='done'` is genuinely the
@@ -536,7 +439,6 @@ async def run_pipeline(
             coverage=coverage.model_dump(),
             idea_match=idea_match.model_dump() if idea_match else None,
             partial_sources=partial_sources.model_dump() if partial_sources else None,
-            quality_signals=quality_signals.model_dump() if quality_signals else None,
         )
 
         job = _jobs.get(run_id)

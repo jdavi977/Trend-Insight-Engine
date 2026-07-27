@@ -14,7 +14,6 @@ from pydantic import ValidationError
 from app.schemas.runs import (
     Competitor,
     Coverage,
-    ExtractionYield,
     FailedSource,
     FailureReason,
     GapItem,
@@ -22,7 +21,6 @@ from app.schemas.runs import (
     PainItem,
     PartialSources,
     PreflightResult,
-    QualitySignals,
     Quote,
     RunApprove,
     RunCreate,
@@ -277,58 +275,6 @@ class TestPartialSources:
             PartialSources(failed=[], succeeded_count=-1, total_count=0)
 
 
-def _quality_signals(**overrides):
-    base = {
-        "quote_source_diversity": 0.5,
-        "severity_distribution": [0, 1, 2, 3, 4],
-        "single_source_gap_count": 1,
-        "extraction_yield": [
-            ExtractionYield(source="youtube", comment_count=184, pain_item_count=12),
-        ],
-    }
-    return QualitySignals(**{**base, **overrides})
-
-
-class TestExtractionYield:
-    def test_round_trip(self):
-        ey = ExtractionYield(source="appstore", comment_count=40, pain_item_count=5)
-        assert ExtractionYield.model_validate(ey.model_dump()) == ey
-
-    def test_source_must_be_known(self):
-        with pytest.raises(ValidationError):
-            ExtractionYield(source="reddit", comment_count=1, pain_item_count=1)
-
-    def test_counts_non_negative(self):
-        with pytest.raises(ValidationError):
-            ExtractionYield(source="youtube", comment_count=-1, pain_item_count=0)
-
-
-class TestQualitySignals:
-    def test_round_trip(self):
-        qs = _quality_signals()
-        assert QualitySignals.model_validate(qs.model_dump()) == qs
-
-    def test_severity_distribution_must_be_length_five(self):
-        with pytest.raises(ValidationError):
-            _quality_signals(severity_distribution=[0, 1, 2, 3])
-        with pytest.raises(ValidationError):
-            _quality_signals(severity_distribution=[0, 1, 2, 3, 4, 5])
-
-    def test_diversity_bounded(self):
-        with pytest.raises(ValidationError):
-            _quality_signals(quote_source_diversity=1.5)
-        with pytest.raises(ValidationError):
-            _quality_signals(quote_source_diversity=-0.1)
-
-    def test_single_source_gap_count_non_negative(self):
-        with pytest.raises(ValidationError):
-            _quality_signals(single_source_gap_count=-1)
-
-    def test_extraction_yield_defaults_empty(self):
-        qs = _quality_signals(extraction_yield=[])
-        assert qs.extraction_yield == []
-
-
 class TestRunResult:
     def test_full_round_trip(self):
         rr = RunResult(
@@ -344,24 +290,8 @@ class TestRunResult:
             quotes={"q1": _quote("q1"), "q2": _quote("q2")},
             coverage=Coverage(quotes_retrieved=184, quotes_cited=12, citation_ratio=0.065),
             idea_match=IdeaMatch(gap_id="g1", verdict="matches", evidence_quote_ids=["q1", "q2"]),
-            quality_signals=_quality_signals(),
         )
         assert RunResult.model_validate(rr.model_dump()) == rr
-
-    def test_quality_signals_optional(self):
-        rr = RunResult(
-            run_id="r",
-            idea="x",
-            created_at=datetime(2026, 5, 28, tzinfo=timezone.utc),
-            category="c",
-            signal_strength="medium",
-            signal_reasoning="r",
-            competitors=[_competitor()],
-            gaps=[_gap()],
-            quotes={"q1": _quote("q1"), "q2": _quote("q2")},
-            coverage=Coverage(quotes_retrieved=10, quotes_cited=2, citation_ratio=0.2),
-        )
-        assert rr.quality_signals is None
 
     def test_idea_match_optional(self):
         rr = RunResult(

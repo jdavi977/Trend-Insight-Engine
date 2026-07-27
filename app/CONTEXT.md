@@ -17,7 +17,6 @@
 | api/           | One router per resource. `runs.py`, `health.py` (`GET /` liveness). Plus `errors.py` |
 | services/      | Orchestration — `idea_run_service`, `run_pipeline_service`, `preflight_service`, `per_source_extraction_service` |
 | jobs/          | Runnable entrypoints. `preflight_smoke.py` |
-| eval/          | PRD §7.9 measurement: `harness.py` drives the real pipeline on a `seed/` idea; `metrics.py` = the four pure scorers; reports → gitignored `reports/`. Outside the request path |
 | utilities/     | Cross-cutting helpers only                                           |
 | main.py        | App factory: `create_app()`, CORS, X-Robots-Tag middleware, routers, exception handlers |
 
@@ -81,9 +80,9 @@ Legacy `/analyze/*`, `/get/homePage`, `/data/send`, `/insights/similar` are
 - Tooling: `pytest` + `pytest-mock` + `httpx.TestClient`.
 - Mock external services (YouTube, App Store, OpenAI, Supabase). Hit pure modules
   (preprocessing, redact, schemas, llm/router) for real.
-- Eval harness (PRD §7.9): runner scores pipeline output (gap recall,
-  hallucination rate, citation ratio, severity calibration) against a 5-idea
-  hand-labelled seed set. Manual in v1; CI gate is v1.1.
+- The PRD §7.9 eval harness and the per-run quality-signal bundle it scored were
+  **cut** in the scope-down (issue #87). Pipeline output has no automated quality
+  measurement — a change that needs quality validation brings its own.
 
 ## v2 Domain Schema (schemas/runs.py)
 - `GapItem`: `gap_id`, `gap`, `severity` (1–5 rubric), `frequency` (raw count),
@@ -98,4 +97,5 @@ Legacy `/analyze/*`, `/get/homePage`, `/data/send`, `/insights/similar` are
 ## Model Routing (config/constants.py + llm/router.py)
 v1 maps every stage to `gpt-4o`. Stages: `preflight_classify`, `preflight_rank`,
 `per_source_extract`, `synthesis`, `idea_match`. Swapping a model per stage is a
-one-line config change validated against the eval harness — no pipeline edits.
+one-line config change — no pipeline edits. The harness that used to validate a
+swap is gone (#87), so a swap now carries its own validation.

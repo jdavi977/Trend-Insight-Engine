@@ -286,6 +286,8 @@ These reduce one bias vector (idea-leakage) and make the rest *visible*, consist
 
 ### 7.9 Evaluation harness
 
+> **REMOVED 2026-07-27** — scope-down slice 2, [#87](https://github.com/jdavi977/Trend-Insight-Engine/issues/87), spec [D2/D3](../planning/specs/scope-down-core-pipeline_spec.md). `app/eval/` (harness, metrics, 5-idea seed set) and the `quality_signals` field are deleted: the harness was a manual dev tool outside CI, and it was `quality_signals`' only real consumer, so the two were cut together. **Nothing described below is live.** The section is retained as the opt-in-later record of what was built and what re-adopting it would cost — the code is recoverable from git at `1a586b2`. Consequence: any change that needs quality validation — a per-stage model swap (§10.1), an engagement-filter retune — now brings its own.
+
 v1 ships the evaluation harness and a seed set. v1.1 fills the full golden eval corpus (§15). The harness is the prerequisite for every cost-increasing quality improvement in §15 — without measurement, no mitigation can be justified.
 
 **Harness (v1 scope):**
@@ -389,16 +391,16 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 
 | Stage | Calls / run | Token profile | Latency constraint | v1 model | Future routing candidates |
 |---|---|---|---|---|---|
-| **Pre-flight** | 1 | Light (idea text + search results) | ≤10s user-facing | gpt-4o | Cheaper/faster (gpt-4o-mini, Haiku-class). Classification + ranking is a simpler task; accuracy must be validated via §7.9 harness before downgrading. |
+| **Pre-flight** | 1 | Light (idea text + search results) | ≤10s user-facing | gpt-4o | Cheaper/faster (gpt-4o-mini, Haiku-class). Classification + ranking is a simpler task; accuracy must be validated before downgrading — the §7.9 harness that would have done it is removed (#87), so the downgrade owns its own evidence. |
 | **Per-source extraction** | 10 (parallel) | Heavy (hundreds of comments each) | Background; dominates total run time | gpt-4o | Same family. Token volume is the cost driver — stratified sampling (§15) reduces input before model routing helps. |
 | **Synthesis** | 1 | Heavy (entire pooled quote set) | Background; single largest call | gpt-4o | Reasoning model (o3-class, Opus with extended thinking). One call per run, highest-stakes output — a stronger model here has the best cost/accuracy ratio. |
 | **Idea-match** | 0–1 | Light (gap list + idea text) | Background | gpt-4o | Cheaper model viable; low-stakes relative to synthesis. |
 | **Adversarial pass** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different model family (Claude, Gemini). Same-family critique catches fewer blind spots. |
 | **Cold-model critique** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different family + low temperature. Independent audit of synthesis output. |
 
-**Implementation rule:** each pipeline stage resolves its model config through a single routing function — `resolve(stage_name) → (model, temperature, max_tokens)` — *before* it calls the LLM. The resolver returns config only; the SDK call itself stays in the stage module (e.g. `app/llm/preflight.py`), not inside the router. The discipline being enforced is "no stage hardcodes a model," not "all SDK calls live in one file." v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry and validating against the §7.9 eval harness — no pipeline code changes.
+**Implementation rule:** each pipeline stage resolves its model config through a single routing function — `resolve(stage_name) → (model, temperature, max_tokens)` — *before* it calls the LLM. The resolver returns config only; the SDK call itself stays in the stage module (e.g. `app/llm/preflight.py`), not inside the router. The discipline being enforced is "no stage hardcodes a model," not "all SDK calls live in one file." v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry — no pipeline code changes. Validating that the swap didn't degrade output is a separate problem the swapper owns: the §7.9 harness that used to answer it was removed (#87).
 
-**Cost-neutral orchestration path:** downgrading pre-flight and idea-match to a cheaper model frees ~10–15% of per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move when the eval harness shows the cheaper models maintain accuracy on those stages.
+**Cost-neutral orchestration path:** downgrading pre-flight and idea-match to a cheaper model frees ~10–15% of per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move *once there is evidence* the cheaper models maintain accuracy on those stages — evidence the removed harness no longer supplies.
 
 ## 11. Alternatives Considered
 
@@ -440,9 +442,9 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 - **Frequency** — Raw count of supporting pain items.
 - **Spread** — Count of distinct competitors surfacing a gap.
 - **Model routing** — Config-driven mapping of pipeline stages to LLM models. v1 maps all stages to gpt-4o; enables agent orchestration without code changes (§10.1).
-- **Eval harness** — Runner script that scores pipeline output against hand-labelled expected gaps. Measures gap recall, hallucination rate, citation ratio, severity calibration (§7.9).
-- **Golden eval set** — Corpus of ideas with hand-labelled expected gaps used by the eval harness. 5-idea seed in v1; full 15–20 idea set in v1.1.
-- **Quality signals** — Per-run metrics (quote diversity, severity distribution, extraction yield) logged for trend analysis. Not surfaced in v1 UI (§7.9).
+- **Eval harness** — *(removed #87)* Runner script that scored pipeline output against hand-labelled expected gaps. Measured gap recall, hallucination rate, citation ratio, severity calibration (§7.9).
+- **Golden eval set** — *(removed #87 — the 5-idea seed went with the harness)* Corpus of ideas with hand-labelled expected gaps. A full 15–20 idea set remains a v1.1 aspiration, now starting from nothing.
+- **Quality signals** — *(removed #87)* Per-run metrics (quote diversity, severity distribution, extraction yield) logged for trend analysis. Never surfaced in the UI (§7.9).
 
 ## 14. Resolved Decisions
 
@@ -473,8 +475,8 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
     - *Optional:* extend validation set with an industrial/enterprise idea and re-run before v1 ship.
 
 19. **Selection-bias mitigations (v1)** — Quote-then-claim constrains *grounding* but not *which* quotes. v1 ships three near-zero-cost mitigations (§7.8): idea-blinded extraction, coverage metrics, citation count per gap. Higher-cost active mitigations catalogued in §15.
-20. **Evaluation harness + seed set (v1)** — Harness runner + 5 hand-labelled ideas ship with v1 (§7.9). Full 15–20 idea corpus and CI regression gate deferred to v1.1. Rationale: the harness is the prerequisite for justifying every cost-increasing mitigation in §15 — shipping the infrastructure early means v1.1 improvements are data-driven from day one.
-21. **Model routing as config (v1)** — All LLM calls route through a single `(stage_name) → model` resolver (§10.1). v1 maps everything to gpt-4o. Swapping a model per stage requires one config change + eval harness validation — no pipeline code changes. Rationale: makes agent orchestration (multi-model, cold-model critique) a deployment decision, not an architecture change.
+20. **Evaluation harness + seed set (v1)** — Harness runner + 5 hand-labelled ideas ship with v1 (§7.9). Full 15–20 idea corpus and CI regression gate deferred to v1.1. Rationale: the harness is the prerequisite for justifying every cost-increasing mitigation in §15 — shipping the infrastructure early means v1.1 improvements are data-driven from day one. **Reversed 2026-07-27 (#87):** the harness stayed a manual dev tool, never entered CI, and was the only real consumer of `quality_signals` — the pair was cut in the scope-down. The prerequisite argument still stands; it now applies to whatever measurement a future quality change builds for itself.
+21. **Model routing as config (v1)** — All LLM calls route through a single `(stage_name) → model` resolver (§10.1). v1 maps everything to gpt-4o. Swapping a model per stage is one config change — no pipeline code changes (validation of the swap is the swapper's own since #87 removed the harness). Rationale: makes agent orchestration (multi-model, cold-model critique) a deployment decision, not an architecture change.
 
 ## 15. v1.1 Roadmap & Known Limitations
 
@@ -488,15 +490,17 @@ v1 is built in three vertical slices against this PRD — each a tracer bullet t
 | **Slice 2 — lifecycle hardening** | Makes the system safe to expose to an untrusted user: §6 sad paths US-S1…S7 and §8 non-functional requirements — source retry + ≥70% partial-source threshold, server-restart → `failed`, per-IP rate limit, daily budget cap, concurrency guard; `POST /runs/:id/feedback` + `POST /runs/:id/report` (the §4 feedback loop); `react-router-dom` migration to shareable `/runs/:id` URLs (below); My Runs. | **Shipped** 2026-06-06 — [spec](../planning/specs/v2-slice-2-lifecycle-hardening_spec.md) |
 | **Slice 3 — eval + v1 removal** | Eval harness + 5-idea seed set (§7.9), `quality_signals` field (§7.9), removal of the legacy `/analyze/*` endpoints, weekly jobs, `automatic_table*`, and the unlinked v1 frontend pages; retirement of the v1-only `create_response` LLM helper still reached by those endpoints; removal of the LLM-guessed `signal_strength` **gate** (see note below); pre-flight robustness deferred from the slice-2 review — Pydantic validation of the `generate_queries` output and optional parallelization of the `preflight_service.run` search fan-out (see slice-2 spec §3). | **Shipped** 2026-06-11 — [spec](../planning/specs/v2-slice-3-eval-and-v1-removal_spec.md) |
 
-All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 abuse/cost guards, §4 feedback indicators, and `partial_sources` handling are wired (slice 2); the eval harness + 5-idea seed set, `quality_signals`, and count-based low-signal gate are in place and the legacy v1 surface is removed (slice 3). Remaining work is the v1.1 roadmap below.
+All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 abuse/cost guards, §4 feedback indicators, and `partial_sources` handling are wired (slice 2); the count-based low-signal gate is in place and the legacy v1 surface is removed (slice 3). Remaining work is the v1.1 roadmap below.
+
+**Post-v1 scope-down (in progress, [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76)).** Parts of the shipped surface above are being cut back to the core loop — idea in, quote-grounded gaps out. Landed so far: slice 3's eval harness, 5-idea seed set, and `quality_signals` are **removed** (#87, 2026-07-27, §7.9). Still queued: `target_gap` + `idea_match`, the feedback/report endpoints + `feedback_events`, and four dead columns. [planning/CONTEXT.md](../planning/CONTEXT.md) tracks what has actually left, slice by slice; this PRD still describes the pre-scope-down target.
 
 **Note — `signal_strength` gate removal (slice 3).** Before slice 3, the low-signal gate (§7.2 approve `400`, §7.3 step (b), §7.6 acknowledgement) keyed off an *LLM-guessed* `signal_strength` produced by the `PREFLIGHT_GENERATE_QUERIES` call **before any search runs**. That guess is biased and redundant: it's generated in the same call that produces the queries (motivated to rate its own queries favourably), its rubric examples conflate searchability with consumer-vs-B2B category, and it predicts an outcome — *"will the App Store + YouTube return real competitors?"* — that materialises seconds later in the same function as the actual candidate count (`preflight_service.run` already logs `len(raw_apps)`, `len(raw_videos)`, `len(candidates)`). The guess can pass a 0-candidate run or block one with 8 real competitors. Slice 3 removed the LLM grade as a **gate** and keyed the acknowledgement on the observed candidate count instead. `signal_reasoning` is **retained** as displayed pre-flight copy (§7.6) — useful UX, just not load-bearing. (Note: US-S1 "zero competitors found" is already the count-based sad path; this folds the low-signal gate into the same evidence.)
 
 ### Deferred to v1.1
 
-Deferred from v1, in rough priority (note: eval harness + seed set promoted to v1 scope in §7.9):
+Deferred from v1, in rough priority:
 
-1. **Full golden evaluation set.** Expand the v1 seed set (5 ideas, §7.9) to 15–20 ideas with hand-labelled expected gaps. Automate runs before every prompt or model change with regression gates. The seed harness ships with v1; the full corpus and CI gate are v1.1.
+1. **Full golden evaluation set.** 15–20 ideas with hand-labelled expected gaps, plus regression gates on every prompt or model change. Note this no longer *expands* anything: the v1 harness and its 5-idea seed were removed in the scope-down (#87, §7.9), so this item now includes rebuilding the runner and scorers it was going to reuse. That is the price of the cut, and it was taken knowingly — a manual tool nothing ran was worse than no tool.
 2. **Queue UX with ETA.** Replaces `429 busy` with accept-and-queue showing position + estimated start.
 3. **Longitudinal outcome tracking.** Optional email at submit; 14-day follow-up: *"did the gap prove real?"* Until this exists, §4 indicators can't distinguish "ran successfully" from "user built on it."
 4. **User research on §2.** The four-step workflow is a hypothesis. Interview 5–10 indie devs pre-v1.1.

@@ -84,8 +84,8 @@ a tool that does not run yet.
   `engineering-standards-tooling`).*
 
 - **⚠️ One union syntax, not two.** `X | None`, never `Optional[X]`.
-  `services/idea_run_service.py` and `eval/{harness,metrics}.py` still import
-  `typing.Optional` while the rest of the codebase uses `|`.
+  `services/idea_run_service.py` still imports `typing.Optional` while the rest
+  of the codebase uses `|`.
   *Enforced by: `ruff` `UP007`. **Executed in
   `engineering-standards-tooling`.***
 

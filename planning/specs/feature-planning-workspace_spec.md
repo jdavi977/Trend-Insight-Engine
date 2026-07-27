@@ -221,14 +221,19 @@ the kill gate never fires. (Sibling of the F13 drift; surfaced by the
 
 ## Appendix A — `eval-corpus` workspace (deferred)
 
-**Status: deferred** until the pipeline scope-down (#76) lands. Recorded here so
-the grilling isn't lost.
+**Status: blocked, not merely deferred** (updated 2026-07-27). The scope-down it
+was waiting on landed and *deleted the machinery this appendix is built around*:
+`app/eval/harness.py`, `metrics.py`, and `seed/` are gone (#87, scope-down slice
+2). Every stage below names a script that no longer exists, so reviving this
+workspace means first deciding to rebuild a harness — a much larger commitment
+than "un-defer the appendix." Recorded as-is so the grilling isn't lost; read it
+as a design sketch against a deleted codebase, recoverable from git at `1a586b2`.
 
 **Intent.** An ICM workspace that grows the golden seed set 5 → 15–20 ideas, one
 idea per run, with a human labelling gate, producing fixtures that
-[app/eval/harness.py](../../app/eval/harness.py) /
-[metrics.py](../../app/eval/metrics.py) and the v1.1 CI regression gate consume —
-making "is this pipeline change better or worse?" an objective question.
+`app/eval/harness.py` / `metrics.py` *(both deleted)* and the v1.1 CI regression
+gate consume — making "is this pipeline change better or worse?" an objective
+question.
 
 **Proposed stages.** `01-select-idea` → `02-run-capture` (script: `harness.py`,
 no AI) → `03-label-gaps` (AI + heavy human gate) → `04-score` (`metrics.py`) →
@@ -257,7 +262,7 @@ no AI) → `03-label-gaps` (AI + heavy human gate) → `04-score` (`metrics.py`)
   | Labelled at 03 | Consumer today |
   |---|---|
   | genuine gaps + missed gaps (text) | `gap_recall` ✅ |
-  | corrected severity | none — `severity_range` is *recorded in the report*, not scored; calibration is run-level from `quality_signals` |
+  | corrected severity | none — `severity_range` is *recorded in the report*, not scored; the run-level calibration signal it would have fed (`quality_signals`) was itself deleted by #87 |
   | grounding `quote_id`s | none — `hallucination_count` already checks pool membership mechanically, and production's synthesis validator rejects violations pre-persist |
   | noise / duplicate marks | none — there is no precision scorer |
 
