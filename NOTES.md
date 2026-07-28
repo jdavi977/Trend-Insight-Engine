@@ -123,3 +123,17 @@ Next steps:
 4. Go through code and make sure it fits best practices, noticed a lot of redundant code
 
 thoughts: make target gap part of main idea
+
+July 28:
+Demonstrated clean pass (#85 / #79) — drove #76 "scope down to the core pipeline"
+cold from root CLAUDE.md through all five feature-planning stages, then handed off
+to /app and /frontend for implementation. Zero dead-ends on the route. Full route
+and evidence: planning/2026-07-28-clean-pass-run-log.md.
+
+What the pass taught: check-refs catches dangling *links*, but the drift that
+actually wastes an agent's time is prose — "read the project's domain glossary"
+(no glossary exists), "run /setup-matt-pocock-skills" (no such command), "read
+.out-of-scope/" (no such directory). A link-checker cannot see any of those. Filed
+as #91-#94 rather than fixed in place, so the audit trail stays honest. #94 is the
+sharpest one: the routing table routes into icm/feature-planning/, but check-refs
+stops at the five root files and never follows.

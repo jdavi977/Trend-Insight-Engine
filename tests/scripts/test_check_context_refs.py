@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.check_context_refs import DEFAULT_ROOTS, find_dangling_refs, main
+from scripts.check_context_refs import (
+    DEFAULT_ROOTS,
+    default_roots,
+    find_dangling_refs,
+    main,
+)
 
 KINDS = {"link", "workspace", "doc", "skill", "adr"}
 
@@ -22,6 +27,16 @@ def _repo(tmp_path: Path) -> Path:
     (tmp_path / "planning" / "decisions").mkdir(parents=True)
     (tmp_path / ".claude" / "skills").mkdir(parents=True)
     return tmp_path
+
+
+def _stage_table(invokes: str) -> str:
+    """An ICM workspace stage table with one stage, naming `invokes`."""
+    return (
+        "## Stages\n"
+        "| #  | Stage     | Invokes | Artifact                 | Gate  |\n"
+        "|----|-----------|---------|--------------------------|-------|\n"
+        f"| 02 | **Spec**  | {invokes} | `planning/specs/<slug>_spec.md` | light |\n"
+    )
 
 
 def test_reports_dangling_markdown_link(tmp_path):
@@ -79,6 +94,78 @@ def test_reports_routing_table_workspace_and_read_columns(tmp_path):
     assert {(b.kind, b.target) for b in broken} == {
         ("workspace", "/ops"),
         ("doc", "ops/CONTEXT.md"),
+    }
+
+
+def test_reports_stage_table_skill_that_has_no_skill_directory(tmp_path):
+    """#94: an ICM stage table is built out of skills, and its `Invokes` column
+    names them in backticks — a renamed skill must break the workspace loudly."""
+    repo = _repo(tmp_path)
+    (repo / ".claude" / "skills" / "map-architecture").mkdir()
+    context = repo / "icm" / "feature-planning" / "CONTEXT.md"
+    context.parent.mkdir(parents=True)
+    context.write_text(_stage_table("`grill-with-docs` skill"))
+
+    broken = find_dangling_refs([context], repo_root=repo)
+
+    assert [(b.kind, b.target) for b in broken] == [("skill", "grill-with-docs")]
+    assert broken[0].expected == ".claude/skills/grill-with-docs"
+    assert broken[0].line == 4
+
+
+def test_accepts_a_stage_table_whose_invoked_skill_exists(tmp_path):
+    """The prose a stage hangs off the slug — `tdd` skill (planning only) — is a
+    note to the reader, not part of the name."""
+    repo = _repo(tmp_path)
+    (repo / ".claude" / "skills" / "tdd").mkdir()
+    context = repo / "icm" / "feature-planning" / "CONTEXT.md"
+    context.parent.mkdir(parents=True)
+    context.write_text(_stage_table("`tdd` skill (**Workflow step 1 only**)"))
+
+    assert find_dangling_refs([context], repo_root=repo) == []
+
+
+def test_stage_table_config_link_is_not_read_as_a_skill(tmp_path):
+    """Stage 01 invokes a config file, not a skill. It is one dangling *link*
+    when absent — never a bogus `.claude/skills/_config/...` finding too."""
+    repo = _repo(tmp_path)
+    context = repo / "icm" / "feature-planning" / "CONTEXT.md"
+    context.parent.mkdir(parents=True)
+    context.write_text(
+        _stage_table(
+            "[`_config/feature-questions.md`](_config/feature-questions.md)"
+        )
+    )
+
+    broken = find_dangling_refs([context], repo_root=repo)
+
+    assert [(b.kind, b.target) for b in broken] == [
+        ("link", "_config/feature-questions.md")
+    ]
+
+
+def test_default_roots_follow_the_routing_table_into_every_icm_workspace(tmp_path):
+    """#94's part 1: the ICM files are found by glob, so a workspace added later
+    is guarded by construction rather than by editing this script."""
+    repo = _repo(tmp_path)
+    for name in DEFAULT_ROOTS:
+        (repo / name).parent.mkdir(parents=True, exist_ok=True)
+        (repo / name).write_text("# root\n")
+    (repo / "icm" / "feature-planning" / "_config").mkdir(parents=True)
+    (repo / "icm" / "feature-planning" / "CONTEXT.md").write_text("# ws\n")
+    (repo / "icm" / "feature-planning" / "_config" / "feature-questions.md").write_text(
+        "# questions\n"
+    )
+    (repo / "icm" / "release-planning").mkdir(parents=True)
+    (repo / "icm" / "release-planning" / "CONTEXT.md").write_text("# next ws\n")
+
+    roots = [path.relative_to(repo).as_posix() for path in default_roots(repo)]
+
+    assert set(DEFAULT_ROOTS) <= set(roots)
+    assert set(roots) - set(DEFAULT_ROOTS) == {
+        "icm/feature-planning/CONTEXT.md",
+        "icm/feature-planning/_config/feature-questions.md",
+        "icm/release-planning/CONTEXT.md",
     }
 
 
@@ -172,15 +259,37 @@ def test_cli_exits_non_zero_and_names_each_broken_edge(tmp_path, capsys):
     assert ".claude/skills/doc-authoring" in report
 
 
+def test_cli_walks_the_icm_workspaces_when_no_files_are_named(tmp_path, capsys):
+    """`make check-refs` passes no files, so the ICM coverage has to come from
+    the default roots — the gap #94 was filed about."""
+    repo, _ = _clean_repo(tmp_path)
+    for name in DEFAULT_ROOTS:
+        if not (repo / name).exists():
+            (repo / name).write_text("# root\n")
+    context = repo / "icm" / "feature-planning" / "CONTEXT.md"
+    context.parent.mkdir(parents=True)
+    context.write_text(_stage_table("`grill-with-docs` skill"))
+
+    exit_code = main(["--repo-root", str(repo)])
+
+    assert exit_code != 0
+    report = capsys.readouterr().out
+    assert "icm/feature-planning/CONTEXT.md:4" in report
+    assert ".claude/skills/grill-with-docs" in report
+
+
 def test_checks_the_real_context_system():
-    """The five files A2 names all exist and are walkable.
+    """Every default root — the five A2 names plus the ICM workspaces the
+    routing table routes into — exists and is walkable.
 
     Deliberately asserts nothing about *how many* edges dangle: the checker is
     RED on today's tree and goes green when the routing table is repaired, and a
     test that has to be inverted at that point is worse than no test.
     """
     repo = Path(__file__).resolve().parents[2]
-    roots = [repo / name for name in DEFAULT_ROOTS]
+    roots = default_roots(repo)
 
     assert [root for root in roots if not root.exists()] == []
+    assert repo / "icm" / "feature-planning" / "CONTEXT.md" in roots
+    assert repo / "icm" / "feature-planning" / "_config" / "feature-questions.md" in roots
     assert {ref.kind for ref in find_dangling_refs(roots, repo_root=repo)} <= KINDS

@@ -5,6 +5,11 @@ root `CLAUDE.md` and the four domain `CONTEXT.md` files route agents by pointing
 at paths, skills and documents. When one of those targets is absent the route
 dead-ends (audit findings F1-F4). A human read-through missed them twice; this
 script does not.
+
+The routing table also routes *into* the ICM workspaces under `icm/`, and a
+route is only guarded as far as the checker follows it, so those files are roots
+too (#94). They are globbed rather than listed: the next workspace joins the
+guard by existing, not by someone remembering to edit this file.
 """
 from __future__ import annotations
 
@@ -25,9 +30,14 @@ DEFAULT_ROOTS = (
     "docs/CONTEXT.md",
 )
 
+# Every markdown file in an ICM workspace: its `CONTEXT.md` and the `_config/`
+# files its stages invoke. Matched by shape so a new workspace needs no edit here.
+ICM_GLOB = "icm/**/*.md"
+
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 TABLE_SEPARATOR = re.compile(r"^\|[\s:|-]+\|$")
 SKILL_NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+BACKTICKED = re.compile(r"`([^`]+)`")
 WORKSPACE_PATH = re.compile(r"^/[\w.-]+(?:/[\w.-]+)*$")
 DOC_PATH = re.compile(r"^[\w.-]+(?:/[\w.-]+)*\.md$")
 WORKSPACE_BULLET = re.compile(r"^\s*[-*]\s+`?(/[\w.-]+(?:/[\w.-]+)*)`?(?:\s|$)")
@@ -71,6 +81,18 @@ class _Ref:
         if self.glob is not None:
             return self.glob
         return _relative(self.path, repo_root)
+
+
+def default_roots(repo_root: Path) -> list[Path]:
+    """Every file `make check-refs` walks when the CLI names none.
+
+    The five A2 files are listed because they are fixed; the ICM workspace files
+    are globbed because they are not. A workspace whose references go unguarded
+    is the failure #94 records, and it happened by the list falling behind.
+    """
+    return [repo_root / name for name in DEFAULT_ROOTS] + sorted(
+        repo_root.glob(ICM_GLOB)
+    )
 
 
 def find_dangling_refs(
@@ -180,6 +202,8 @@ def _table_refs(lines: list[str], repo_root: Path) -> list[_Ref]:
 
     A routing row is only as good as its three targets, so all three columns are
     checked — F1's dead `/ops` row is a workspace and a `CONTEXT.md`, not a link.
+    An ICM workspace's stage table is the same edge in a different shape: its
+    `Invokes` column names the skills the workspace is built out of.
     """
     refs: list[_Ref] = []
     header: list[str] | None = None
@@ -214,13 +238,15 @@ def _row_refs(
     doc = _cell(cells, columns.get("read"))
     if doc and DOC_PATH.match(doc):
         refs.append(_Ref(lineno, "doc", doc, repo_root / doc))
-    for name in _skill_names(_cell(cells, columns.get("skills"))):
+    names = _skill_names(_cell(cells, columns.get("skills")))
+    names += _invoked_names(_raw_cell(cells, columns.get("invokes")))
+    for name in names:
         refs.append(_Ref(lineno, "skill", name, repo_root / SKILLS_DIR / name))
     return refs
 
 
 def _routing_columns(header: list[str]) -> dict[str, int]:
-    wanted = ("go to", "read", "skills")
+    wanted = ("go to", "read", "skills", "invokes")
     found = {}
     for index, cell in enumerate(header):
         name = cell.strip().lower()
@@ -231,9 +257,14 @@ def _routing_columns(header: list[str]) -> dict[str, int]:
 
 def _cell(cells: list[str], index: int | None) -> str:
     """The cell at `index`, stripped of markdown emphasis; empty when absent."""
+    return _raw_cell(cells, index).strip("`*")
+
+
+def _raw_cell(cells: list[str], index: int | None) -> str:
+    """The cell at `index` as written; empty when the column is absent."""
     if index is None or index >= len(cells):
         return ""
-    return cells[index].strip().strip("`*")
+    return cells[index].strip()
 
 
 def _cells(row: str) -> list[str]:
@@ -248,6 +279,17 @@ def _skill_names(cell: str) -> list[str]:
         if SKILL_NAME.match(name):
             names.append(name)
     return names
+
+
+def _invoked_names(cell: str) -> list[str]:
+    """Skill slugs in a stage table's `Invokes` cell.
+
+    A `Skills` cell is a comma-separated list and nothing else; a stage cell is a
+    backticked slug wearing prose — ``` `tdd` skill (Workflow step 1 only) ``` —
+    so the backticks are what marks the name. Anything else backticked in there
+    is a path, and `_link_refs` already checks it.
+    """
+    return [name for name in BACKTICKED.findall(cell) if SKILL_NAME.match(name)]
 
 
 def _relative(path: Path, repo_root: Path) -> str:
@@ -276,7 +318,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
-    roots = args.files or [repo_root / name for name in DEFAULT_ROOTS]
+    roots = args.files or default_roots(repo_root)
     broken = find_dangling_refs(roots, repo_root=repo_root)
     print(_report(broken, checked=len(roots)))
     return 1 if broken else 0
@@ -293,9 +335,10 @@ def _report(broken: Sequence[_Ref], checked: int) -> str:
         lines.append(f"      -> {ref.expected} (missing)")
     lines.append("")
     lines.append(
-        "Every path, skill, and document referenced by CLAUDE.md and the domain "
-        "CONTEXT.md files must resolve on disk (engineering-standards-alignment "
-        "spec A2). Fix the reference or create the target."
+        "Every path, skill, and document referenced by CLAUDE.md, the domain "
+        "CONTEXT.md files, and the icm/ workspaces must resolve on disk "
+        "(engineering-standards-alignment spec A2). Fix the reference or create "
+        "the target."
     )
     return "\n".join(lines)
 

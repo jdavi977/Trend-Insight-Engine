@@ -41,7 +41,7 @@ the `feature-name` in `feature-name_spec.md`.
 | 02 | **Spec**      | `grill-with-docs` skill        | the same file, filled out                                                             | built into the skill — it is an interview  |
 | 03 | **Map**       | `map-architecture` skill       | `planning/architecture/YYYY-MM-DD-<slug>.md`                                          | light verify                               |
 | 04 | **Issues**    | `to-issues` skill              | GitHub issues titled `[spec: <slug>]`                                                 | built into the skill — its step 4 quizzes on the breakdown |
-| 05 | **Impl plan** | `tdd` skill (**§1 planning only**) | TDD plan folded into each `[spec: <slug>]` issue body                              | light verify                               |
+| 05 | **Impl plan** | `tdd` skill (**Workflow step 1, Planning, only**) | TDD plan folded into each `[spec: <slug>]` issue body                              | light verify                               |
 
 The spec file is the maturing artifact: stage 01 opens it with §1–§2 only,
 stage 02 fills it out. There is no separate frame document, and no
@@ -65,9 +65,10 @@ feature without the user saying so.
 
 ### Stage 05 is plan-only
 
-Stage 05 invokes the `tdd` skill for its **§1 Planning** step only: produce the
-TDD plan and fold it into each `[spec: <slug>]` issue body. **Do NOT enter the
-red-green-refactor loop** (`tdd` §2–4) here. This workspace plans features; it
+Stage 05 invokes the `tdd` skill for step 1 of its **Workflow** section,
+*Planning*, only: produce the TDD plan and fold it into each `[spec: <slug>]`
+issue body. **Do NOT enter the red-green-refactor loop** (`tdd` Workflow steps
+2–4) here. This workspace plans features; it
 does not implement them, and no stage writes code under `app/` or `frontend/`.
 
 **Handoff.** Stage 05 ends the workflow. Implementation re-enters through the

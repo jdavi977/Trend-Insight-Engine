@@ -267,8 +267,18 @@ framework, no component library (see [Declined](#8-declined-and-why)).
   costs every future session, and "we'll write it later" is how four of them
   survived a sweep. Either the target exists or the citation comes out.
   *Enforced by: `scripts/check_context_refs.py` (`make check-refs`) over root
-  `CLAUDE.md` and the four domain `CONTEXT.md` files. CI wiring is **executed in
-  `engineering-standards-tooling`**.*
+  `CLAUDE.md`, the four domain `CONTEXT.md` files, and every markdown file under
+  `icm/`. CI wiring is **executed in `engineering-standards-tooling`**.*
+
+- **✅ A guard follows the route as far as the route goes.** The checker walks
+  `icm/**/*.md`, so a new ICM workspace is covered by existing — nothing to add
+  to `DEFAULT_ROOTS`. What a workspace author *does* owe the guard is backticks:
+  a stage table's `Invokes` column is read for skill names only where they are
+  written as `` `skill-name` ``, so an unquoted slug is silently unchecked and a
+  renamed skill breaks the workspace without breaking the build. This rule is
+  the reason it exists — `check-refs` stopped at the five root files while the
+  routing table routed past them, and the ICM workspace ran unguarded (#94).
+  *Enforced by: `scripts/check_context_refs.py`, for the backticked form.*
 
 ## 7. Tooling and CI
 
