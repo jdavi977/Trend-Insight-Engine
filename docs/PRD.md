@@ -33,7 +33,7 @@ The cost of the pivot is explicit: §4 leading indicators replace any v1 "weekly
 
 **Trend Insight Engine** takes a builder's idea — vague (*"2.5d survivor-like game"*) or specific (*"note-taking app with better offline sync"*) — and returns a ranked list of **evidence-backed candidate gaps** drawn from real complaints across relevant competitors. Every gap is anchored to verbatim quotes from the source data; synthesis cannot claim a gap that isn't grounded in retrieved evidence.
 
-The product is **decision support, not a verdict.** Output is a structured starting point for interviews and landing-page tests, not a substitute. The UI reinforces this with signal-strength banners, verbatim quotes next to every claim, and a "report this run" affordance.
+The product is **decision support, not a verdict.** Output is a structured starting point for interviews and landing-page tests, not a substitute. The UI reinforces this with signal-strength banners and verbatim quotes next to every claim. *(The "report this run" affordance that also carried this message was removed in the scope-down — [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89), §7.2.)*
 
 **Scope honesty:** the tool works best for consumer apps, mobile games, and creator-facing tools — where users post publicly. For B2B SaaS, devtools, or enterprise software, public signal is thin; the tool warns before running and requires explicit acknowledgement.
 
@@ -77,6 +77,8 @@ Adjacent tools cover different ground: enterprise feedback platforms (Enterpret,
 
 These signals are weak on their own. A run hitting all three with a hallucinated gap is still a failure — §7.4 quote-grounding and the v1.1 golden eval set (§15) are the real defence.
 
+**Not currently measured (scope-down, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89), 2026-07-27).** The first two indicators were collected by `POST /runs/:id/feedback` — the per-gap thumbs-up and the direction prompt — and that whole surface is removed, along with the `feedback_events` log it wrote to. Nothing reads these indicators today; the table describes what would have to be rebuilt to measure them, not a live instrument.
+
 ## 5. Non-Goals
 
 - **Not a sentiment dashboard.** Structured pain only — no NPS, no positive/negative ratios.
@@ -108,7 +110,7 @@ These signals are weak on their own. A run hitting all three with a hallucinated
 | US-S4 | Server restarts during `running` | Transitions to `failed` with `failure_reason: server_restart` on next read |
 | US-S5 | Daily OpenAI budget cap exhausted | `POST /runs` returns `429 budget_exhausted` |
 | US-S6 | Per-IP rate limit hit | `429 rate_limited` with retry-after |
-| US-S7 | User reports a run as abusive | `POST /runs/:id/report` hides the result pending review |
+| US-S7 | ~~User reports a run as abusive~~ | **Removed 2026-07-27 ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)).** `POST /runs/:id/report` and the `reported` state are gone; moderation is out of the core loop and returns as its own feature if abuse becomes real |
 
 ## 7. Functional Requirements
 
@@ -118,21 +120,18 @@ One submission = one run.
 
 ```
 pending → preflight_ready → running → done | failed
-                                    ↘ reported (admin-hidden)
 ```
 
-`failed` is terminal with a structured `failure_reason`. `reported` hides the public view but keeps the row; admin decides restore or hard-delete.
+`failed` is terminal with a structured `failure_reason`. These five states are the whole machine: the admin-hidden `reported` branch left with the report endpoint in the scope-down ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89), 2026-07-27), so no status hides a run from the public surface.
 
 ### 7.2 Endpoints
 
 - **`POST /runs`** — `{ idea }`. Creates run in `pending`. Pre-flight runs synchronously; response held until pre-flight finishes (≤10s, §8), then flips to `preflight_ready`. Per-IP rate-limited.
 - **`POST /runs/:id/approve`** — `{ competitors: [{ source, url, name }], acknowledged_low_signal? }`. Validates edited list; `preflight_ready` → `running`; enqueues background pipeline. If pre-flight was `low` signal and the ack flag is missing, returns 400.
-- **`POST /runs/:id/feedback`** — `{ new_to_me_gap_ids?, direction?, time_saved_estimate_minutes? }`. Records §4 indicators. **Append-only**. Valid only when `done`.
-- **`POST /runs/:id/report`** — `{ reason }`. Hides run; queues for admin review.
 - **`GET /runs/:id`** — current state + (when `done`) full results. Public.
 - **`GET /runs`** — paginated public feed of recent completed runs. Drives Home.
 
-Legacy `/analyze/youtube` and `/analyze/appStore` are **removed**; their logic moves to internal `services/`.
+Legacy `/analyze/youtube` and `/analyze/appStore` are **removed**; their logic moves to internal `services/`. `POST /runs/:id/feedback` (append-only §4 indicators) and `POST /runs/:id/report` (`{ reason }`, hides the run pending admin review) shipped in slice 2 and were **removed 2026-07-27** in the scope-down ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)) — create, approve, and read are the whole run surface.
 
 All `/runs/:id` HTML responses set `X-Robots-Tag: noindex, nofollow`.
 
@@ -189,9 +188,7 @@ Pre-flight was prototyped and graded against 15 ideas on 2026-05-22 — PASS on 
   per_video_pain: [VideoPainBlock],
   coverage: { quotes_retrieved, quotes_cited, citation_ratio },  // §7.8
   partial_sources?: { failed: [{source, name, reason}],
-                      succeeded_count, total_count },
-  feedback_events?: [ { submitted_at, new_to_me_gap_ids,
-                        direction, time_saved_estimate_minutes } ]
+                      succeeded_count, total_count }
 }
 ```
 
@@ -250,9 +247,7 @@ Applied server-side based on category; not exposed in v1 UI. Per-run tuning is a
   - **Signal-strength banner** at the top.
   - **`partial_sources` banner** if any sources failed, naming them.
   - **Ranked gap list** with **verbatim quotes prominent next to each claim** (not hidden in drill-down) — reinforces §1 framing.
-  - **Thumbs-up control** per gap → `POST /runs/:id/feedback`.
-  - **Direction prompt** after the list: *"continuing / shifting / dropping / need more research?"* — non-blocking, dismissible.
-  - **"Report this run"** link → `POST /runs/:id/report`.
+  - *(Removed 2026-07-27, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89): the per-gap thumbs-up, the "continuing / shifting / dropping / need more research?" direction prompt, and the "Report this run" link. The Result page is read-only — gap list plus a "Start another run" CTA.)*
 - **My Runs** — frontend-only filter of the public feed against `localStorage` `run_id`s.
 
 ### 7.7 Quote-then-claim retrieval (v1)
@@ -343,15 +338,15 @@ These signals are logged, not surfaced in the UI in v1. They feed the golden eva
 | **Secrets** | All keys via `python-dotenv`. Never hardcoded. |
 | **Privacy / PII** | Persist-time redaction: regex strip of emails, phone numbers, `@handles`; NER pass for obvious person names. Raw text never persisted. |
 | **SEO surface** | `/runs/:id` set `X-Robots-Tag: noindex, nofollow`. Home feed is indexable but only lists idea text + timestamp, not gap content. |
-| **Abuse handling** | `POST /runs/:id/report` immediately hides; queues for admin. Not deleted, hidden pending decision. |
+| **Abuse handling** | **None as of 2026-07-27** ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)). The `POST /runs/:id/report` hide-pending-admin path was removed; the remaining guards on an untrusted submitter are the per-IP rate limit, the daily budget cap, and `noindex` on run pages. Moderation returns as its own feature if abuse becomes real. |
 
 ## 9. Data Model
 
 | Store | Used for | Notes |
 |---|---|---|
-| **Supabase `idea_runs`** | One row per run | `id`, `idea`, `status`, `category`, `signal_strength`, `signal_reasoning`, `competitors_json`, `quotes_json`, `partial_sources_json`, `created_at`, `updated_at`, `failure_reason`, `reported_at`. Source of truth. The dead `target_gap` / `idea_match_json` columns survive #88 by one slice — physical drop is [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90) (spec R5: code stops writing first). |
+| **Supabase `idea_runs`** | One row per run | `id`, `idea`, `status`, `category`, `signal_strength`, `signal_reasoning`, `competitors_json`, `quotes_json`, `partial_sources_json`, `created_at`, `updated_at`, `failure_reason`. Source of truth. The dead `target_gap` / `idea_match_json` (#88) and `reported_at` / `report_reason` (#89) columns survive their slice by one — physical drop is [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90) (spec R5: code stops writing first). |
 | **Supabase `gaps`** | One row per surfaced gap | `gap_id`, `run_id` (FK), `gap`, `severity`, `frequency`, `spread`, `competitors_present_json`, `evidence_quote_ids_json`. Promoted out of the run blob for cross-run analytics. |
-| **Supabase `feedback_events`** | Append-only feedback log | `id`, `run_id` (FK), `submitted_at`, `new_to_me_gap_ids_json`, `direction`, `time_saved_estimate_minutes`. Never overwritten. |
+| ~~**Supabase `feedback_events`**~~ | ~~Append-only feedback log~~ | **Removed 2026-07-27** ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)). Nothing writes to it since the feedback endpoint was deleted; the physical table drop is [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90). |
 | **In-memory job state** | Background task progress for active runs | Lost on restart; active runs → `failed` on next read. |
 
 Legacy `automatic_table` and `automatic_apple_table` (weekly trending) are **removed** in v2.
@@ -377,8 +372,7 @@ Legacy `automatic_table` and `automatic_apple_table` (weekly trending) are **rem
                                        → LLM extract)              quote-ID grounding)
                                              │
                                              ▼
-                                     Supabase: idea_runs
-                                     + gaps + feedback_events
+                                     Supabase: idea_runs + gaps
 ```
 
 Layer rule: `api/` → `services/` only. Pipeline modules don't import each other.
@@ -448,7 +442,7 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenced sections):
 
 1. Weekly trending pipeline + old Home — removed; replaced by public feed (§7.6).
-2. Run privacy — public by URL with `noindex` + report link (§7.6, §8).
+2. Run privacy — public by URL with `noindex` + report link (§7.6, §8). **Partly reversed 2026-07-27 (#89):** the report link is gone; `noindex` is the surviving half.
 3. Submit form — two fields: `idea` + optional `target_gap`. **Reversed 2026-07-27 (#88):** `target_gap` was folded into `idea` and the `idea_match` stage it fed was removed — a separate field is extra contract and UI surface for an optional add-on outside the core loop.
 4. Product name — Trend Insight Engine throughout; legacy `TBN` to migrate.
 5. Cost / abuse — per-IP rate limit + daily OpenAI budget cap. No auth, no BYO-key in v1 (§8).
@@ -458,11 +452,11 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
 9. Engagement filters — per-category defaults, not user-tunable in v1 (§7.5).
 10. PII handling — redact at persist; raw text never stored (§8).
 11. Concurrency — v1: 429 busy + retry-after. v1.1: queue + ETA.
-12. Adversarial submissions — `noindex` + report link. No proactive named-brand blocking.
+12. Adversarial submissions — `noindex` + report link. No proactive named-brand blocking. **Partly reversed 2026-07-27 (#89):** report link removed; `noindex` + the per-IP/budget guards are what remain.
 13. History — public feed (`GET /runs`); "My Runs" is a frontend filter against `localStorage`.
 14. Partial completion — `done` + banner if ≥70% sources succeed; else `failed` (§8).
 15. Pipeline parallelism — 10 sources fan out concurrently; sequential within source. Cap 5 OpenAI calls.
-16. Data model — `gaps` table promoted out of run blob; `feedback_events` append-only (§9).
+16. Data model — `gaps` table promoted out of run blob; `feedback_events` append-only (§9). **Reversed 2026-07-27 (#89):** `feedback_events` has no writer and is queued for drop; the `gaps` promotion stands.
 17. Success metrics framed honestly — §4 indicators are leading, not validated. Longitudinal validation deferred.
 18. **Pre-flight prototype validation** — Graded on 15 ideas on 2026-05-22 ([findings](../planning/prototypes/preflight/findings.md)). PASS on all three criteria. Confirmed failure modes: qualifier loss (mitigated by §7.6 competitor editor) and shallow App Store results for B2B devtools (mitigated by §7.5 low-signal warning). Grades were LLM-applied; pass margin is wide enough that grader optimism does not flip outcomes.
 
@@ -484,12 +478,12 @@ v1 is built in three vertical slices against this PRD — each a tracer bullet t
 | Slice | Scope | Status |
 |---|---|---|
 | **Slice 1 — end-to-end happy path** | Idea → pre-flight → approve → parallel per-source extraction → quote-then-claim synthesis → grounded gaps, persisted to Supabase and read in the browser. Endpoints `POST /runs`, `POST /runs/:id/approve`, `GET /runs/:id`, `GET /runs`; pages Home, New Run, Run Result; model-routing resolver (§10.1), idea-blinded extraction (§7.8), persist-time PII redaction (§8), coverage + citation counts (§7.4, §7.8). | **Shipped** 2026-06-01 — [spec](../planning/specs/v2-slice-1-end-to-end_spec.md) |
-| **Slice 2 — lifecycle hardening** | Makes the system safe to expose to an untrusted user: §6 sad paths US-S1…S7 and §8 non-functional requirements — source retry + ≥70% partial-source threshold, server-restart → `failed`, per-IP rate limit, daily budget cap, concurrency guard; `POST /runs/:id/feedback` + `POST /runs/:id/report` (the §4 feedback loop); `react-router-dom` migration to shareable `/runs/:id` URLs (below); My Runs. | **Shipped** 2026-06-06 — [spec](../planning/specs/v2-slice-2-lifecycle-hardening_spec.md) |
+| **Slice 2 — lifecycle hardening** | Makes the system safe to expose to an untrusted user: §6 sad paths US-S1…S7 and §8 non-functional requirements — source retry + ≥70% partial-source threshold, server-restart → `failed`, per-IP rate limit, daily budget cap, concurrency guard; `POST /runs/:id/feedback` + `POST /runs/:id/report` (the §4 feedback loop — since **removed**, #89); `react-router-dom` migration to shareable `/runs/:id` URLs (below); My Runs. | **Shipped** 2026-06-06 — [spec](../planning/specs/v2-slice-2-lifecycle-hardening_spec.md) |
 | **Slice 3 — eval + v1 removal** | Eval harness + 5-idea seed set (§7.9), `quality_signals` field (§7.9), removal of the legacy `/analyze/*` endpoints, weekly jobs, `automatic_table*`, and the unlinked v1 frontend pages; retirement of the v1-only `create_response` LLM helper still reached by those endpoints; removal of the LLM-guessed `signal_strength` **gate** (see note below); pre-flight robustness deferred from the slice-2 review — Pydantic validation of the `generate_queries` output and optional parallelization of the `preflight_service.run` search fan-out (see slice-2 spec §3). | **Shipped** 2026-06-11 — [spec](../planning/specs/v2-slice-3-eval-and-v1-removal_spec.md) |
 
-All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 abuse/cost guards, §4 feedback indicators, and `partial_sources` handling are wired (slice 2); the count-based low-signal gate is in place and the legacy v1 surface is removed (slice 3). Remaining work is the v1.1 roadmap below.
+All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 rate-limit/budget guards, and `partial_sources` handling are wired (slice 2); the count-based low-signal gate is in place and the legacy v1 surface is removed (slice 3). The §4 feedback indicators shipped in slice 2 and were removed again in the scope-down (#89) — see below. Remaining work is the v1.1 roadmap below.
 
-**Post-v1 scope-down (in progress, [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76)).** Parts of the shipped surface above are being cut back to the core loop — idea in, quote-grounded gaps out. Landed so far: slice 3's eval harness, 5-idea seed set, and `quality_signals` are **removed** (#87, 2026-07-27, §7.9); `target_gap` is **folded into `idea`** and the `idea_match` stage is **removed** (#88, 2026-07-27, §7.2–§7.4). Still queued: the feedback/report endpoints + `feedback_events`, and the dead columns (#90). [planning/CONTEXT.md](../planning/CONTEXT.md) tracks what has actually left, slice by slice; this PRD still describes the pre-scope-down target.
+**Post-v1 scope-down (in progress, [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76)).** Parts of the shipped surface above are being cut back to the core loop — idea in, quote-grounded gaps out. Landed so far: slice 3's eval harness, 5-idea seed set, and `quality_signals` are **removed** (#87, 2026-07-27, §7.9); `target_gap` is **folded into `idea`** and the `idea_match` stage is **removed** (#88, 2026-07-27, §7.2–§7.4); the feedback + report endpoints, their UI, and the `reported` lifecycle state are **removed** (#89, 2026-07-27, §4/§7.1/§7.2/§7.6/§8). Still queued: the physical Supabase drops — `feedback_events` and the dead columns (#90). [planning/CONTEXT.md](../planning/CONTEXT.md) tracks what has actually left, slice by slice; this PRD still describes the pre-scope-down target.
 
 **Note — `signal_strength` gate removal (slice 3).** Before slice 3, the low-signal gate (§7.2 approve `400`, §7.3 step (b), §7.6 acknowledgement) keyed off an *LLM-guessed* `signal_strength` produced by the `PREFLIGHT_GENERATE_QUERIES` call **before any search runs**. That guess is biased and redundant: it's generated in the same call that produces the queries (motivated to rate its own queries favourably), its rubric examples conflate searchability with consumer-vs-B2B category, and it predicts an outcome — *"will the App Store + YouTube return real competitors?"* — that materialises seconds later in the same function as the actual candidate count (`preflight_service.run` already logs `len(raw_apps)`, `len(raw_videos)`, `len(candidates)`). The guess can pass a 0-candidate run or block one with 8 real competitors. Slice 3 removed the LLM grade as a **gate** and keyed the acknowledgement on the observed candidate count instead. `signal_reasoning` is **retained** as displayed pre-flight copy (§7.6) — useful UX, just not load-bearing. (Note: US-S1 "zero competitors found" is already the count-based sad path; this folds the low-signal gate into the same evidence.)
 

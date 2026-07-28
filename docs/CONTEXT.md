@@ -13,9 +13,9 @@
 ## Standards
 - API docs follow endpoint → method → params → response format.
 - Document the v2 run lifecycle endpoints: `POST /runs`, `POST /runs/:id/approve`,
-  `POST /runs/:id/feedback`, `POST /runs/:id/report`, `GET /runs/:id`, `GET /runs`.
-  Do NOT document the removed `/analyze/youtube`, `/analyze/appStore`,
-  `/get/homePage`.
+  `GET /runs/:id`, `GET /runs`. Do NOT document the removed `/analyze/youtube`,
+  `/analyze/appStore`, `/get/homePage`, or the scope-down's `POST /runs/:id/feedback`
+  and `POST /runs/:id/report` (#89).
 - Output shape: gaps grounded in quote IDs (PRD §7.4) — document `GapItem`,
   `Quote`, `Coverage`, run lifecycle states, and the severity 1–5 rubric.
 - Guides use numbered steps with code blocks.

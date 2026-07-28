@@ -33,19 +33,20 @@
 - `POST /runs/:id/approve` — `{ competitors[], acknowledged_low_signal? }`.
   `preflight_ready → running`; enqueues background pipeline. Low-signal without
   ack → 400.
-- `POST /runs/:id/feedback` — `{ new_to_me_gap_ids?, direction?, time_saved? }`.
-  Append-only; valid only when `done`. *(not yet implemented)*
-- `POST /runs/:id/report` — `{ reason }`. Hides run pending admin. *(not yet impl.)*
 - `GET /runs/:id` — current state + (when `done`) full results. Public.
 - `GET /runs` — paginated public feed of completed runs (drives Home).
 
 All `/runs` responses get `X-Robots-Tag: noindex, nofollow` (main.py middleware).
 Legacy `/analyze/*`, `/get/homePage`, `/data/send`, `/insights/similar` are
 **deleted** (slice 3, issue #72); `GET /` returns a tiny static health payload.
+`POST /runs/:id/feedback` and `POST /runs/:id/report` are **deleted** in the
+scope-down (issue #89) — the run surface is create / approve / read only.
 
 ## Run Lifecycle
-`pending → preflight_ready → running → done | failed` (+ `reported`).
+`pending → preflight_ready → running → done | failed` — the whole machine.
 `failed` terminal with structured `failure_reason` (e.g. `server_restart`).
+The admin-hidden state behind the old report endpoint left with it (#89), so no
+read path filters a run out of the public surface by status any more.
 
 ## Code Patterns (Follow These)
 - Each pipeline stage returns data to the caller — no side effects.

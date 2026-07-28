@@ -45,10 +45,21 @@ scope-down cut is judged against
   `idea` alone (spec §9 Q1). The **`target_gap` and `idea_match_json` columns
   still exist**; the physical drop is slice 5 (spec R5). Making synthesis
   actually *use* the idea to target gaps is reliability work, not this cut (N2).
-- *Still live, scheduled for removal:* `POST /runs/:id/feedback`,
-  `POST /runs/:id/report`, `feedback_events`, and the `reported` state; the dead
-  `preflight_raw_json` column. Each leaves in its own slice — this file is
-  updated by the slice that removes it, never ahead of it (spec D4).
+- *Removed (slice 4, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)):*
+  the whole **feedback + report surface** — `POST /runs/:id/feedback` and
+  `POST /runs/:id/report`, the `RunFeedback`/`RunReport` schemas,
+  `submit_feedback`/`report_run`, `check_can_report`, the `feedback_events`
+  write, and the Result page's thumbs-up, direction prompt, and report control.
+  With report went the **`reported` lifecycle state** (spec R3): the run
+  lifecycle is now `pending → preflight_ready → running → done | failed`, with
+  no admin-hidden branch and so no read path that hides a run from the public
+  feed. The **`feedback_events` table still exists**, as do `reported_at` /
+  `report_reason` on `idea_runs`; the physical drop is slice 5 (spec R5).
+  Moderation is not part of the core loop — if abuse becomes real, it comes back
+  as its own feature, not as a lifecycle state maintained on spec (spec §6 row 6).
+- *Still live, scheduled for removal:* the dead `preflight_raw_json` column.
+  Each leaves in its own slice — this file is updated by the slice that removes
+  it, never ahead of it (spec D4).
 
 **Cross-spec consequence of the harness cut** (spec D3, recorded here because
 this is where the reliability work will look): the deleted
@@ -92,8 +103,9 @@ Idea text
 ```
 
 ## Run Lifecycle
-`pending → preflight_ready → running → done | failed` (plus `reported`,
-admin-hidden). `failed` terminal with structured `failure_reason`.
+`pending → preflight_ready → running → done | failed`. `failed` terminal with
+structured `failure_reason`. The admin-hidden `reported` state left with the
+report surface (scope-down slice 4, #89) — these five are the whole machine.
 
 ## Architectural Principles
 - Layer rule: `api/ → services/` only. Pipeline modules don't import each other.
@@ -114,8 +126,8 @@ admin-hidden). `failed` terminal with structured `failure_reason`.
   status table is the source of truth.
   - Slice 1 — end-to-end happy path (shipped 2026-06-01).
   - Slice 2 — lifecycle hardening: sad paths, rate limit + budget cap,
-    feedback/report, `react-router-dom` shareable URLs, My Runs
-    (shipped 2026-06-06).
+    feedback/report (since **removed**, #89), `react-router-dom` shareable URLs,
+    My Runs (shipped 2026-06-06).
   - Slice 3 — eval harness + 5-idea seed set, `quality_signals`, count-based
     low-signal gate, pre-flight robustness, v1 legacy teardown
     (shipped 2026-06-11).
