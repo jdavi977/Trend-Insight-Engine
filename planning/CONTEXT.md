@@ -35,15 +35,15 @@ scope-down cut is judged against
 - *Removed (slice 2, [#87](https://github.com/jdavi977/Trend-Insight-Engine/issues/87)):*
   the eval harness (`app/eval/` + `tests/eval/`) and the `quality_signals`
   surface it was the only real consumer of — the schema, the pipeline
-  computation, and the `quality_signals_json` write. The **column itself still
-  exists**; the physical drop is slice 5 (spec R5 — code stops writing first).
+  computation, and the `quality_signals_json` write. The column itself was
+  dropped in slice 5 (spec R5 — code stops writing first).
 - *Removed (slice 3, [#88](https://github.com/jdavi977/Trend-Insight-Engine/issues/88)):*
   the `target_gap` field, **folded into `idea`** — dropped from `POST /runs`, the
   schemas, and the New Run form — and with it the whole `idea_match` stage
   (`app/llm/idea_match.py`, its pipeline branch, model-routing entry, `IdeaMatch`
   schema, and the Result page's `IdeaMatchCard`). `synthesize()` now runs on
-  `idea` alone (spec §9 Q1). The **`target_gap` and `idea_match_json` columns
-  still exist**; the physical drop is slice 5 (spec R5). Making synthesis
+  `idea` alone (spec §9 Q1). The `target_gap` and `idea_match_json` columns
+  were dropped in slice 5. Making synthesis
   actually *use* the idea to target gaps is reliability work, not this cut (N2).
 - *Removed (slice 4, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)):*
   the whole **feedback + report surface** — `POST /runs/:id/feedback` and
@@ -53,13 +53,25 @@ scope-down cut is judged against
   With report went the **`reported` lifecycle state** (spec R3): the run
   lifecycle is now `pending → preflight_ready → running → done | failed`, with
   no admin-hidden branch and so no read path that hides a run from the public
-  feed. The **`feedback_events` table still exists**, as do `reported_at` /
-  `report_reason` on `idea_runs`; the physical drop is slice 5 (spec R5).
-  Moderation is not part of the core loop — if abuse becomes real, it comes back
-  as its own feature, not as a lifecycle state maintained on spec (spec §6 row 6).
-- *Still live, scheduled for removal:* the dead `preflight_raw_json` column.
-  Each leaves in its own slice — this file is updated by the slice that removes
-  it, never ahead of it (spec D4).
+  feed. The `feedback_events` table and the `reported_at` / `report_reason`
+  columns were dropped in slice 5. Moderation is not part of the core loop — if
+  abuse becomes real, it comes back as its own feature, not as a lifecycle state
+  maintained on spec (spec §6 row 6).
+- *Removed (slice 5, [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90)):*
+  the **physical Supabase drops** the four code slices above deliberately lagged
+  (spec R5 — a column is dropped only after the code that writes it is gone).
+  Dropped from `idea_runs`: `quality_signals_json` (#87), `target_gap` and
+  `idea_match_json` (#88), `reported_at` and `report_reason` (#89), and
+  `preflight_raw_json`, which never had a writer at all. Dropped whole:
+  `feedback_events` (#89). Six columns, not the four the issue body listed —
+  `reported_at` / `report_reason` only became dead once #89 landed. Executed by
+  hand in the Supabase SQL editor: the slice-1 tables have no checked-in
+  migration, so the SQL recorded on
+  [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76) **is** the
+  migration record, and there is nothing to revert (spec N6/A6).
+
+  Each surface leaves in its own slice — this file is updated by the slice that
+  removes it, never ahead of it (spec D4).
 
 **Cross-spec consequence of the harness cut** (spec D3, recorded here because
 this is where the reliability work will look): the deleted
