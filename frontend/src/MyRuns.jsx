@@ -3,7 +3,7 @@
  * No accounts in v1 (PRD §5), so this is a frontend-only filter of the public
  * `GET /runs` feed against the run ids collected in localStorage at submit time
  * (see runStorage.js). No backend change. A run started in another browser — or
- * one that was reported and excluded from the feed — simply won't appear.
+ * one that never reached `done` and so is absent from the feed — won't appear.
  *
  * Page-level component owns all state and is the only thing that talks to the
  * backend (frontend/CONTEXT.md). Navigation uses react-router-dom.

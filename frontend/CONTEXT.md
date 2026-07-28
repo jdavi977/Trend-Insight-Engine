@@ -74,12 +74,10 @@ non-terminal (`pending` / `preflight_ready` / `running`) and stops on
   2 citations is visibly weaker than 12 (§7.8).
 - **Coverage line:** render `coverage` as e.g. *"12 of 184 retrieved quotes were
   cited (6%)"*.
-- **Thumbs-up control** per gap → `POST /runs/:id/feedback`
-  (`new_to_me_gap_ids`).
-- **Direction prompt** after the list — *"continuing / shifting / dropping / need
-  more research?"* → `POST /runs/:id/feedback` (`direction`). Non-blocking,
-  dismissible.
-- **"Report this run"** link → `POST /runs/:id/report`.
+- The page ends at the gap list + a "Start another run" CTA. The thumbs-up
+  control, direction prompt, and "Report this run" link were **removed** with
+  the feedback + report surface in the scope-down (#89) — the Result page is
+  read-only, and no component posts to `/runs/:id/feedback` or `/report`.
 
 ## Not in v2
 - No NPS / sentiment ratios (structured pain only).
