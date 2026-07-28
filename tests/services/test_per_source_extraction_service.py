@@ -56,11 +56,11 @@ class TestEngagementFilter:
             "comments": fixture["comments"], "source_metadata": fixture["metadata"],
         })
 
-        # Productivity defaults: youtube min likes = 50. Fixture has 5 above
-        # threshold (142, 88, 60, 33→no it's 33<50 so drops, 71). Wait — recount.
-        # Above 50: 142, 88, 60, 71 → 4 quotes.
-        assert len(quotes) == 4
-        assert all(q.like_count >= 50 for q in quotes)
+        # Productivity youtube threshold = 10 (the youtube floor is flat across
+        # categories). Fixture Likes: 142, 88, 60, 33, 71, 12, 5, 0 → the two
+        # below 10 (5, 0) are dropped before the LLM, leaving 6.
+        assert len(quotes) == 6
+        assert all(q.like_count >= 10 for q in quotes)
         assert mock_llm.call_count == 1
 
     def test_empty_pool_skips_llm_call(self, mocker):
@@ -78,16 +78,18 @@ class TestEngagementFilter:
         mock_llm.assert_not_called()
 
     def test_threshold_swaps_with_category(self, mocker):
-        """b2b-saas drops the youtube threshold from 50 to 10 — comments that
-        productivity would reject now pass."""
+        """The engagement threshold is category-keyed (PRD §7.5). The youtube
+        floor is now flat across categories, but App Store still varies:
+        mobile-game (min 4 votes) admits a review that productivity (min 6)
+        rejects."""
         _mock_llm(mocker, [])
-        comments = [{"Likes": 15, "Text": "Found this niche devtool genuinely solves my prompt-mgmt pain."}]
+        comments = [{"vote_count": "5", "content": "Sync between devices keeps dropping mid-edit."}]
 
-        prod_meta = SourceMetadata(source="youtube", source_id="v", category="productivity")
-        saas_meta = SourceMetadata(source="youtube", source_id="v", category="b2b-saas")
+        prod_meta = SourceMetadata(source="appstore", source_id="app_x", category="productivity")
+        game_meta = SourceMetadata(source="appstore", source_id="app_x", category="mobile-game")
 
         assert extract_per_source(comments, prod_meta)[1] == []
-        assert len(extract_per_source(comments, saas_meta)[1]) == 1
+        assert len(extract_per_source(comments, game_meta)[1]) == 1
 
     def test_appstore_uses_vote_count_field(self, mocker):
         _mock_llm(mocker, [])
