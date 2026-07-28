@@ -7,6 +7,7 @@ evidence_quote_ids (PRD §7.7), Coverage.citation_ratio is bounded, severity is
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
@@ -23,9 +24,8 @@ from app.schemas.runs import (
     Quote,
     RunApprove,
     RunCreate,
-    RunFeedback,
-    RunReport,
     RunResult,
+    RunStatus,
 )
 
 
@@ -206,36 +206,17 @@ class TestPreflightResult:
         assert pr.no_sources is True
 
 
-class TestRunFeedback:
-    def test_all_fields_optional(self):
-        fb = RunFeedback()
-        assert fb.new_to_me_gap_ids is None
-        assert fb.direction is None
-        assert fb.time_saved_estimate_minutes is None
-
-    def test_valid_direction_accepted(self):
-        for direction in ("continue", "shift", "drop", "need_more_research"):
-            assert RunFeedback(direction=direction).direction == direction
-
-    def test_invalid_direction_rejected(self):
-        with pytest.raises(ValidationError):
-            RunFeedback(direction="pivot")
-
-    def test_negative_time_saved_rejected(self):
-        with pytest.raises(ValidationError):
-            RunFeedback(time_saved_estimate_minutes=-1)
-
-    def test_zero_time_saved_allowed(self):
-        assert RunFeedback(time_saved_estimate_minutes=0).time_saved_estimate_minutes == 0
-
-
-class TestRunReport:
-    def test_reason_required_non_empty(self):
-        with pytest.raises(ValidationError):
-            RunReport(reason="")
-
-    def test_happy_path(self):
-        assert RunReport(reason="spam").reason == "spam"
+class TestRunStatus:
+    def test_lifecycle_states(self):
+        """`reported` left with the feedback + report surface (scope-down #89):
+        the lifecycle is pending → preflight_ready → running → done | failed."""
+        assert set(get_args(RunStatus)) == {
+            "pending",
+            "preflight_ready",
+            "running",
+            "done",
+            "failed",
+        }
 
 
 class TestFailureReason:

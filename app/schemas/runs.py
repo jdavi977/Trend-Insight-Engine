@@ -15,13 +15,10 @@ from app.config.constants import LOW_SIGNAL_CANDIDATE_THRESHOLD
 
 SourceLiteral = Literal["youtube", "appstore"]
 SignalStrength = Literal["high", "medium", "low"]
-# `reported` (slice 2 §4): a run hidden from the public surface by POST /runs/:id/report.
-RunStatus = Literal[
-    "pending", "preflight_ready", "running", "done", "failed", "reported"
-]
-
-# Feedback direction (slice 2 §7): the builder's read on their idea after seeing gaps.
-Direction = Literal["continue", "shift", "drop", "need_more_research"]
+# The whole run lifecycle. The admin-hidden state behind the old
+# POST /runs/:id/report left with that surface in the scope-down (issue #89),
+# so `done` and `failed` are the only terminal states.
+RunStatus = Literal["pending", "preflight_ready", "running", "done", "failed"]
 
 
 class FailureReason(str, Enum):
@@ -116,20 +113,6 @@ class PartialSources(BaseModel):
     failed: List[FailedSource] = Field(default_factory=list)
     succeeded_count: int = Field(ge=0)
     total_count: int = Field(ge=0)
-
-
-class RunFeedback(BaseModel):
-    """Body for POST /runs/:id/feedback (slice 2 §7). Append-only; records the §4 indicators."""
-
-    new_to_me_gap_ids: Optional[List[str]] = None
-    direction: Optional[Direction] = None
-    time_saved_estimate_minutes: Optional[int] = Field(default=None, ge=0)
-
-
-class RunReport(BaseModel):
-    """Body for POST /runs/:id/report (slice 2 §7)."""
-
-    reason: str = Field(min_length=1)
 
 
 class PreflightResult(BaseModel):

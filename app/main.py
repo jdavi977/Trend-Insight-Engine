@@ -34,7 +34,7 @@ def create_app() -> FastAPI:
     )
 
     # Spec §6 / §10: keep run pages out of search indexes. Middleware (not a
-    # per-route header) so /runs/:id/approve, feedback, report etc. inherit it.
+    # per-route header) so /runs/:id and /runs/:id/approve inherit it.
     @app.middleware("http")
     async def add_x_robots_tag(request: Request, call_next):
         response = await call_next(request)
