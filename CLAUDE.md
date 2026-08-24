@@ -11,7 +11,7 @@ see [docs/PRD.md](docs/PRD.md) (v2.2) — the source of truth.
 - Backend: FastAPI + Python 3.14 (app/)
 - LLM: OpenAI API (gpt-4o); per-stage model routing via config (PRD §10.1)
 - Validation: Pydantic (+ quote-ID grounding check on synthesis)
-- Storage: Supabase (`idea_runs`, `gaps`, `feedback_events`)
+- Storage: Supabase (`idea_runs`, `gaps`)
 - Data Sources: YouTube Data API v3, iTunes RSS / App Store Search API
 - Server: Uvicorn (ASGI)
 
@@ -67,5 +67,5 @@ Deliberately unrouted: `caveman`, `write-a-skill` — invoke by name.
                     surviving v1 camelCase modules are a tracked delta
 - Frontend comps:   PascalCase.jsx
 - API endpoints:    resource-oriented run lifecycle (e.g. POST /runs, GET /runs/:id)
-- Supabase tables:  idea_runs, gaps, feedback_events (v2; automatic_table removed)
+- Supabase tables:  idea_runs, gaps (v2; automatic_table + feedback_events removed)
 - Env vars:         SCREAMING_SNAKE_CASE (YOUTUBE_API, OPENAI_KEY)

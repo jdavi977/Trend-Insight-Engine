@@ -61,16 +61,18 @@ a tool that does not run yet.
   readability"*; *"mixedCase is allowed only in contexts where that's already the
   prevailing style … to retain backwards compatibility."* All v2 code complies
   (`per_source_extraction_service.py`, `run_pipeline_service.py`,
-  `idea_match.py`, `json_response.py`). This supersedes the `camelCase.py` line
+  `json_response.py`). This supersedes the `camelCase.py` line
   that root `CLAUDE.md` carried before 2026-07-22.
   *Enforced by: `ruff` `N999`/`N802` (adoption executed in
   `engineering-standards-tooling`); reviewer judgment until then.*
 
-- **⚠️ Six v1 modules and one function are still camelCase** —
+- **⚠️ Four v1 modules and one function are still camelCase** —
   `config/promptTemplates.py`, `ingestion/appStoreReviews.py`,
-  `ingestion/youtubeComments.py`, `preprocessing/reviewPipeline.py`,
-  `preprocessing/validateUrl.py`, `utilities/textCleaning.py`, and
-  `keyChecker()` in `config/secrets.py`. The **rule** above is settled; the
+  `ingestion/youtubeComments.py`, `preprocessing/reviewPipeline.py`, and
+  `keyChecker()` in `config/secrets.py`. (`preprocessing/validateUrl.py` and
+  `utilities/textCleaning.py` were on this list until 2026-07-27, when
+  `scope-down-core-pipeline` deleted them as dead code — they leave the rename
+  scope rather than entering it.) The **rule** above is settled; the
   **rename migration** (modules, imports, and the matching test files) is
   deferred so it can land in one pass while nothing else is in flight.
   *Enforced by: `ruff` `N999`. **Rename executed in
@@ -82,8 +84,8 @@ a tool that does not run yet.
   `engineering-standards-tooling`).*
 
 - **⚠️ One union syntax, not two.** `X | None`, never `Optional[X]`.
-  `services/idea_run_service.py` and `eval/{harness,metrics}.py` still import
-  `typing.Optional` while the rest of the codebase uses `|`.
+  `services/idea_run_service.py` still imports `typing.Optional` while the rest
+  of the codebase uses `|`.
   *Enforced by: `ruff` `UP007`. **Executed in
   `engineering-standards-tooling`.***
 
@@ -215,8 +217,8 @@ framework, no component library (see [Declined](#8-declined-and-why)).
   (`python-code-review`).*
 
 - **✅ Mock external services; run pure modules for real.** YouTube, App Store,
-  OpenAI, and Supabase are mocked; `preprocessing`, `redact`, `validateUrl`,
-  `schemas`, and `llm/router` are exercised directly. A test that mocks a pure
+  OpenAI, and Supabase are mocked; `preprocessing`, `redact`, `schemas`, and
+  `llm/router` are exercised directly. A test that mocks a pure
   module is testing the mock. *Enforced by: reviewer judgment.*
 
 - **✅ Behaviour over implementation; vertical slices over horizontal layers.**
@@ -265,8 +267,18 @@ framework, no component library (see [Declined](#8-declined-and-why)).
   costs every future session, and "we'll write it later" is how four of them
   survived a sweep. Either the target exists or the citation comes out.
   *Enforced by: `scripts/check_context_refs.py` (`make check-refs`) over root
-  `CLAUDE.md` and the four domain `CONTEXT.md` files. CI wiring is **executed in
-  `engineering-standards-tooling`**.*
+  `CLAUDE.md`, the four domain `CONTEXT.md` files, and every markdown file under
+  `icm/`. CI wiring is **executed in `engineering-standards-tooling`**.*
+
+- **✅ A guard follows the route as far as the route goes.** The checker walks
+  `icm/**/*.md`, so a new ICM workspace is covered by existing — nothing to add
+  to `DEFAULT_ROOTS`. What a workspace author *does* owe the guard is backticks:
+  a stage table's `Invokes` column is read for skill names only where they are
+  written as `` `skill-name` ``, so an unquoted slug is silently unchecked and a
+  renamed skill breaks the workspace without breaking the build. This rule is
+  the reason it exists — `check-refs` stopped at the five root files while the
+  routing table routed past them, and the ICM workspace ran unguarded (#94).
+  *Enforced by: `scripts/check_context_refs.py`, for the backticked form.*
 
 ## 7. Tooling and CI
 

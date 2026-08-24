@@ -12,7 +12,6 @@ REQUIRED_STAGES = (
     "preflight_rank",
     "per_source_extract",
     "synthesis",
-    "idea_match",
 )
 
 

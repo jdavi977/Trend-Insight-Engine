@@ -19,9 +19,10 @@ v1 (v2.2) shipped 2026-06-11. The repo is now in a **reliability-hardening /
 scope-down** phase (see [NOTES.md](../../NOTES.md), Jul 10–12): filter
 miscalibration, empty quote pools, grounding-bar rejections, and a recurring
 "is this change better or worse?" question that has no objective answer today.
-The eval harness exists ([app/eval/harness.py](../../app/eval/harness.py),
-[metrics.py](../../app/eval/metrics.py)) but the labelled seed set is only 5
-ideas and labelling is manual. Two sequential, reviewable, repeatable authoring
+The eval harness existed at the time of writing (`app/eval/harness.py`,
+`metrics.py`) but the labelled seed set was only 5 ideas and labelling was
+manual — the harness was deleted outright on 2026-07-27 (#87), which is part of
+why this spec is superseded. Two sequential, reviewable, repeatable authoring
 loops are worth turning into ICM workspaces; the live idea→gaps pipeline is
 **not** (it is concurrent/real-time — ICM-excluded, stays as service code).
 

@@ -32,7 +32,6 @@ def _row(
     return {
         "id": run_id,
         "idea": idea,
-        "target_gap": None,
         "status": status_,
         "category": category,
         "signal_strength": signal_strength,
@@ -40,7 +39,6 @@ def _row(
         "competitors_json": competitors or [],
         "quotes_json": {},
         "coverage_json": None,
-        "idea_match_json": None,
         "failure_reason": None,
         "created_at": "2026-05-28T10:00:00+00:00",
         "updated_at": updated_at,
@@ -88,7 +86,7 @@ def test_post_runs_inserts_row_runs_preflight_and_returns_preflight_ready(client
 
     response = client.post(
         "/runs",
-        json={"idea": "note-taking app with better offline sync", "target_gap": None},
+        json={"idea": "note-taking app with better offline sync"},
     )
 
     assert response.status_code == 200
@@ -99,7 +97,7 @@ def test_post_runs_inserts_row_runs_preflight_and_returns_preflight_ready(client
     assert body["preflight"]["signal_strength"] == "high"
     assert len(body["preflight"]["candidates"]) == 1
 
-    insert.assert_called_once_with("note-taking app with better offline sync", None)
+    insert.assert_called_once_with("note-taking app with better offline sync")
     update.assert_called_once()
     update_kwargs = update.call_args.kwargs
     assert update_kwargs["run_id"] == pending["id"]
@@ -108,6 +106,28 @@ def test_post_runs_inserts_row_runs_preflight_and_returns_preflight_ready(client
         "source": "appstore", "url": "https://apps.apple.com/obsidian",
         "name": "Obsidian", "identifier": "md.obsidian",
     }]
+
+
+def test_post_runs_ignores_a_stale_target_gap_field(client, mocker):
+    """`target_gap` folded into `idea` (#88, spec D5): the field is gone from the
+    contract, but a client still sending it must not hard-fail — Pydantic drops
+    the unknown key and the run is created from `idea` alone."""
+    pending = _row()
+    insert = mocker.patch(
+        "app.services.idea_run_service.insert_idea_run", return_value=pending,
+    )
+    mocker.patch("app.services.idea_run_service.update_idea_run_preflight")
+    mocker.patch(
+        "app.services.idea_run_service.preflight_service.run",
+        return_value=_preflight(),
+    )
+
+    response = client.post(
+        "/runs", json={"idea": "note app", "target_gap": "offline sync"},
+    )
+
+    assert response.status_code == 200
+    insert.assert_called_once_with("note app")
 
 
 def test_post_runs_then_get_runs_returns_current_state(client, mocker):
@@ -136,7 +156,7 @@ def test_post_runs_then_get_runs_returns_current_state(client, mocker):
         "app.services.idea_run_service.get_idea_run", return_value=ready,
     )
 
-    post = client.post("/runs", json={"idea": "idea", "target_gap": None})
+    post = client.post("/runs", json={"idea": "idea"})
     run_id = post.json()["run_id"]
 
     get = client.get(f"/runs/{run_id}")
@@ -422,7 +442,7 @@ def test_post_runs_busy_429_when_a_pipeline_is_running(client, mocker):
 
     run_pipeline_service._jobs["other-run"] = {"status": "running", "stage": "synthesis"}
 
-    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+    response = client.post("/runs", json={"idea": "x"})
 
     assert response.status_code == 429
     assert response.headers["X-RateLimit-Reason"] == "busy"
@@ -437,7 +457,7 @@ def test_post_runs_rate_limited_429_after_hourly_limit(client, mocker):
     for _ in range(RATE_LIMIT_PER_HOUR):
         rate_limit_service.record_run("testclient")
 
-    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+    response = client.post("/runs", json={"idea": "x"})
 
     assert response.status_code == 429
     assert response.headers["X-RateLimit-Reason"] == "rate_limited"
@@ -450,7 +470,7 @@ def test_post_runs_budget_exhausted_429(client, mocker):
         return_value=True,
     )
 
-    response = client.post("/runs", json={"idea": "x", "target_gap": None})
+    response = client.post("/runs", json={"idea": "x"})
 
     assert response.status_code == 429
     assert response.headers["X-RateLimit-Reason"] == "budget_exhausted"
@@ -463,7 +483,7 @@ def test_post_runs_records_run_against_client_ip_on_success(client, mocker):
 
     response = client.post(
         "/runs",
-        json={"idea": "note-taking app with better offline sync", "target_gap": None},
+        json={"idea": "note-taking app with better offline sync"},
         headers={"X-Forwarded-For": "203.0.113.42"},
     )
 
@@ -471,169 +491,3 @@ def test_post_runs_records_run_against_client_ip_on_success(client, mocker):
     # The first X-Forwarded-For hop is the recorded client, not the socket peer.
     assert "203.0.113.42" in rate_limit_service._ip_runs
     assert "testclient" not in rate_limit_service._ip_runs
-
-
-# --- POST /runs/:id/feedback (slice 2 §7, issue #62) ------------------------
-
-_RUN_ID = "11111111-1111-1111-1111-111111111111"
-
-
-def test_feedback_on_done_run_appends_event_and_returns_ok(client, mocker):
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="done"),
-    )
-    mocker.patch(
-        "app.services.idea_run_service.list_gaps_for_run",
-        return_value=[{"gap_id": "gap_001"}],
-    )
-    insert = mocker.patch(
-        "app.services.idea_run_service.insert_feedback_event",
-        return_value={"id": "fe1"},
-    )
-
-    response = client.post(
-        f"/runs/{_RUN_ID}/feedback",
-        json={"new_to_me_gap_ids": ["gap_001"], "direction": "continue",
-              "time_saved_estimate_minutes": 30},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {"ok": True}
-    insert.assert_called_once()
-
-
-def test_feedback_resubmit_appends_another_row(client, mocker):
-    """Append-only: a second submission inserts a second row (PRD §9)."""
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="done"),
-    )
-    insert = mocker.patch(
-        "app.services.idea_run_service.insert_feedback_event",
-        return_value={"id": "fe"},
-    )
-
-    client.post(f"/runs/{_RUN_ID}/feedback", json={"direction": "continue"})
-    client.post(f"/runs/{_RUN_ID}/feedback", json={"direction": "drop"})
-
-    assert insert.call_count == 2
-
-
-def test_feedback_on_non_done_run_returns_409(client, mocker):
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="running"),
-    )
-    insert = mocker.patch("app.services.idea_run_service.insert_feedback_event")
-
-    response = client.post(f"/runs/{_RUN_ID}/feedback", json={"direction": "continue"})
-
-    assert response.status_code == 409
-    insert.assert_not_called()
-
-
-def test_feedback_unknown_gap_ids_returns_400(client, mocker):
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="done"),
-    )
-    mocker.patch(
-        "app.services.idea_run_service.list_gaps_for_run",
-        return_value=[{"gap_id": "gap_001"}],
-    )
-    insert = mocker.patch("app.services.idea_run_service.insert_feedback_event")
-
-    response = client.post(
-        f"/runs/{_RUN_ID}/feedback", json={"new_to_me_gap_ids": ["ghost"]},
-    )
-
-    assert response.status_code == 400
-    insert.assert_not_called()
-
-
-def test_feedback_invalid_direction_returns_422(client):
-    response = client.post(f"/runs/{_RUN_ID}/feedback", json={"direction": "maybe"})
-
-    assert response.status_code == 422
-
-
-def test_feedback_negative_minutes_returns_422(client):
-    response = client.post(
-        f"/runs/{_RUN_ID}/feedback", json={"time_saved_estimate_minutes": -5},
-    )
-
-    assert response.status_code == 422
-
-
-# --- POST /runs/:id/report (slice 2 §7, US-S7, issue #62) -------------------
-
-
-def test_report_hides_run_and_returns_ok(client, mocker):
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="done"),
-    )
-    update = mocker.patch(
-        "app.services.idea_run_service.update_idea_run_reported",
-        return_value=_row(run_id=_RUN_ID, status_="reported"),
-    )
-
-    response = client.post(f"/runs/{_RUN_ID}/report", json={"reason": "abusive content"})
-
-    assert response.status_code == 200
-    assert response.json() == {"ok": True}
-    update.assert_called_once_with(_RUN_ID, "abusive content")
-
-
-def test_report_empty_reason_returns_422(client):
-    response = client.post(f"/runs/{_RUN_ID}/report", json={"reason": ""})
-
-    assert response.status_code == 422
-
-
-def test_reported_run_returns_404_from_get(client, mocker):
-    """After a report, GET /runs/:id 404s while the row is retained (Q5)."""
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="reported"),
-    )
-
-    response = client.get(f"/runs/{_RUN_ID}")
-
-    assert response.status_code == 404
-
-
-def test_report_is_per_ip_rate_limited(client, mocker):
-    from app.config.constants import RATE_LIMIT_PER_HOUR
-    from app.services import rate_limit_service
-
-    # Exhaust the shared per-IP window (TestClient socket peer is "testclient").
-    for _ in range(RATE_LIMIT_PER_HOUR):
-        rate_limit_service.record_run("testclient")
-    report = mocker.patch("app.services.idea_run_service.report_run")
-
-    response = client.post(f"/runs/{_RUN_ID}/report", json={"reason": "spam"})
-
-    assert response.status_code == 429
-    assert response.headers["X-RateLimit-Reason"] == "rate_limited"
-    report.assert_not_called()
-
-
-def test_report_counts_against_shared_per_ip_budget(client, mocker):
-    from app.services import rate_limit_service
-
-    mocker.patch(
-        "app.services.idea_run_service.get_idea_run",
-        return_value=_row(run_id=_RUN_ID, status_="done"),
-    )
-    mocker.patch(
-        "app.services.idea_run_service.update_idea_run_reported",
-        return_value=_row(run_id=_RUN_ID, status_="reported"),
-    )
-
-    response = client.post(f"/runs/{_RUN_ID}/report", json={"reason": "spam"})
-
-    assert response.status_code == 200
-    # An accepted report consumes a slot in the same bucket as POST /runs (Q6).
-    assert "testclient" in rate_limit_service._ip_runs

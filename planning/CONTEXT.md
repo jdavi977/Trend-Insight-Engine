@@ -14,6 +14,77 @@ Framing: **decision support, not a verdict.** Best-fit categories are consumer
 apps, mobile games, creator tools, productivity. B2B/devtools/enterprise are
 warned as low-signal but allowed with explicit acknowledgement.
 
+## Core-Loop Foundation (the scope-down reference)
+The foundation this project scales back to is **one loop**: an **idea** goes in →
+**pre-flight** classifies it and proposes competitors → **ingest** pulls YouTube
+comments and App Store reviews per competitor → **clean** normalises and filters
+them → **redact** strips PII → **idea-blinded per-source extraction** turns each
+source into pain items without seeing the idea → **quote-then-claim synthesis**
+ranks those into candidate gaps → **persisted, quote-grounded gaps** come out.
+Everything not serving that loop is **opt-in-later**: cut cleanly and recoverable
+from git, never left half-maintained. This paragraph is the reference every
+scope-down cut is judged against
+([scope-down-core-pipeline_spec.md](specs/scope-down-core-pipeline_spec.md) G1).
+
+**Opt-in-later surfaces** — verdicts and reasons in that spec §5, logged on
+[#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76):
+
+- *Removed (slice 1):* the empty v1-teardown shells `app/rag/`, `app/lib/`,
+  `tests/rag/`, `tests/jobs/`; the dead v1 modules
+  `preprocessing/validateUrl.py` (+ its test) and `utilities/textCleaning.py`.
+- *Removed (slice 2, [#87](https://github.com/jdavi977/Trend-Insight-Engine/issues/87)):*
+  the eval harness (`app/eval/` + `tests/eval/`) and the `quality_signals`
+  surface it was the only real consumer of — the schema, the pipeline
+  computation, and the `quality_signals_json` write. The column itself was
+  dropped in slice 5 (spec R5 — code stops writing first).
+- *Removed (slice 3, [#88](https://github.com/jdavi977/Trend-Insight-Engine/issues/88)):*
+  the `target_gap` field, **folded into `idea`** — dropped from `POST /runs`, the
+  schemas, and the New Run form — and with it the whole `idea_match` stage
+  (`app/llm/idea_match.py`, its pipeline branch, model-routing entry, `IdeaMatch`
+  schema, and the Result page's `IdeaMatchCard`). `synthesize()` now runs on
+  `idea` alone (spec §9 Q1). The `target_gap` and `idea_match_json` columns
+  were dropped in slice 5. Making synthesis
+  actually *use* the idea to target gaps is reliability work, not this cut (N2).
+- *Removed (slice 4, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)):*
+  the whole **feedback + report surface** — `POST /runs/:id/feedback` and
+  `POST /runs/:id/report`, the `RunFeedback`/`RunReport` schemas,
+  `submit_feedback`/`report_run`, `check_can_report`, the `feedback_events`
+  write, and the Result page's thumbs-up, direction prompt, and report control.
+  With report went the **`reported` lifecycle state** (spec R3): the run
+  lifecycle is now `pending → preflight_ready → running → done | failed`, with
+  no admin-hidden branch and so no read path that hides a run from the public
+  feed. The `feedback_events` table and the `reported_at` / `report_reason`
+  columns were dropped in slice 5. Moderation is not part of the core loop — if
+  abuse becomes real, it comes back as its own feature, not as a lifecycle state
+  maintained on spec (spec §6 row 6).
+- *Removed (slice 5, [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90)):*
+  the **physical Supabase drops** the four code slices above deliberately lagged
+  (spec R5 — a column is dropped only after the code that writes it is gone).
+  Dropped from `idea_runs`: `quality_signals_json` (#87), `target_gap` and
+  `idea_match_json` (#88), `reported_at` and `report_reason` (#89), and
+  `preflight_raw_json`, which never had a writer at all. Dropped whole:
+  `feedback_events` (#89). Six columns, not the four the issue body listed —
+  `reported_at` / `report_reason` only became dead once #89 landed. Executed by
+  hand in the Supabase SQL editor: the slice-1 tables have no checked-in
+  migration, so the SQL recorded on
+  [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76) **is** the
+  migration record, and there is nothing to revert (spec N6/A6).
+
+  Each surface leaves in its own slice — this file is updated by the slice that
+  removes it, never ahead of it (spec D4).
+
+**Cross-spec consequence of the harness cut** (spec D3, recorded here because
+this is where the reliability work will look): the deleted
+`pipeline-reliability-hardening` spec's **exit-criterion 5** — *"eval harness
+green post-retune, all 5 seed categories, recall not worse"* — is void, as is its
+planned `quality_signals` extension (`quotes_dropped_for_budget`). The eventual
+engagement-filter retune **must bring its own validation** and must not be filed
+citing exit-criterion 5.
+
+**Kept, explicitly** (so a later sweep doesn't re-flag them): `partial_sources_json`
+(written + read), `preprocessing/redact.py`, `preprocessing/reviewPipeline.py`,
+`jobs/preflight_smoke.py`.
+
 ## The v1→v2 Pivot (why this version exists)
 v1 was **URL-in, problems-out** for a single source, plus a weekly trending
 cron. Two problems drove the pivot (PRD Background):
@@ -40,20 +111,20 @@ Idea text
    ingestion → preprocessing → PII strip → idea-blinded LLM extract → pain list
    (retry once per source; ≥70% must succeed or run fails)
  → Quote-then-claim synthesis (1 LLM call): ranked gaps, each citing ≥2 quote IDs
- → Optional idea-match (if target_gap supplied)
  → Persist to Supabase → done (or done + partial_sources banner)
 ```
 
 ## Run Lifecycle
-`pending → preflight_ready → running → done | failed` (plus `reported`,
-admin-hidden). `failed` terminal with structured `failure_reason`.
+`pending → preflight_ready → running → done | failed`. `failed` terminal with
+structured `failure_reason`. The admin-hidden `reported` state left with the
+report surface (scope-down slice 4, #89) — these five are the whole machine.
 
 ## Architectural Principles
 - Layer rule: `api/ → services/` only. Pipeline modules don't import each other.
 - Every gap must cite ≥2 retrieved `quote_id`s; uncited/hallucinated-ID gaps
   rejected post-synthesis (PRD §7.7).
-- **Idea-blinded extraction:** per-source prompts exclude `idea`/`target_gap`;
-  only synthesis + idea-match see them (confirmation-bias mitigation, §7.8).
+- **Idea-blinded extraction:** per-source prompts exclude `idea`; only synthesis
+  sees it (confirmation-bias mitigation, §7.8).
 - Pydantic validates all boundaries; synthesis output additionally validated for
   quote-ID grounding.
 - PII redacted at persist time (regex + NER); raw text never persisted (§8).
@@ -67,8 +138,8 @@ admin-hidden). `failed` terminal with structured `failure_reason`.
   status table is the source of truth.
   - Slice 1 — end-to-end happy path (shipped 2026-06-01).
   - Slice 2 — lifecycle hardening: sad paths, rate limit + budget cap,
-    feedback/report, `react-router-dom` shareable URLs, My Runs
-    (shipped 2026-06-06).
+    feedback/report (since **removed**, #89), `react-router-dom` shareable URLs,
+    My Runs (shipped 2026-06-06).
   - Slice 3 — eval harness + 5-idea seed set, `quality_signals`, count-based
     low-signal gate, pre-flight robustness, v1 legacy teardown
     (shipped 2026-06-11).

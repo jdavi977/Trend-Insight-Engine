@@ -1,7 +1,7 @@
 /* New Run — submit an idea, review pre-flight, approve. Spec §10 / issue #51.
  *
  * One page, two phases driven by local state:
- *   1. Submit form: `idea` (required) + optional `target_gap` → POST /runs.
+ *   1. Submit form: `idea` (required, the only field) → POST /runs.
  *   2. Pre-flight review (rendered inline once POST returns): signal-strength
  *      panel, low-signal acknowledgement gate, editable competitor list →
  *      POST /runs/:id/approve → open the run's result page.
@@ -103,7 +103,6 @@ function competitorFromUrl(rawUrl) {
 export default function NewRun() {
   const navigate = useNavigate();
   const [idea, setIdea] = useState("");
-  const [targetGap, setTargetGap] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [approving, setApproving] = useState(false);
@@ -124,7 +123,7 @@ export default function NewRun() {
       const res = await fetch(`${API_BASE}/runs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea: idea.trim(), target_gap: targetGap.trim() || null }),
+        body: JSON.stringify({ idea: idea.trim() }),
       });
       if (!res.ok) {
         setError(await readError(res));
@@ -226,24 +225,6 @@ export default function NewRun() {
             multiline
             rows={3}
             autoFocus
-          />
-        </Field>
-
-        <Field
-          label={
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <span>Target gap</span>
-              <span style={{ fontSize: ".75rem", fontWeight: 500, color: "var(--tie-fg-3)", letterSpacing: ".02em" }}>Optional</span>
-            </span>
-          }
-          hint="If you already suspect a specific pain, name it. We add a separate “does this idea match your target?” check after synthesis."
-        >
-          <TextInput
-            value={targetGap}
-            onChange={(e) => setTargetGap(e.target.value)}
-            placeholder="e.g. offline edits silently lost on reconnect"
-            multiline
-            rows={2}
           />
         </Field>
 

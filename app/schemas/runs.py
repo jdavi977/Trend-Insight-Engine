@@ -15,14 +15,10 @@ from app.config.constants import LOW_SIGNAL_CANDIDATE_THRESHOLD
 
 SourceLiteral = Literal["youtube", "appstore"]
 SignalStrength = Literal["high", "medium", "low"]
-# `reported` (slice 2 §4): a run hidden from the public surface by POST /runs/:id/report.
-RunStatus = Literal[
-    "pending", "preflight_ready", "running", "done", "failed", "reported"
-]
-IdeaMatchVerdict = Literal["matches", "partial", "no_match"]
-
-# Feedback direction (slice 2 §7): the builder's read on their idea after seeing gaps.
-Direction = Literal["continue", "shift", "drop", "need_more_research"]
+# The whole run lifecycle. The admin-hidden state behind the old
+# POST /runs/:id/report left with that surface in the scope-down (issue #89),
+# so `done` and `failed` are the only terminal states.
+RunStatus = Literal["pending", "preflight_ready", "running", "done", "failed"]
 
 
 class FailureReason(str, Enum):
@@ -41,7 +37,6 @@ class FailureReason(str, Enum):
 
 class RunCreate(BaseModel):
     idea: str = Field(min_length=1)
-    target_gap: Optional[str] = None
 
 
 class Competitor(BaseModel):
@@ -75,8 +70,8 @@ class SourceMetadata(BaseModel):
     """Per-source descriptor for the idea-blinded extractor (spec §8 / §13).
 
     Lives here because the extractor's signature is part of the v2 boundary —
-    it physically excludes `idea` / `target_gap` so confirmation bias cannot
-    leak into per-source prompts.
+    it physically excludes `idea` so confirmation bias cannot leak into
+    per-source prompts.
     """
     source: SourceLiteral
     source_id: str = Field(min_length=1)
@@ -100,12 +95,6 @@ class Coverage(BaseModel):
     citation_ratio: float = Field(ge=0.0, le=1.0)
 
 
-class IdeaMatch(BaseModel):
-    gap_id: str = Field(min_length=1)
-    verdict: IdeaMatchVerdict
-    evidence_quote_ids: List[str] = Field(default_factory=list)
-
-
 class FailedSource(BaseModel):
     """One source that failed the pipeline (slice 2 §5.1)."""
 
@@ -124,20 +113,6 @@ class PartialSources(BaseModel):
     failed: List[FailedSource] = Field(default_factory=list)
     succeeded_count: int = Field(ge=0)
     total_count: int = Field(ge=0)
-
-
-class RunFeedback(BaseModel):
-    """Body for POST /runs/:id/feedback (slice 2 §7). Append-only; records the §4 indicators."""
-
-    new_to_me_gap_ids: Optional[List[str]] = None
-    direction: Optional[Direction] = None
-    time_saved_estimate_minutes: Optional[int] = Field(default=None, ge=0)
-
-
-class RunReport(BaseModel):
-    """Body for POST /runs/:id/report (slice 2 §7)."""
-
-    reason: str = Field(min_length=1)
 
 
 class PreflightResult(BaseModel):
@@ -168,38 +143,9 @@ class PreflightResult(BaseModel):
         return 0 < len(self.candidates) < LOW_SIGNAL_CANDIDATE_THRESHOLD
 
 
-class ExtractionYield(BaseModel):
-    """Per-source extraction throughput (slice 3 §5).
-
-    Collected during fan-out — how many comments/reviews a source contributed
-    and how many pain items the idea-blinded extractor emitted from them.
-    """
-
-    source: SourceLiteral
-    comment_count: int = Field(ge=0)
-    pain_item_count: int = Field(ge=0)
-
-
-class QualitySignals(BaseModel):
-    """Per-run observability signals (slice 3 §5 / PRD §7.9).
-
-    Computed post-synthesis on every production run, persisted to
-    `idea_runs.quality_signals_json`, and **logged — not surfaced in the v1 UI**.
-    Never load-bearing for completion: a computation error persists `null`
-    rather than failing the run.
-    """
-
-    quote_source_diversity: float = Field(ge=0.0, le=1.0)
-    # Length-5: count of gaps at severity [1,2,3,4,5].
-    severity_distribution: List[int] = Field(min_length=5, max_length=5)
-    single_source_gap_count: int = Field(ge=0)
-    extraction_yield: List[ExtractionYield] = Field(default_factory=list)
-
-
 class RunResult(BaseModel):
     run_id: str
     idea: str
-    target_gap: Optional[str] = None
     created_at: datetime
     category: str
     signal_strength: SignalStrength
@@ -208,9 +154,7 @@ class RunResult(BaseModel):
     gaps: List[GapItem]
     quotes: dict[str, Quote]
     coverage: Coverage
-    idea_match: Optional[IdeaMatch] = None
     partial_sources: Optional[PartialSources] = None
-    quality_signals: Optional[QualitySignals] = None
 
 
 class RunCreateResponse(BaseModel):
@@ -222,15 +166,14 @@ class RunCreateResponse(BaseModel):
 class RunStateResponse(BaseModel):
     """Permissive view of a single `idea_runs` row at any lifecycle stage.
 
-    Fields populated by later pipeline stages (gaps, coverage, idea_match) are
-    optional so a `preflight_ready` row serialises cleanly. Once slice 1's
-    background pipeline lands, the `done` view is the union of this shape and
-    the `gaps` table — RunResult stays the strict "terminal" view.
+    Fields populated by later pipeline stages (gaps, coverage) are optional so a
+    `preflight_ready` row serialises cleanly. Once slice 1's background pipeline
+    lands, the `done` view is the union of this shape and the `gaps` table —
+    RunResult stays the strict "terminal" view.
     """
 
     run_id: str
     idea: str
-    target_gap: Optional[str] = None
     status: RunStatus
     created_at: datetime
     updated_at: datetime
@@ -241,9 +184,7 @@ class RunStateResponse(BaseModel):
     quotes: Dict[str, Quote] = Field(default_factory=dict)
     gaps: List[GapItem] = Field(default_factory=list)
     coverage: Optional[Coverage] = None
-    idea_match: Optional[IdeaMatch] = None
     partial_sources: Optional[PartialSources] = None
-    quality_signals: Optional[QualitySignals] = None
     failure_reason: Optional[str] = None
 
 

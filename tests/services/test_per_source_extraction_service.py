@@ -36,13 +36,12 @@ def _mock_llm(mocker, pain_items_payload):
 
 class TestSignatureIdeaBlinded:
     """The structural guarantee from spec §13: the function physically cannot
-    see `idea` / `target_gap`. Verified by inspecting the signature so a future
-    refactor that adds those parameters fails CI loudly."""
+    see the `idea`. Verified by inspecting the signature so a future refactor
+    that adds that parameter fails CI loudly."""
 
     def test_signature_has_no_idea_parameter(self):
         params = set(inspect.signature(extract_per_source).parameters)
         assert "idea" not in params
-        assert "target_gap" not in params
 
     def test_signature_accepts_only_comments_and_metadata(self):
         params = list(inspect.signature(extract_per_source).parameters)
@@ -57,11 +56,11 @@ class TestEngagementFilter:
             "comments": fixture["comments"], "source_metadata": fixture["metadata"],
         })
 
-        # Productivity defaults: youtube min likes = 50. Fixture has 5 above
-        # threshold (142, 88, 60, 33→no it's 33<50 so drops, 71). Wait — recount.
-        # Above 50: 142, 88, 60, 71 → 4 quotes.
-        assert len(quotes) == 4
-        assert all(q.like_count >= 50 for q in quotes)
+        # Productivity youtube threshold = 10 (the youtube floor is flat across
+        # categories). Fixture Likes: 142, 88, 60, 33, 71, 12, 5, 0 → the two
+        # below 10 (5, 0) are dropped before the LLM, leaving 6.
+        assert len(quotes) == 6
+        assert all(q.like_count >= 10 for q in quotes)
         assert mock_llm.call_count == 1
 
     def test_empty_pool_skips_llm_call(self, mocker):
@@ -79,16 +78,18 @@ class TestEngagementFilter:
         mock_llm.assert_not_called()
 
     def test_threshold_swaps_with_category(self, mocker):
-        """b2b-saas drops the youtube threshold from 50 to 10 — comments that
-        productivity would reject now pass."""
+        """The engagement threshold is category-keyed (PRD §7.5). The youtube
+        floor is now flat across categories, but App Store still varies:
+        mobile-game (min 4 votes) admits a review that productivity (min 6)
+        rejects."""
         _mock_llm(mocker, [])
-        comments = [{"Likes": 15, "Text": "Found this niche devtool genuinely solves my prompt-mgmt pain."}]
+        comments = [{"vote_count": "5", "content": "Sync between devices keeps dropping mid-edit."}]
 
-        prod_meta = SourceMetadata(source="youtube", source_id="v", category="productivity")
-        saas_meta = SourceMetadata(source="youtube", source_id="v", category="b2b-saas")
+        prod_meta = SourceMetadata(source="appstore", source_id="app_x", category="productivity")
+        game_meta = SourceMetadata(source="appstore", source_id="app_x", category="mobile-game")
 
         assert extract_per_source(comments, prod_meta)[1] == []
-        assert len(extract_per_source(comments, saas_meta)[1]) == 1
+        assert len(extract_per_source(comments, game_meta)[1]) == 1
 
     def test_appstore_uses_vote_count_field(self, mocker):
         _mock_llm(mocker, [])
@@ -224,7 +225,6 @@ class TestIdeaBlindingObservable:
 
     def test_prompt_logged_and_does_not_contain_idea(self, fixture, mocker, caplog):
         idea = "note-taking app with better offline sync"
-        target_gap = "offline reliability"
         _mock_llm(mocker, [])
 
         with caplog.at_level(logging.INFO, logger=svc.logger.name):
@@ -234,7 +234,6 @@ class TestIdeaBlindingObservable:
         assert prompt_logs, "expected the constructed prompt to be logged"
         full = "\n".join(prompt_logs)
         assert idea not in full
-        assert target_gap not in full
 
 
 class TestDegenerateLLMOutput:

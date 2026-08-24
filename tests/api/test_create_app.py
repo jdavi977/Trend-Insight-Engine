@@ -32,10 +32,11 @@ def test_create_app_registers_only_v2_routes():
     assert ("/runs", "GET") in routes
     assert ("/runs/{run_id}", "GET") in routes
     assert ("/runs/{run_id}/approve", "POST") in routes
-    assert ("/runs/{run_id}/feedback", "POST") in routes
-    assert ("/runs/{run_id}/report", "POST") in routes
     v1_paths = {"/analyze/youtube", "/analyze/appStore", "/get/homePage", "/data/send", "/insights/similar"}
     assert v1_paths.isdisjoint({path for path, _ in routes})
+    # The feedback + report surface left in the scope-down (issue #89).
+    scoped_out_paths = {"/runs/{run_id}/feedback", "/runs/{run_id}/report"}
+    assert scoped_out_paths.isdisjoint({path for path, _ in routes})
 
 
 def test_root_returns_health_payload(client):
@@ -56,6 +57,19 @@ def test_root_returns_health_payload(client):
 )
 def test_retired_v1_endpoints_return_404(client, method, path):
     response = getattr(client, method)(path)
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/runs/11111111-1111-1111-1111-111111111111/feedback",
+        "/runs/11111111-1111-1111-1111-111111111111/report",
+    ],
+)
+def test_removed_feedback_and_report_endpoints_return_404(client, path):
+    """The feedback + report surface was cut in the scope-down (issue #89)."""
+    response = client.post(path, json={"reason": "spam", "direction": "continue"})
     assert response.status_code == 404
 
 

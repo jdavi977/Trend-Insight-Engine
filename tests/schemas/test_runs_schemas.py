@@ -7,6 +7,7 @@ evidence_quote_ids (PRD §7.7), Coverage.citation_ratio is bounded, severity is
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import get_args
 
 import pytest
 from pydantic import ValidationError
@@ -14,21 +15,17 @@ from pydantic import ValidationError
 from app.schemas.runs import (
     Competitor,
     Coverage,
-    ExtractionYield,
     FailedSource,
     FailureReason,
     GapItem,
-    IdeaMatch,
     PainItem,
     PartialSources,
     PreflightResult,
-    QualitySignals,
     Quote,
     RunApprove,
     RunCreate,
-    RunFeedback,
-    RunReport,
     RunResult,
+    RunStatus,
 )
 
 
@@ -71,12 +68,14 @@ class TestRunCreate:
         with pytest.raises(ValidationError):
             RunCreate(idea="")
 
-    def test_target_gap_optional(self):
-        rc = RunCreate(idea="note app")
-        assert rc.target_gap is None
+    def test_idea_is_the_only_field(self):
+        """`target_gap` was folded into `idea` (#88, spec D5) — a run is created
+        from one idea string, and a stale extra key is dropped, not rejected."""
+        rc = RunCreate(idea="note app", target_gap="offline sync")
+        assert rc.model_dump() == {"idea": "note app"}
 
     def test_round_trip(self):
-        rc = RunCreate(idea="note app", target_gap="offline sync")
+        rc = RunCreate(idea="note app")
         assert RunCreate.model_validate(rc.model_dump()) == rc
 
 
@@ -136,16 +135,6 @@ class TestCoverage:
     def test_happy_path(self):
         c = Coverage(quotes_retrieved=184, quotes_cited=12, citation_ratio=0.065)
         assert c.citation_ratio == pytest.approx(0.065)
-
-
-class TestIdeaMatch:
-    def test_verdict_must_be_known(self):
-        with pytest.raises(ValidationError):
-            IdeaMatch(gap_id="g1", verdict="maybe", evidence_quote_ids=[])
-
-    def test_partial_verdict_allowed(self):
-        m = IdeaMatch(gap_id="g1", verdict="partial", evidence_quote_ids=["q1"])
-        assert m.verdict == "partial"
 
 
 class TestPreflightResult:
@@ -217,36 +206,17 @@ class TestPreflightResult:
         assert pr.no_sources is True
 
 
-class TestRunFeedback:
-    def test_all_fields_optional(self):
-        fb = RunFeedback()
-        assert fb.new_to_me_gap_ids is None
-        assert fb.direction is None
-        assert fb.time_saved_estimate_minutes is None
-
-    def test_valid_direction_accepted(self):
-        for direction in ("continue", "shift", "drop", "need_more_research"):
-            assert RunFeedback(direction=direction).direction == direction
-
-    def test_invalid_direction_rejected(self):
-        with pytest.raises(ValidationError):
-            RunFeedback(direction="pivot")
-
-    def test_negative_time_saved_rejected(self):
-        with pytest.raises(ValidationError):
-            RunFeedback(time_saved_estimate_minutes=-1)
-
-    def test_zero_time_saved_allowed(self):
-        assert RunFeedback(time_saved_estimate_minutes=0).time_saved_estimate_minutes == 0
-
-
-class TestRunReport:
-    def test_reason_required_non_empty(self):
-        with pytest.raises(ValidationError):
-            RunReport(reason="")
-
-    def test_happy_path(self):
-        assert RunReport(reason="spam").reason == "spam"
+class TestRunStatus:
+    def test_lifecycle_states(self):
+        """`reported` left with the feedback + report surface (scope-down #89):
+        the lifecycle is pending → preflight_ready → running → done | failed."""
+        assert set(get_args(RunStatus)) == {
+            "pending",
+            "preflight_ready",
+            "running",
+            "done",
+            "failed",
+        }
 
 
 class TestFailureReason:
@@ -277,64 +247,11 @@ class TestPartialSources:
             PartialSources(failed=[], succeeded_count=-1, total_count=0)
 
 
-def _quality_signals(**overrides):
-    base = {
-        "quote_source_diversity": 0.5,
-        "severity_distribution": [0, 1, 2, 3, 4],
-        "single_source_gap_count": 1,
-        "extraction_yield": [
-            ExtractionYield(source="youtube", comment_count=184, pain_item_count=12),
-        ],
-    }
-    return QualitySignals(**{**base, **overrides})
-
-
-class TestExtractionYield:
-    def test_round_trip(self):
-        ey = ExtractionYield(source="appstore", comment_count=40, pain_item_count=5)
-        assert ExtractionYield.model_validate(ey.model_dump()) == ey
-
-    def test_source_must_be_known(self):
-        with pytest.raises(ValidationError):
-            ExtractionYield(source="reddit", comment_count=1, pain_item_count=1)
-
-    def test_counts_non_negative(self):
-        with pytest.raises(ValidationError):
-            ExtractionYield(source="youtube", comment_count=-1, pain_item_count=0)
-
-
-class TestQualitySignals:
-    def test_round_trip(self):
-        qs = _quality_signals()
-        assert QualitySignals.model_validate(qs.model_dump()) == qs
-
-    def test_severity_distribution_must_be_length_five(self):
-        with pytest.raises(ValidationError):
-            _quality_signals(severity_distribution=[0, 1, 2, 3])
-        with pytest.raises(ValidationError):
-            _quality_signals(severity_distribution=[0, 1, 2, 3, 4, 5])
-
-    def test_diversity_bounded(self):
-        with pytest.raises(ValidationError):
-            _quality_signals(quote_source_diversity=1.5)
-        with pytest.raises(ValidationError):
-            _quality_signals(quote_source_diversity=-0.1)
-
-    def test_single_source_gap_count_non_negative(self):
-        with pytest.raises(ValidationError):
-            _quality_signals(single_source_gap_count=-1)
-
-    def test_extraction_yield_defaults_empty(self):
-        qs = _quality_signals(extraction_yield=[])
-        assert qs.extraction_yield == []
-
-
 class TestRunResult:
     def test_full_round_trip(self):
         rr = RunResult(
             run_id="11111111-1111-1111-1111-111111111111",
             idea="note app",
-            target_gap="offline sync",
             created_at=datetime(2026, 5, 28, 12, 0, tzinfo=timezone.utc),
             category="notes",
             signal_strength="high",
@@ -343,12 +260,12 @@ class TestRunResult:
             gaps=[_gap()],
             quotes={"q1": _quote("q1"), "q2": _quote("q2")},
             coverage=Coverage(quotes_retrieved=184, quotes_cited=12, citation_ratio=0.065),
-            idea_match=IdeaMatch(gap_id="g1", verdict="matches", evidence_quote_ids=["q1", "q2"]),
-            quality_signals=_quality_signals(),
         )
         assert RunResult.model_validate(rr.model_dump()) == rr
 
-    def test_quality_signals_optional(self):
+    def test_carries_no_idea_match(self):
+        """The idea-match stage was folded away (#88, spec A4) — a terminal
+        result is gaps + quotes + coverage, with no separate match verdict."""
         rr = RunResult(
             run_id="r",
             idea="x",
@@ -361,19 +278,4 @@ class TestRunResult:
             quotes={"q1": _quote("q1"), "q2": _quote("q2")},
             coverage=Coverage(quotes_retrieved=10, quotes_cited=2, citation_ratio=0.2),
         )
-        assert rr.quality_signals is None
-
-    def test_idea_match_optional(self):
-        rr = RunResult(
-            run_id="r",
-            idea="x",
-            created_at=datetime(2026, 5, 28, tzinfo=timezone.utc),
-            category="c",
-            signal_strength="medium",
-            signal_reasoning="r",
-            competitors=[_competitor()],
-            gaps=[_gap()],
-            quotes={"q1": _quote("q1"), "q2": _quote("q2")},
-            coverage=Coverage(quotes_retrieved=10, quotes_cited=2, citation_ratio=0.2),
-        )
-        assert rr.idea_match is None
+        assert "idea_match" not in rr.model_dump()

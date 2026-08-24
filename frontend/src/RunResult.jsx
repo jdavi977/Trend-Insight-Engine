@@ -4,8 +4,8 @@
  * every 5s while the run is non-terminal (pending / running / preflight_ready)
  * and stops once `done` or `failed`. Three render states:
  *   - running  → progress shell ("Running across N sources…")
- *   - done     → signal banner, coverage line, optional idea_match card, ranked
- *                gap list with verbatim quotes inline + citation count per gap
+ *   - done     → signal banner, coverage line, ranked gap list with verbatim
+ *                quotes inline + citation count per gap
  *   - failed   → failure_reason surfaced (never a silent blank)
  *
  * Page-level component owns all state and is the only thing that talks to the
@@ -15,22 +15,19 @@
  * The run id comes from the /runs/:id route (ADR 2026-06-01 / issue #58), so a
  * pasted URL loads the run directly in a fresh tab (US-4, US-5).
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   PrimaryButton,
-  SecondaryButton,
   Pill,
   Spinner,
   ErrorBanner,
   SignalBadge,
   SourceIcon,
-  TextInput,
 } from "./components/atoms";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const POLL_MS = 5000; // spec open question #1 — confirmed 5s.
-const FEEDBACK_DEBOUNCE_MS = 800; // batch rapid thumbs-up toggles into one append-only write.
 
 // Human-readable copy per `failure_reason` enum (slice 2 §5.3 / §9.2). Never
 // surface the raw enum string — each terminal cause gets a clear explanation.
@@ -148,7 +145,7 @@ export default function RunResult() {
   }
 
   if (run.status === "done") {
-    return <DoneState run={run} runId={runId} navigate={navigate} onNewRun={onNewRun} />;
+    return <DoneState run={run} onNewRun={onNewRun} />;
   }
 
   // pending / preflight_ready / running
@@ -236,60 +233,9 @@ function FailedState({ run, onNewRun }) {
 }
 
 // ── Done ───────────────────────────────────────────────────────
-function DoneState({ run, runId, navigate, onNewRun }) {
+function DoneState({ run, onNewRun }) {
   const gaps = run.gaps ?? [];
   const quotes = run.quotes ?? {};
-
-  // Feedback (PRD §4/§9) is append-only and page-level: children call up via
-  // callbacks, the page owns the single fetch (frontend/CONTEXT.md).
-  const [feedbackError, setFeedbackError] = useState("");
-
-  async function postFeedback(payload) {
-    try {
-      const res = await fetch(`${API_BASE}/runs/${runId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        setFeedbackError(await readError(res));
-        return false;
-      }
-      setFeedbackError("");
-      return true;
-    } catch (err) {
-      setFeedbackError(err?.message || "Couldn’t record that — check your connection.");
-      return false;
-    }
-  }
-
-  // Thumbs-up: track the set of "new to me" gaps and flush the whole set on a
-  // debounce so rapid toggles collapse into one append-only feedback row.
-  const [newToMe, setNewToMe] = useState(() => new Set());
-  const isFirstFlush = useRef(true);
-
-  function toggleNewToMe(gapId) {
-    setNewToMe((prev) => {
-      const next = new Set(prev);
-      if (next.has(gapId)) next.delete(gapId);
-      else next.add(gapId);
-      return next;
-    });
-  }
-
-  useEffect(() => {
-    // Skip the initial mount (empty set) and any state where nothing is marked.
-    if (isFirstFlush.current) {
-      isFirstFlush.current = false;
-      return undefined;
-    }
-    if (newToMe.size === 0) return undefined;
-    const timer = setTimeout(() => {
-      postFeedback({ new_to_me_gap_ids: [...newToMe] });
-    }, FEEDBACK_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newToMe]);
 
   return (
     <div className="tie-page tie-page--narrow">
@@ -309,10 +255,6 @@ function DoneState({ run, runId, navigate, onNewRun }) {
         {run.partial_sources && <PartialSourcesBanner partial={run.partial_sources} />}
         {run.coverage && <CoverageLine coverage={run.coverage} />}
 
-        {run.idea_match && (
-          <IdeaMatchCard match={run.idea_match} targetGap={run.target_gap} quotes={quotes} />
-        )}
-
         {gaps.length === 0 ? (
           <div
             style={{
@@ -329,39 +271,16 @@ function DoneState({ run, runId, navigate, onNewRun }) {
           </div>
         ) : (
           gaps.map((gap, i) => (
-            <GapCard
-              key={gap.gap_id}
-              gap={gap}
-              rank={i + 1}
-              quotes={quotes}
-              newToMe={newToMe.has(gap.gap_id)}
-              onToggleNewToMe={() => toggleNewToMe(gap.gap_id)}
-            />
+            <GapCard key={gap.gap_id} gap={gap} rank={i + 1} quotes={quotes} />
           ))
         )}
       </div>
 
-      {gaps.length > 0 && <DirectionPrompt onChoose={(direction) => postFeedback({ direction })} />}
-
-      {feedbackError && (
-        <p style={{ margin: "1rem 0 0", fontSize: ".8rem", color: "var(--tie-error-fg)" }}>
-          {feedbackError}
-        </p>
+      {onNewRun && (
+        <div style={{ marginTop: "2.5rem" }}>
+          <PrimaryButton onClick={onNewRun}>Start another run →</PrimaryButton>
+        </div>
       )}
-
-      <div
-        style={{
-          marginTop: "2.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        {onNewRun && <PrimaryButton onClick={onNewRun}>Start another run →</PrimaryButton>}
-        <ReportControl runId={runId} navigate={navigate} />
-      </div>
     </div>
   );
 }
@@ -389,186 +308,6 @@ function PartialSourcesBanner({ partial }) {
             .join(", ")}
         </p>
       )}
-    </div>
-  );
-}
-
-// ── Direction prompt (slice 2 §9.2) ────────────────────────────
-const DIRECTION_OPTIONS = [
-  { value: "continue", label: "Continuing with it" },
-  { value: "shift", label: "Shifting the angle" },
-  { value: "drop", label: "Dropping it" },
-  { value: "need_more_research", label: "Need more research" },
-];
-
-function DirectionPrompt({ onChoose }) {
-  const [dismissed, setDismissed] = useState(false);
-  const [chosen, setChosen] = useState(null);
-
-  if (dismissed) return null;
-
-  if (chosen) {
-    return (
-      <div
-        style={{
-          marginTop: "2rem",
-          padding: "1rem 1.25rem",
-          background: "var(--tie-surface-soft)",
-          border: "1px solid var(--tie-border-soft)",
-          borderRadius: "var(--tie-radius-md)",
-          color: "var(--tie-fg-3)",
-          fontSize: ".9rem",
-        }}
-      >
-        Thanks — noted that you’re{" "}
-        <strong style={{ color: "var(--tie-fg-2)" }}>
-          {DIRECTION_OPTIONS.find((o) => o.value === chosen)?.label.toLowerCase()}
-        </strong>
-        .
-      </div>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        marginTop: "2rem",
-        padding: "1.25rem 1.4rem",
-        background: "var(--tie-surface-soft)",
-        border: "1px solid var(--tie-border-soft)",
-        borderRadius: "var(--tie-radius-md)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
-        <div style={{ fontWeight: 600, color: "var(--tie-fg-1)", fontSize: ".98rem" }}>
-          After seeing these gaps, where’s your idea headed?
-        </div>
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Dismiss"
-          style={{
-            background: "none",
-            border: "none",
-            color: "var(--tie-fg-3)",
-            cursor: "pointer",
-            fontSize: "1.1rem",
-            lineHeight: 1,
-            padding: 0,
-            flexShrink: 0,
-          }}
-        >
-          ✕
-        </button>
-      </div>
-      <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginTop: ".9rem" }}>
-        {DIRECTION_OPTIONS.map((opt) => (
-          <SecondaryButton
-            key={opt.value}
-            onClick={() => {
-              setChosen(opt.value);
-              onChoose(opt.value);
-            }}
-            style={{ padding: ".55rem .9rem", fontSize: ".88rem" }}
-          >
-            {opt.label}
-          </SecondaryButton>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Report this run (slice 2 §9.2) ─────────────────────────────
-function ReportControl({ runId, navigate }) {
-  const [confirming, setConfirming] = useState(false);
-  const [reason, setReason] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit() {
-    const trimmed = reason.trim();
-    if (!trimmed) {
-      setError("Please add a brief reason.");
-      return;
-    }
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch(`${API_BASE}/runs/${runId}/report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: trimmed }),
-      });
-      if (!res.ok) {
-        setError(await readError(res));
-        setSubmitting(false);
-        return;
-      }
-      // Hidden pending admin review — send the user home with an acknowledgement.
-      navigate("/", { state: { reported: true } });
-    } catch (err) {
-      setError(err?.message || "Couldn’t submit the report — check your connection.");
-      setSubmitting(false);
-    }
-  }
-
-  if (!confirming) {
-    return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        style={{
-          background: "none",
-          border: "none",
-          color: "var(--tie-fg-3)",
-          textDecoration: "underline",
-          cursor: "pointer",
-          fontSize: ".82rem",
-          fontFamily: "inherit",
-          padding: 0,
-        }}
-      >
-        Report this run
-      </button>
-    );
-  }
-
-  return (
-    <div
-      style={{
-        flex: "1 1 100%",
-        padding: "1.1rem 1.25rem",
-        background: "var(--tie-surface-soft)",
-        border: "1px solid var(--tie-border-strong)",
-        borderRadius: "var(--tie-radius-md)",
-      }}
-    >
-      <div style={{ fontWeight: 600, color: "var(--tie-fg-1)", fontSize: ".95rem", marginBottom: ".25rem" }}>
-        Report this run?
-      </div>
-      <p style={{ margin: "0 0 .75rem", color: "var(--tie-fg-3)", fontSize: ".85rem", lineHeight: 1.5 }}>
-        It’ll be hidden from the public feed pending review. Tell us what’s wrong with it.
-      </p>
-      <TextInput
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="e.g. offensive content, spam, broken results…"
-        multiline
-        rows={2}
-        autoFocus
-      />
-      {error && (
-        <p style={{ margin: ".5rem 0 0", fontSize: ".8rem", color: "var(--tie-error-fg)" }}>{error}</p>
-      )}
-      <div style={{ display: "flex", gap: ".5rem", marginTop: ".75rem" }}>
-        <PrimaryButton onClick={submit} disabled={submitting}>
-          {submitting ? "Reporting…" : "Confirm report"}
-        </PrimaryButton>
-        <SecondaryButton onClick={() => setConfirming(false)} disabled={submitting}>
-          Cancel
-        </SecondaryButton>
-      </div>
     </div>
   );
 }
@@ -611,45 +350,6 @@ function CoverageLine({ coverage }) {
   );
 }
 
-const IDEA_MATCH_LABEL = {
-  matches: "Matches your target gap",
-  partial: "Partially matches your target gap",
-  no_match: "Doesn’t match your target gap",
-};
-
-function IdeaMatchCard({ match, targetGap, quotes }) {
-  const cited = (match.evidence_quote_ids ?? []).map((id) => quotes[id]).filter(Boolean);
-  return (
-    <div
-      style={{
-        background: "var(--tie-surface)",
-        border: "1px solid var(--tie-border-strong)",
-        borderRadius: "var(--tie-radius-md)",
-        padding: "1.25rem 1.4rem",
-      }}
-    >
-      <div style={{ fontSize: ".72rem", letterSpacing: ".08em", textTransform: "uppercase", fontWeight: 600, color: "var(--tie-fg-3)", marginBottom: ".5rem" }}>
-        Your target gap
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--tie-fg-1)" }}>
-          {IDEA_MATCH_LABEL[match.verdict] ?? match.verdict}
-        </span>
-      </div>
-      {targetGap && (
-        <p style={{ margin: ".5rem 0 0", color: "var(--tie-fg-2)", fontSize: ".92rem", lineHeight: 1.5 }}>
-          “{targetGap}”
-        </p>
-      )}
-      {cited.length > 0 && (
-        <div style={{ marginTop: ".9rem" }}>
-          <QuoteList quotes={cited} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 // Severity 1..5 → label + color (matches the SignalDot palette tone).
 function severityMeta(severity) {
   if (severity >= 4) return { label: `Severity ${severity}/5`, color: "#b91c1c", bg: "var(--tie-error-bg)", border: "var(--tie-error-border)" };
@@ -657,7 +357,7 @@ function severityMeta(severity) {
   return { label: `Severity ${severity}/5`, color: "#16a34a", bg: "rgba(22,163,74,.10)", border: "rgba(22,163,74,.30)" };
 }
 
-function GapCard({ gap, rank, quotes, newToMe, onToggleNewToMe }) {
+function GapCard({ gap, rank, quotes }) {
   const sev = severityMeta(gap.severity);
   const citationCount = gap.evidence_quote_ids?.length ?? 0;
   const cited = (gap.evidence_quote_ids ?? []).map((id) => quotes[id]).filter(Boolean);
@@ -702,31 +402,6 @@ function GapCard({ gap, rank, quotes, newToMe, onToggleNewToMe }) {
             <Pill muted style={{ whiteSpace: "nowrap" }}>
               {citationCount} citation{citationCount === 1 ? "" : "s"}
             </Pill>
-            <button
-              type="button"
-              onClick={onToggleNewToMe}
-              aria-pressed={newToMe}
-              title={newToMe ? "Marked as new to you" : "This gap is new to me"}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: ".3rem",
-                padding: "4px 9px",
-                borderRadius: "var(--tie-radius-pill)",
-                border: `1px solid ${newToMe ? "var(--tie-border-strong)" : "var(--tie-border)"}`,
-                background: newToMe ? "var(--tie-surface-hover)" : "var(--tie-surface)",
-                color: newToMe ? "var(--tie-fg-1)" : "var(--tie-fg-3)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: "var(--tie-fs-micro)",
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-                transition: "all .15s ease",
-              }}
-            >
-              <span aria-hidden="true" style={{ opacity: newToMe ? 1 : 0.5 }}>👍</span>
-              <span>New to me</span>
-            </button>
           </div>
         </div>
 

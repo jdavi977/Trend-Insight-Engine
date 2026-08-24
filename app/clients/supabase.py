@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from supabase import create_client, Client
@@ -11,10 +11,9 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
 supabase_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
-def insert_idea_run(idea: str, target_gap: Optional[str]) -> dict:
+def insert_idea_run(idea: str) -> dict:
     response = supabase_client.table("idea_runs").insert({
         "idea": idea,
-        "target_gap": target_gap,
         "status": "pending",
         "competitors_json": [],
         "quotes_json": {},
@@ -79,27 +78,19 @@ def update_idea_run_done(
     run_id: str,
     quotes: dict,
     coverage: dict,
-    idea_match: Optional[dict],
     partial_sources: Optional[dict] = None,
-    quality_signals: Optional[dict] = None,
 ) -> dict:
     """Write the terminal happy-path result. `status='done'` is set last (spec §8).
 
     `partial_sources` (slice 2 §5.1) is the partial-completion summary written to
     `partial_sources_json` — `None` on a fully-successful run, populated when the
     run completed `done` despite ≥1 source failing above the 70% threshold.
-
-    `quality_signals` (slice 3 §5) is the per-run observability bundle written to
-    `quality_signals_json` — `None` when its computation failed (it is never
-    load-bearing for completion).
     """
     response = supabase_client.table("idea_runs").update({
         "status": "done",
         "quotes_json": quotes,
         "coverage_json": coverage,
-        "idea_match_json": idea_match,
         "partial_sources_json": partial_sources,
-        "quality_signals_json": quality_signals,
     }).eq("id", run_id).execute()
     return _one_updated_row(response, run_id)
 
@@ -130,42 +121,6 @@ def update_idea_run_failed_if_running(
     }).eq("id", run_id).eq("status", "running").execute()
     rows = response.data or []
     return rows[0] if rows else None
-
-
-def update_idea_run_reported(run_id: str, reason: str) -> dict:
-    """Hide a run from the public surface (spec §7, US-S7, issue #62).
-
-    Flips `status` → `reported`, stamps `reported_at`, and stores the report
-    reason for manual admin review. The row is retained, not deleted (PRD §8 —
-    "hidden pending decision"). Raises if the run_id matches no row.
-    """
-    response = supabase_client.table("idea_runs").update({
-        "status": "reported",
-        "reported_at": datetime.now(timezone.utc).isoformat(),
-        "report_reason": reason,
-    }).eq("id", run_id).execute()
-    return _one_updated_row(response, run_id)
-
-
-def insert_feedback_event(
-    run_id: str,
-    new_to_me_gap_ids: Optional[list[str]],
-    direction: Optional[str],
-    time_saved_estimate_minutes: Optional[int],
-) -> dict:
-    """APPEND-ONLY insert into `feedback_events` (spec §7, PRD §9).
-
-    Every call adds a row — never an upsert, update, or delete. Multiple rows
-    per `run_id` are expected (one per feedback submission). `submitted_at` is
-    stamped server-side by the column default (migration 002).
-    """
-    response = supabase_client.table("feedback_events").insert({
-        "run_id": run_id,
-        "new_to_me_gap_ids_json": new_to_me_gap_ids,
-        "direction": direction,
-        "time_saved_estimate_minutes": time_saved_estimate_minutes,
-    }).execute()
-    return response.data[0]
 
 
 def insert_gaps(gap_rows: list[dict]) -> list[dict]:

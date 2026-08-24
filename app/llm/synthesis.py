@@ -26,7 +26,7 @@ from app.schemas.runs import Coverage, GapItem, PainItem, Quote
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = """You are a product-research synthesizer. You receive a pool of verbatim user quotes harvested from competing products (each quote has a stable quote_id), plus per-source pain items already extracted from those quotes. Optionally you also receive an idea the researcher is exploring, and a target_gap they want validated.
+_SYSTEM_PROMPT = """You are a product-research synthesizer. You receive a pool of verbatim user quotes harvested from competing products (each quote has a stable quote_id), plus per-source pain items already extracted from those quotes. You also receive the idea the researcher is exploring.
 
 Your task: produce a ranked list of distinct product GAPS — concrete unmet needs, recurring complaints, or feature requests — grounded in the quote pool.
 
@@ -35,7 +35,7 @@ RULES (non-negotiable; violations will be discarded by a downstream validator):
 2. Prefer gaps that span multiple competitors over single-competitor gripes.
 3. severity is 1–5 (1 = mild nit, 3 = meaningful friction, 5 = dealbreaker / data loss).
 4. Rank gaps by importance (highest first). Aim for 3–7 gaps; fewer well-grounded gaps beats many weakly-grounded ones.
-5. Do NOT echo the idea or target_gap text back as a gap. Gaps must be derived from the quotes.
+5. Do NOT echo the idea text back as a gap. Gaps must be derived from the quotes.
 
 Return ONLY valid JSON in this shape:
 {
@@ -48,7 +48,6 @@ Return ONLY valid JSON in this shape:
 
 def _build_user_message(
     idea: str,
-    target_gap: str | None,
     quotes: list[Quote],
     pain_items: list[PainItem],
 ) -> str:
@@ -60,10 +59,8 @@ def _build_user_message(
         f"  - [{p.source}/{p.source_id}] {p.text} (cites: {', '.join(p.quote_ids)})"
         for p in pain_items
     ]
-    target_block = f"target_gap: {target_gap}\n" if target_gap else ""
     return (
         f"idea: {idea}\n"
-        f"{target_block}"
         f"\nQuote pool ({len(quotes)} quotes):\n"
         + "\n".join(quote_lines)
         + f"\n\nPer-source pain items ({len(pain_items)}):\n"
@@ -154,7 +151,6 @@ def _coverage(quotes: list[Quote], gaps: Iterable[GapItem]) -> Coverage:
 
 def synthesize(
     idea: str,
-    target_gap: str | None,
     quotes: list[Quote],
     pain_items: list[PainItem],
 ) -> tuple[list[GapItem], Coverage]:
@@ -162,9 +158,13 @@ def synthesize(
 
     Any candidate gap with fewer than 2 citations, or citing a quote_id not in
     the pool, is silently rejected (spec §5 — not auto-repaired).
+
+    Runs on `idea` alone: the separate gap-hypothesis field was folded into it
+    (#88, spec D5 / §9 Q1). Making synthesis actually *target* gaps at the idea
+    is reliability work, deliberately out of scope here.
     """
     pool_index = {q.quote_id: q for q in quotes}
-    raw = _call_llm(_build_user_message(idea, target_gap, quotes, pain_items))
+    raw = _call_llm(_build_user_message(idea, quotes, pain_items))
     candidates = _parse_candidates(raw)
 
     gaps: list[GapItem] = []

@@ -33,7 +33,7 @@ The cost of the pivot is explicit: §4 leading indicators replace any v1 "weekly
 
 **Trend Insight Engine** takes a builder's idea — vague (*"2.5d survivor-like game"*) or specific (*"note-taking app with better offline sync"*) — and returns a ranked list of **evidence-backed candidate gaps** drawn from real complaints across relevant competitors. Every gap is anchored to verbatim quotes from the source data; synthesis cannot claim a gap that isn't grounded in retrieved evidence.
 
-The product is **decision support, not a verdict.** Output is a structured starting point for interviews and landing-page tests, not a substitute. The UI reinforces this with signal-strength banners, verbatim quotes next to every claim, and a "report this run" affordance.
+The product is **decision support, not a verdict.** Output is a structured starting point for interviews and landing-page tests, not a substitute. The UI reinforces this with signal-strength banners and verbatim quotes next to every claim. *(The "report this run" affordance that also carried this message was removed in the scope-down — [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89), §7.2.)*
 
 **Scope honesty:** the tool works best for consumer apps, mobile games, and creator-facing tools — where users post publicly. For B2B SaaS, devtools, or enterprise software, public signal is thin; the tool warns before running and requires explicit acknowledgement.
 
@@ -77,6 +77,8 @@ Adjacent tools cover different ground: enterprise feedback platforms (Enterpret,
 
 These signals are weak on their own. A run hitting all three with a hallucinated gap is still a failure — §7.4 quote-grounding and the v1.1 golden eval set (§15) are the real defence.
 
+**Not currently measured (scope-down, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89), 2026-07-27).** The first two indicators were collected by `POST /runs/:id/feedback` — the per-gap thumbs-up and the direction prompt — and that whole surface is removed, along with the `feedback_events` log it wrote to. Nothing reads these indicators today; the table describes what would have to be rebuilt to measure them, not a live instrument.
+
 ## 5. Non-Goals
 
 - **Not a sentiment dashboard.** Structured pain only — no NPS, no positive/negative ratios.
@@ -108,7 +110,7 @@ These signals are weak on their own. A run hitting all three with a hallucinated
 | US-S4 | Server restarts during `running` | Transitions to `failed` with `failure_reason: server_restart` on next read |
 | US-S5 | Daily OpenAI budget cap exhausted | `POST /runs` returns `429 budget_exhausted` |
 | US-S6 | Per-IP rate limit hit | `429 rate_limited` with retry-after |
-| US-S7 | User reports a run as abusive | `POST /runs/:id/report` hides the result pending review |
+| US-S7 | ~~User reports a run as abusive~~ | **Removed 2026-07-27 ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)).** `POST /runs/:id/report` and the `reported` state are gone; moderation is out of the core loop and returns as its own feature if abuse becomes real |
 
 ## 7. Functional Requirements
 
@@ -118,21 +120,18 @@ One submission = one run.
 
 ```
 pending → preflight_ready → running → done | failed
-                                    ↘ reported (admin-hidden)
 ```
 
-`failed` is terminal with a structured `failure_reason`. `reported` hides the public view but keeps the row; admin decides restore or hard-delete.
+`failed` is terminal with a structured `failure_reason`. These five states are the whole machine: the admin-hidden `reported` branch left with the report endpoint in the scope-down ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89), 2026-07-27), so no status hides a run from the public surface.
 
 ### 7.2 Endpoints
 
-- **`POST /runs`** — `{ idea, target_gap? }`. Creates run in `pending`. Pre-flight runs synchronously; response held until pre-flight finishes (≤10s, §8), then flips to `preflight_ready`. Per-IP rate-limited.
+- **`POST /runs`** — `{ idea }`. Creates run in `pending`. Pre-flight runs synchronously; response held until pre-flight finishes (≤10s, §8), then flips to `preflight_ready`. Per-IP rate-limited.
 - **`POST /runs/:id/approve`** — `{ competitors: [{ source, url, name }], acknowledged_low_signal? }`. Validates edited list; `preflight_ready` → `running`; enqueues background pipeline. If pre-flight was `low` signal and the ack flag is missing, returns 400.
-- **`POST /runs/:id/feedback`** — `{ new_to_me_gap_ids?, direction?, time_saved_estimate_minutes? }`. Records §4 indicators. **Append-only**. Valid only when `done`.
-- **`POST /runs/:id/report`** — `{ reason }`. Hides run; queues for admin review.
 - **`GET /runs/:id`** — current state + (when `done`) full results. Public.
 - **`GET /runs`** — paginated public feed of recent completed runs. Drives Home.
 
-Legacy `/analyze/youtube` and `/analyze/appStore` are **removed**; their logic moves to internal `services/`.
+Legacy `/analyze/youtube` and `/analyze/appStore` are **removed**; their logic moves to internal `services/`. `POST /runs/:id/feedback` (append-only §4 indicators) and `POST /runs/:id/report` (`{ reason }`, hides the run pending admin review) shipped in slice 2 and were **removed 2026-07-27** in the scope-down ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)) — create, approve, and read are the whole run surface.
 
 All `/runs/:id` HTML responses set `X-Robots-Tag: noindex, nofollow`.
 
@@ -167,7 +166,6 @@ Idea text
         - output: ranked gaps, each citing quote IDs from the input pool
         - gaps with no cited quotes are rejected
 
-  → If target_gap supplied: idea-match LLM call
 
   → Persist to Supabase → status `done` (or `done` + `partial_sources` banner)
 
@@ -182,18 +180,15 @@ Pre-flight was prototyped and graded against 15 ideas on 2026-05-22 — PASS on 
 
 ```
 {
-  run_id, idea, target_gap?, created_at,
+  run_id, idea, created_at,
   category, signal_strength, signal_reasoning,
   competitors: [...],
   gaps: [GapItem],
   per_app_pain: [AppPainBlock],
   per_video_pain: [VideoPainBlock],
-  idea_match?: { gap_id, verdict, evidence_quote_ids },
   coverage: { quotes_retrieved, quotes_cited, citation_ratio },  // §7.8
   partial_sources?: { failed: [{source, name, reason}],
-                      succeeded_count, total_count },
-  feedback_events?: [ { submitted_at, new_to_me_gap_ids,
-                        direction, time_saved_estimate_minutes } ]
+                      succeeded_count, total_count }
 }
 ```
 
@@ -245,16 +240,14 @@ Applied server-side based on category; not exposed in v1 UI. Per-run tuning is a
 ### 7.6 Frontend pages
 
 - **Home** — public feed of recent completed runs (idea text, completed-at, link) + "Start a new run" CTA. Replaces the old weekly-trending Home.
-- **New Run** — submit form (idea + optional target gap) → pre-flight loading → **pre-flight review:**
+- **New Run** — submit form (idea — the only field) → pre-flight loading → **pre-flight review:**
   - **Signal-strength panel.** Shows `signal_strength` + `signal_reasoning`. If `low`, prominent: primary CTA *"Continue anyway — I understand the signal will be thin"*, secondary *"Cancel and refine"*. Acknowledgement gates `approve`.
   - **Competitor list editor.** Add / remove / paste URL. Each candidate shows its search-API source ("found via App Store search for X").
 - **Run Status / Result** — live progress while `running` (the page polls and updates itself in-session), full result when `done`. The backend `GET /runs/:id` endpoint sets `X-Robots-Tag: noindex, nofollow`. *Navigation is state-based (no shareable/deep-linkable client URL in v2 — see §15); the run is reached in-session by approving it or opening it from the feed.* When `done`:
   - **Signal-strength banner** at the top.
   - **`partial_sources` banner** if any sources failed, naming them.
   - **Ranked gap list** with **verbatim quotes prominent next to each claim** (not hidden in drill-down) — reinforces §1 framing.
-  - **Thumbs-up control** per gap → `POST /runs/:id/feedback`.
-  - **Direction prompt** after the list: *"continuing / shifting / dropping / need more research?"* — non-blocking, dismissible.
-  - **"Report this run"** link → `POST /runs/:id/report`.
+  - *(Removed 2026-07-27, [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89): the per-gap thumbs-up, the "continuing / shifting / dropping / need more research?" direction prompt, and the "Report this run" link. The Result page is read-only — gap list plus a "Start another run" CTA.)*
 - **My Runs** — frontend-only filter of the public feed against `localStorage` `run_id`s.
 
 ### 7.7 Quote-then-claim retrieval (v1)
@@ -274,17 +267,19 @@ A formal golden eval set (15–20 ideas, hallucination-rate measured) is **defer
 
 - Articulate, emotionally-loaded complaints win over quiet but frequent friction.
 - The LLM's prior over "what categories of pain exist" shapes clustering.
-- If the per-source extractor sees `idea` or `target_gap`, it can over-promote pain matching the user's hypothesis (confirmation bias).
+- If the per-source extractor sees the `idea`, it can over-promote pain matching the user's hypothesis (confirmation bias).
 
 v1 ships three near-zero-cost mitigations:
 
-1. **Idea-blinded extraction.** Per-source prompts exclude `idea` and `target_gap`. Only synthesis sees them; `idea_match` runs after synthesis (§7.3). Removes confirmation bias at zero LLM cost.
+1. **Idea-blinded extraction.** Per-source prompts exclude the `idea`; only synthesis sees it (§7.3). Removes confirmation bias at zero LLM cost.
 2. **Coverage metrics in output.** `coverage: { quotes_retrieved, quotes_cited, citation_ratio }`. UI renders one line: *"12 of 184 retrieved quotes were cited (6%)"*. A run discarding 95% of evidence is structurally weaker than one citing 40%.
 3. **Citation count per gap.** UI shows `len(evidence_quote_ids)` next to severity — 2 citations is weaker than 12.
 
 These reduce one bias vector (idea-leakage) and make the rest *visible*, consistent with §1's "decision support, not verdict" framing. They do not *measure* selection bias — that requires the golden eval (§15). Higher-cost active mitigations are catalogued in §15.
 
 ### 7.9 Evaluation harness
+
+> **REMOVED 2026-07-27** — scope-down slice 2, [#87](https://github.com/jdavi977/Trend-Insight-Engine/issues/87), spec [D2/D3](../planning/specs/scope-down-core-pipeline_spec.md). `app/eval/` (harness, metrics, 5-idea seed set) and the `quality_signals` field are deleted: the harness was a manual dev tool outside CI, and it was `quality_signals`' only real consumer, so the two were cut together. **Nothing described below is live.** The section is retained as the opt-in-later record of what was built and what re-adopting it would cost — the code is recoverable from git at `1a586b2`. Consequence: any change that needs quality validation — a per-stage model swap (§10.1), an engagement-filter retune — now brings its own.
 
 v1 ships the evaluation harness and a seed set. v1.1 fills the full golden eval corpus (§15). The harness is the prerequisite for every cost-increasing quality improvement in §15 — without measurement, no mitigation can be justified.
 
@@ -343,15 +338,15 @@ These signals are logged, not surfaced in the UI in v1. They feed the golden eva
 | **Secrets** | All keys via `python-dotenv`. Never hardcoded. |
 | **Privacy / PII** | Persist-time redaction: regex strip of emails, phone numbers, `@handles`; NER pass for obvious person names. Raw text never persisted. |
 | **SEO surface** | `/runs/:id` set `X-Robots-Tag: noindex, nofollow`. Home feed is indexable but only lists idea text + timestamp, not gap content. |
-| **Abuse handling** | `POST /runs/:id/report` immediately hides; queues for admin. Not deleted, hidden pending decision. |
+| **Abuse handling** | **None as of 2026-07-27** ([#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89)). The `POST /runs/:id/report` hide-pending-admin path was removed; the remaining guards on an untrusted submitter are the per-IP rate limit, the daily budget cap, and `noindex` on run pages. Moderation returns as its own feature if abuse becomes real. |
 
 ## 9. Data Model
 
 | Store | Used for | Notes |
 |---|---|---|
-| **Supabase `idea_runs`** | One row per run | `id`, `idea`, `target_gap`, `status`, `category`, `signal_strength`, `signal_reasoning`, `competitors_json`, `quotes_json`, `partial_sources_json`, `created_at`, `updated_at`, `failure_reason`, `reported_at`. Source of truth. |
+| **Supabase `idea_runs`** | One row per run | `id`, `idea`, `status`, `category`, `signal_strength`, `signal_reasoning`, `competitors_json`, `quotes_json`, `partial_sources_json`, `created_at`, `updated_at`, `failure_reason`. Source of truth. That is now the whole table: the dead `quality_signals_json` (#87), `target_gap` / `idea_match_json` (#88), `reported_at` / `report_reason` (#89), and never-written `preflight_raw_json` columns were dropped 2026-07-27 ([#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90)), each after the code writing it was gone (spec R5). |
 | **Supabase `gaps`** | One row per surfaced gap | `gap_id`, `run_id` (FK), `gap`, `severity`, `frequency`, `spread`, `competitors_present_json`, `evidence_quote_ids_json`. Promoted out of the run blob for cross-run analytics. |
-| **Supabase `feedback_events`** | Append-only feedback log | `id`, `run_id` (FK), `submitted_at`, `new_to_me_gap_ids_json`, `direction`, `time_saved_estimate_minutes`. Never overwritten. |
+| ~~**Supabase `feedback_events`**~~ | ~~Append-only feedback log~~ | **Removed 2026-07-27.** The feedback endpoint that wrote it was deleted in [#89](https://github.com/jdavi977/Trend-Insight-Engine/issues/89); the table itself was dropped in [#90](https://github.com/jdavi977/Trend-Insight-Engine/issues/90). |
 | **In-memory job state** | Background task progress for active runs | Lost on restart; active runs → `failed` on next read. |
 
 Legacy `automatic_table` and `automatic_apple_table` (weekly trending) are **removed** in v2.
@@ -377,8 +372,7 @@ Legacy `automatic_table` and `automatic_apple_table` (weekly trending) are **rem
                                        → LLM extract)              quote-ID grounding)
                                              │
                                              ▼
-                                     Supabase: idea_runs
-                                     + gaps + feedback_events
+                                     Supabase: idea_runs + gaps
 ```
 
 Layer rule: `api/` → `services/` only. Pipeline modules don't import each other.
@@ -389,16 +383,15 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 
 | Stage | Calls / run | Token profile | Latency constraint | v1 model | Future routing candidates |
 |---|---|---|---|---|---|
-| **Pre-flight** | 1 | Light (idea text + search results) | ≤10s user-facing | gpt-4o | Cheaper/faster (gpt-4o-mini, Haiku-class). Classification + ranking is a simpler task; accuracy must be validated via §7.9 harness before downgrading. |
+| **Pre-flight** | 1 | Light (idea text + search results) | ≤10s user-facing | gpt-4o | Cheaper/faster (gpt-4o-mini, Haiku-class). Classification + ranking is a simpler task; accuracy must be validated before downgrading — the §7.9 harness that would have done it is removed (#87), so the downgrade owns its own evidence. |
 | **Per-source extraction** | 10 (parallel) | Heavy (hundreds of comments each) | Background; dominates total run time | gpt-4o | Same family. Token volume is the cost driver — stratified sampling (§15) reduces input before model routing helps. |
 | **Synthesis** | 1 | Heavy (entire pooled quote set) | Background; single largest call | gpt-4o | Reasoning model (o3-class, Opus with extended thinking). One call per run, highest-stakes output — a stronger model here has the best cost/accuracy ratio. |
-| **Idea-match** | 0–1 | Light (gap list + idea text) | Background | gpt-4o | Cheaper model viable; low-stakes relative to synthesis. |
 | **Adversarial pass** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different model family (Claude, Gemini). Same-family critique catches fewer blind spots. |
 | **Cold-model critique** (v1.1) | 0–1 | Synthesis-sized | Background | — | Different family + low temperature. Independent audit of synthesis output. |
 
-**Implementation rule:** each pipeline stage resolves its model config through a single routing function — `resolve(stage_name) → (model, temperature, max_tokens)` — *before* it calls the LLM. The resolver returns config only; the SDK call itself stays in the stage module (e.g. `app/llm/preflight.py`), not inside the router. The discipline being enforced is "no stage hardcodes a model," not "all SDK calls live in one file." v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry and validating against the §7.9 eval harness — no pipeline code changes.
+**Implementation rule:** each pipeline stage resolves its model config through a single routing function — `resolve(stage_name) → (model, temperature, max_tokens)` — *before* it calls the LLM. The resolver returns config only; the SDK call itself stays in the stage module (e.g. `app/llm/preflight.py`), not inside the router. The discipline being enforced is "no stage hardcodes a model," not "all SDK calls live in one file." v1 config maps every stage to gpt-4o. Swapping a model for one stage requires changing one config entry — no pipeline code changes. Validating that the swap didn't degrade output is a separate problem the swapper owns: the §7.9 harness that used to answer it was removed (#87).
 
-**Cost-neutral orchestration path:** downgrading pre-flight and idea-match to a cheaper model frees ~10–15% of per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move when the eval harness shows the cheaper models maintain accuracy on those stages.
+**Cost-neutral orchestration path:** downgrading pre-flight to a cheaper model frees a slice of the per-run token budget — enough to fund an adversarial pass (§15) at net-zero cost increase. This is the recommended first move *once there is evidence* the cheaper models maintain accuracy on those stages — evidence the removed harness no longer supplies.
 
 ## 11. Alternatives Considered
 
@@ -427,7 +420,7 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 
 - **Trend Insight Engine** — Product name. Legacy `TBN` references in code to be migrated.
 - **Idea** — Free-text input describing what to build. May be specific or vague.
-- **Target gap** *(optional)* — A specific pain the user thinks their idea addresses. Triggers idea-match step.
+- **Target gap** — *(removed 2026-07-27, scope-down slice 3, [#88](https://github.com/jdavi977/Trend-Insight-Engine/issues/88))* A specific pain the user thought their idea addressed, submitted as a second form field and scored by an `idea_match` LLM step after synthesis. Folded into `idea`: one input carries the gap intent, and synthesis runs on `idea` alone.
 - **Competitor** — App or video selected (by grounded search + user) as a source of user pain.
 - **Pre-flight** — Cheap LLM + grounded API search that turns an idea into a candidate competitor list.
 - **Pain item** — One problem extracted from one source, tagged with grounding `quote_id`s.
@@ -440,17 +433,17 @@ v1 uses a single model (gpt-4o) for all LLM stages. This section documents the p
 - **Frequency** — Raw count of supporting pain items.
 - **Spread** — Count of distinct competitors surfacing a gap.
 - **Model routing** — Config-driven mapping of pipeline stages to LLM models. v1 maps all stages to gpt-4o; enables agent orchestration without code changes (§10.1).
-- **Eval harness** — Runner script that scores pipeline output against hand-labelled expected gaps. Measures gap recall, hallucination rate, citation ratio, severity calibration (§7.9).
-- **Golden eval set** — Corpus of ideas with hand-labelled expected gaps used by the eval harness. 5-idea seed in v1; full 15–20 idea set in v1.1.
-- **Quality signals** — Per-run metrics (quote diversity, severity distribution, extraction yield) logged for trend analysis. Not surfaced in v1 UI (§7.9).
+- **Eval harness** — *(removed #87)* Runner script that scored pipeline output against hand-labelled expected gaps. Measured gap recall, hallucination rate, citation ratio, severity calibration (§7.9).
+- **Golden eval set** — *(removed #87 — the 5-idea seed went with the harness)* Corpus of ideas with hand-labelled expected gaps. A full 15–20 idea set remains a v1.1 aspiration, now starting from nothing.
+- **Quality signals** — *(removed #87)* Per-run metrics (quote diversity, severity distribution, extraction yield) logged for trend analysis. Never surfaced in the UI (§7.9).
 
 ## 14. Resolved Decisions
 
 Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenced sections):
 
 1. Weekly trending pipeline + old Home — removed; replaced by public feed (§7.6).
-2. Run privacy — public by URL with `noindex` + report link (§7.6, §8).
-3. Submit form — two fields: `idea` + optional `target_gap`.
+2. Run privacy — public by URL with `noindex` + report link (§7.6, §8). **Partly reversed 2026-07-27 (#89):** the report link is gone; `noindex` is the surviving half.
+3. Submit form — two fields: `idea` + optional `target_gap`. **Reversed 2026-07-27 (#88):** `target_gap` was folded into `idea` and the `idea_match` stage it fed was removed — a separate field is extra contract and UI surface for an optional add-on outside the core loop.
 4. Product name — Trend Insight Engine throughout; legacy `TBN` to migrate.
 5. Cost / abuse — per-IP rate limit + daily OpenAI budget cap. No auth, no BYO-key in v1 (§8).
 6. B2B / devtools scope — warn + allow with explicit acknowledgement.
@@ -459,11 +452,11 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
 9. Engagement filters — per-category defaults, not user-tunable in v1 (§7.5).
 10. PII handling — redact at persist; raw text never stored (§8).
 11. Concurrency — v1: 429 busy + retry-after. v1.1: queue + ETA.
-12. Adversarial submissions — `noindex` + report link. No proactive named-brand blocking.
+12. Adversarial submissions — `noindex` + report link. No proactive named-brand blocking. **Partly reversed 2026-07-27 (#89):** report link removed; `noindex` + the per-IP/budget guards are what remain.
 13. History — public feed (`GET /runs`); "My Runs" is a frontend filter against `localStorage`.
 14. Partial completion — `done` + banner if ≥70% sources succeed; else `failed` (§8).
 15. Pipeline parallelism — 10 sources fan out concurrently; sequential within source. Cap 5 OpenAI calls.
-16. Data model — `gaps` table promoted out of run blob; `feedback_events` append-only (§9).
+16. Data model — `gaps` table promoted out of run blob; `feedback_events` append-only (§9). **Reversed 2026-07-27 (#89):** `feedback_events` has no writer and is queued for drop; the `gaps` promotion stands.
 17. Success metrics framed honestly — §4 indicators are leading, not validated. Longitudinal validation deferred.
 18. **Pre-flight prototype validation** — Graded on 15 ideas on 2026-05-22 ([findings](../planning/prototypes/preflight/findings.md)). PASS on all three criteria. Confirmed failure modes: qualifier loss (mitigated by §7.6 competitor editor) and shallow App Store results for B2B devtools (mitigated by §7.5 low-signal warning). Grades were LLM-applied; pass margin is wide enough that grader optimism does not flip outcomes.
 
@@ -473,8 +466,8 @@ Major decisions from earlier drafts, resolved in v2.1–2.2 (details in referenc
     - *Optional:* extend validation set with an industrial/enterprise idea and re-run before v1 ship.
 
 19. **Selection-bias mitigations (v1)** — Quote-then-claim constrains *grounding* but not *which* quotes. v1 ships three near-zero-cost mitigations (§7.8): idea-blinded extraction, coverage metrics, citation count per gap. Higher-cost active mitigations catalogued in §15.
-20. **Evaluation harness + seed set (v1)** — Harness runner + 5 hand-labelled ideas ship with v1 (§7.9). Full 15–20 idea corpus and CI regression gate deferred to v1.1. Rationale: the harness is the prerequisite for justifying every cost-increasing mitigation in §15 — shipping the infrastructure early means v1.1 improvements are data-driven from day one.
-21. **Model routing as config (v1)** — All LLM calls route through a single `(stage_name) → model` resolver (§10.1). v1 maps everything to gpt-4o. Swapping a model per stage requires one config change + eval harness validation — no pipeline code changes. Rationale: makes agent orchestration (multi-model, cold-model critique) a deployment decision, not an architecture change.
+20. **Evaluation harness + seed set (v1)** — Harness runner + 5 hand-labelled ideas ship with v1 (§7.9). Full 15–20 idea corpus and CI regression gate deferred to v1.1. Rationale: the harness is the prerequisite for justifying every cost-increasing mitigation in §15 — shipping the infrastructure early means v1.1 improvements are data-driven from day one. **Reversed 2026-07-27 (#87):** the harness stayed a manual dev tool, never entered CI, and was the only real consumer of `quality_signals` — the pair was cut in the scope-down. The prerequisite argument still stands; it now applies to whatever measurement a future quality change builds for itself.
+21. **Model routing as config (v1)** — All LLM calls route through a single `(stage_name) → model` resolver (§10.1). v1 maps everything to gpt-4o. Swapping a model per stage is one config change — no pipeline code changes (validation of the swap is the swapper's own since #87 removed the harness). Rationale: makes agent orchestration (multi-model, cold-model critique) a deployment decision, not an architecture change.
 
 ## 15. v1.1 Roadmap & Known Limitations
 
@@ -485,18 +478,20 @@ v1 is built in three vertical slices against this PRD — each a tracer bullet t
 | Slice | Scope | Status |
 |---|---|---|
 | **Slice 1 — end-to-end happy path** | Idea → pre-flight → approve → parallel per-source extraction → quote-then-claim synthesis → grounded gaps, persisted to Supabase and read in the browser. Endpoints `POST /runs`, `POST /runs/:id/approve`, `GET /runs/:id`, `GET /runs`; pages Home, New Run, Run Result; model-routing resolver (§10.1), idea-blinded extraction (§7.8), persist-time PII redaction (§8), coverage + citation counts (§7.4, §7.8). | **Shipped** 2026-06-01 — [spec](../planning/specs/v2-slice-1-end-to-end_spec.md) |
-| **Slice 2 — lifecycle hardening** | Makes the system safe to expose to an untrusted user: §6 sad paths US-S1…S7 and §8 non-functional requirements — source retry + ≥70% partial-source threshold, server-restart → `failed`, per-IP rate limit, daily budget cap, concurrency guard; `POST /runs/:id/feedback` + `POST /runs/:id/report` (the §4 feedback loop); `react-router-dom` migration to shareable `/runs/:id` URLs (below); My Runs. | **Shipped** 2026-06-06 — [spec](../planning/specs/v2-slice-2-lifecycle-hardening_spec.md) |
+| **Slice 2 — lifecycle hardening** | Makes the system safe to expose to an untrusted user: §6 sad paths US-S1…S7 and §8 non-functional requirements — source retry + ≥70% partial-source threshold, server-restart → `failed`, per-IP rate limit, daily budget cap, concurrency guard; `POST /runs/:id/feedback` + `POST /runs/:id/report` (the §4 feedback loop — since **removed**, #89); `react-router-dom` migration to shareable `/runs/:id` URLs (below); My Runs. | **Shipped** 2026-06-06 — [spec](../planning/specs/v2-slice-2-lifecycle-hardening_spec.md) |
 | **Slice 3 — eval + v1 removal** | Eval harness + 5-idea seed set (§7.9), `quality_signals` field (§7.9), removal of the legacy `/analyze/*` endpoints, weekly jobs, `automatic_table*`, and the unlinked v1 frontend pages; retirement of the v1-only `create_response` LLM helper still reached by those endpoints; removal of the LLM-guessed `signal_strength` **gate** (see note below); pre-flight robustness deferred from the slice-2 review — Pydantic validation of the `generate_queries` output and optional parallelization of the `preflight_service.run` search fan-out (see slice-2 spec §3). | **Shipped** 2026-06-11 — [spec](../planning/specs/v2-slice-3-eval-and-v1-removal_spec.md) |
 
-All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 abuse/cost guards, §4 feedback indicators, and `partial_sources` handling are wired (slice 2); the eval harness + 5-idea seed set, `quality_signals`, and count-based low-signal gate are in place and the legacy v1 surface is removed (slice 3). Remaining work is the v1.1 roadmap below.
+All three slices have shipped — **v1 is complete** as of 2026-06-11. The §6 sad paths, §8 rate-limit/budget guards, and `partial_sources` handling are wired (slice 2); the count-based low-signal gate is in place and the legacy v1 surface is removed (slice 3). The §4 feedback indicators shipped in slice 2 and were removed again in the scope-down (#89) — see below. Remaining work is the v1.1 roadmap below.
+
+**Post-v1 scope-down (in progress, [#76](https://github.com/jdavi977/Trend-Insight-Engine/issues/76)).** Parts of the shipped surface above are being cut back to the core loop — idea in, quote-grounded gaps out. Landed so far: slice 3's eval harness, 5-idea seed set, and `quality_signals` are **removed** (#87, 2026-07-27, §7.9); `target_gap` is **folded into `idea`** and the `idea_match` stage is **removed** (#88, 2026-07-27, §7.2–§7.4); the feedback + report endpoints, their UI, and the `reported` lifecycle state are **removed** (#89, 2026-07-27, §4/§7.1/§7.2/§7.6/§8); and the physical Supabase drops those slices lagged — the `feedback_events` table and six dead `idea_runs` columns — are **done** (#90, 2026-07-27, §9). [planning/CONTEXT.md](../planning/CONTEXT.md) tracks what has actually left, slice by slice; this PRD still describes the pre-scope-down target.
 
 **Note — `signal_strength` gate removal (slice 3).** Before slice 3, the low-signal gate (§7.2 approve `400`, §7.3 step (b), §7.6 acknowledgement) keyed off an *LLM-guessed* `signal_strength` produced by the `PREFLIGHT_GENERATE_QUERIES` call **before any search runs**. That guess is biased and redundant: it's generated in the same call that produces the queries (motivated to rate its own queries favourably), its rubric examples conflate searchability with consumer-vs-B2B category, and it predicts an outcome — *"will the App Store + YouTube return real competitors?"* — that materialises seconds later in the same function as the actual candidate count (`preflight_service.run` already logs `len(raw_apps)`, `len(raw_videos)`, `len(candidates)`). The guess can pass a 0-candidate run or block one with 8 real competitors. Slice 3 removed the LLM grade as a **gate** and keyed the acknowledgement on the observed candidate count instead. `signal_reasoning` is **retained** as displayed pre-flight copy (§7.6) — useful UX, just not load-bearing. (Note: US-S1 "zero competitors found" is already the count-based sad path; this folds the low-signal gate into the same evidence.)
 
 ### Deferred to v1.1
 
-Deferred from v1, in rough priority (note: eval harness + seed set promoted to v1 scope in §7.9):
+Deferred from v1, in rough priority:
 
-1. **Full golden evaluation set.** Expand the v1 seed set (5 ideas, §7.9) to 15–20 ideas with hand-labelled expected gaps. Automate runs before every prompt or model change with regression gates. The seed harness ships with v1; the full corpus and CI gate are v1.1.
+1. **Full golden evaluation set.** 15–20 ideas with hand-labelled expected gaps, plus regression gates on every prompt or model change. Note this no longer *expands* anything: the v1 harness and its 5-idea seed were removed in the scope-down (#87, §7.9), so this item now includes rebuilding the runner and scorers it was going to reuse. That is the price of the cut, and it was taken knowingly — a manual tool nothing ran was worse than no tool.
 2. **Queue UX with ETA.** Replaces `429 busy` with accept-and-queue showing position + estimated start.
 3. **Longitudinal outcome tracking.** Optional email at submit; 14-day follow-up: *"did the gap prove real?"* Until this exists, §4 indicators can't distinguish "ran successfully" from "user built on it."
 4. **User research on §2.** The four-step workflow is a hypothesis. Interview 5–10 indie devs pre-v1.1.
@@ -509,7 +504,7 @@ Deferred from v1, in rough priority (note: eval harness + seed set promoted to v
 
 §7.8 ships the cheap measures. Higher-cost alternatives below, ordered by cost-to-value ratio.
 
-Cost is *additional LLM work per run* against a v1 baseline of ~12 calls (1 pre-flight + 10 per-source extraction + 1 synthesis; +1 if `target_gap` triggers `idea_match`). Token volume — not call count — drives spend: per-source extraction dominates (each call digests hundreds of comments), and synthesis is the single largest call (sees the entire pooled quote set). The §8 daily OpenAI budget cap is the binding constraint.
+Cost is *additional LLM work per run* against a v1 baseline of ~12 calls (1 pre-flight + 10 per-source extraction + 1 synthesis). Token volume — not call count — drives spend: per-source extraction dominates (each call digests hundreds of comments), and synthesis is the single largest call (sees the entire pooled quote set). The §8 daily OpenAI budget cap is the binding constraint.
 
 | Alternative | Extra work / run | Cost impact | Value |
 |---|---|---|---|

@@ -4,7 +4,6 @@ The pipeline's external edges are mocked at the module boundary:
 - ingestion via `_ingest`
 - per-source extraction via `extract_per_source`
 - synthesis via `synthesis_stage.synthesize`
-- idea-match via `match_idea`
 - PII redaction via `redact`
 - persistence via the supabase update/insert functions
 
@@ -48,7 +47,6 @@ def _gap(gap_id="gap_001", evidence=("q01", "q02")):
 def _row(
     status_="preflight_ready",
     signal_strength="high",
-    target_gap=None,
     candidate_count=5,
 ):
     """Build an `idea_runs` row. `candidate_count` is the pre-flight candidate
@@ -57,7 +55,6 @@ def _row(
     return {
         "id": RUN_ID,
         "idea": "note-taking app with better offline sync",
-        "target_gap": target_gap,
         "status": status_,
         "category": "productivity",
         "signal_strength": signal_strength,
@@ -172,13 +169,12 @@ class TestApprove:
 # --- run_pipeline() ---------------------------------------------------------
 
 
-def _wire_pipeline(mocker, *, extract_returns, gaps, coverage, idea_match=None):
+def _wire_pipeline(mocker, *, extract_returns, gaps, coverage):
     """Mock every pipeline edge; return the persistence mocks for assertions."""
     mocker.patch.object(svc, "_ingest", return_value=[{"Likes": 100, "Text": "x"}])
     mocker.patch.object(svc, "extract_per_source", side_effect=extract_returns)
     mocker.patch.object(svc, "redact", side_effect=lambda t: t.replace("john@example.com", "[REDACTED_EMAIL]"))
     mocker.patch("app.llm.synthesis.synthesize", return_value=(gaps, coverage))
-    mocker.patch.object(svc, "match_idea", return_value=idea_match)
     done = mocker.patch.object(svc, "update_idea_run_done")
     failed = mocker.patch.object(svc, "update_idea_run_failed")
     insert = mocker.patch.object(svc, "insert_gaps")
@@ -199,7 +195,7 @@ class TestRunPipeline:
         )
 
         asyncio.run(svc.run_pipeline(
-            run_id=RUN_ID, idea="idea", target_gap=None,
+            run_id=RUN_ID, idea="idea",
             category="productivity", competitors=competitors,
         ))
 
@@ -208,7 +204,8 @@ class TestRunPipeline:
         kwargs = done.call_args.kwargs
         assert set(kwargs["quotes"].keys()) == {"q01", "q02"}
         assert kwargs["coverage"]["quotes_retrieved"] == 2
-        assert kwargs["idea_match"] is None
+        # The idea-match stage was folded away (#88) — nothing writes it now.
+        assert "idea_match" not in kwargs
         # gaps inserted with run_id + ordinal
         rows = insert.call_args.args[0]
         assert rows[0]["run_id"] == RUN_ID
@@ -227,13 +224,13 @@ class TestRunPipeline:
         synth = mocker.patch("app.llm.synthesis.synthesize",
                              return_value=([_gap()], Coverage(quotes_retrieved=2, quotes_cited=2, citation_ratio=1.0)))
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="my idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="my idea",
                                      category="productivity", competitors=competitors))
 
         args = synth.call_args.args
         assert args[0] == "my idea"          # idea
-        pooled_quotes = args[2]
-        pooled_pain = args[3]
+        pooled_quotes = args[1]
+        pooled_pain = args[2]
         assert {q.quote_id for q in pooled_quotes} == {"q01", "q02"}
         assert len(pooled_pain) == 2
 
@@ -248,42 +245,12 @@ class TestRunPipeline:
         )
         done = mocker.patch.object(svc, "update_idea_run_done")
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea",
                                      category="productivity", competitors=competitors))
 
         persisted = done.call_args.kwargs["quotes"]["q01"]["text_redacted"]
         assert "john@example.com" not in persisted
         assert "[REDACTED_EMAIL]" in persisted
-
-    def test_idea_match_populated_when_target_gap_supplied(self, mocker):
-        competitors = [_competitor(identifier="vid_1")]
-        from app.schemas.runs import IdeaMatch
-        idea_match = IdeaMatch(gap_id="gap_001", verdict="matches", evidence_quote_ids=["q01"])
-        done, _, _ = _wire_pipeline(
-            mocker,
-            extract_returns=[([], [_quote("q01")])],
-            gaps=[_gap()],
-            coverage=Coverage(quotes_retrieved=1, quotes_cited=2, citation_ratio=1.0),
-            idea_match=idea_match,
-        )
-
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap="offline reliability",
-                                     category="productivity", competitors=competitors))
-
-        assert done.call_args.kwargs["idea_match"] == {
-            "gap_id": "gap_001", "verdict": "matches", "evidence_quote_ids": ["q01"],
-        }
-
-    def test_idea_match_skipped_without_target_gap(self, mocker):
-        competitors = [_competitor(identifier="vid_1")]
-        _wire_pipeline(mocker, extract_returns=[([], [_quote("q01")])], gaps=[_gap()],
-                       coverage=Coverage(quotes_retrieved=1, quotes_cited=2, citation_ratio=1.0))
-        match = mocker.patch.object(svc, "match_idea", return_value=None)
-
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
-                                     category="productivity", competitors=competitors))
-
-        match.assert_not_called()
 
     def test_semaphore_caps_concurrent_openai_calls_at_five(self, mocker):
         competitors = [_competitor(identifier=f"vid_{i}", url=f"https://youtu.be/vid_{i}") for i in range(10)]
@@ -308,7 +275,7 @@ class TestRunPipeline:
 
         mocker.patch.object(svc, "extract_per_source", side_effect=_tracking_extract)
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea",
                                      category="productivity", competitors=competitors))
 
         assert state["max"] <= svc._OPENAI_CONCURRENCY
@@ -367,13 +334,13 @@ class TestSourceResilience:
         synth = mocker.patch("app.llm.synthesis.synthesize",
                              return_value=([_gap()], coverage))
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea",
                                      category="productivity", competitors=competitors))
 
         failed.assert_not_called()
         done.assert_called_once()
         # The retried source's quote made it into the pool → it contributed.
-        pooled_quotes = synth.call_args.args[2]
+        pooled_quotes = synth.call_args.args[1]
         assert {q.quote_id for q in pooled_quotes} == {"q_vid_1", "q_vid_2"}
         # A fully-recovered run carries no partial_sources block.
         assert done.call_args.kwargs["partial_sources"] is None
@@ -388,7 +355,7 @@ class TestSourceResilience:
         )
         mocker.patch("app.llm.synthesis.synthesize", return_value=([_gap()], coverage))
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea",
                                      category="productivity", competitors=competitors))
 
         failed.assert_not_called()
@@ -410,7 +377,7 @@ class TestSourceResilience:
             gaps=[_gap()], coverage=coverage,
         )
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea",
                                      category="productivity", competitors=competitors))
 
         done.assert_not_called()
@@ -433,12 +400,12 @@ class TestSourceResilience:
         synth = mocker.patch("app.llm.synthesis.synthesize",
                              return_value=([_gap()], coverage))
 
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
+        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea",
                                      category="productivity", competitors=competitors))
 
         failed.assert_not_called()
         done.assert_called_once()
-        pooled_quotes = synth.call_args.args[2]
+        pooled_quotes = synth.call_args.args[1]
         assert {q.quote_id for q in pooled_quotes} == {
             "q_vid_0", "q_vid_1", "q_vid_3", "q_vid_4",
         }
@@ -447,136 +414,6 @@ class TestSourceResilience:
         from app.config import constants
         assert constants.PARTIAL_SOURCE_THRESHOLD == 0.70
         assert svc.PARTIAL_SOURCE_THRESHOLD is constants.PARTIAL_SOURCE_THRESHOLD
-
-
-# --- quality signals (slice 3 §5 / issue #67) -------------------------------
-
-
-class TestQualitySignalsComputation:
-    """Pure-function checks on `_compute_quality_signals`."""
-
-    def test_diversity_is_one_minus_max_source_share(self):
-        # Cited quotes: 3 youtube + 1 appstore → max_share 3/4 → diversity 0.25.
-        quotes = [
-            _quote("q01", source="youtube"),
-            _quote("q02", source="youtube"),
-            _quote("q03", source="youtube"),
-            _quote("q04", source="appstore"),
-        ]
-        gap = GapItem(gap_id="g1", gap="g", severity=3, frequency=4, spread=2,
-                      evidence_quote_ids=["q01", "q02", "q03", "q04"])
-        signals = svc._compute_quality_signals([gap], quotes, [])
-
-        assert signals.quote_source_diversity == 0.25
-
-    def test_diversity_zero_when_single_source(self):
-        quotes = [_quote("q01"), _quote("q02")]
-        gap = _gap(evidence=("q01", "q02"))  # both youtube
-        signals = svc._compute_quality_signals([gap], quotes, [])
-        assert signals.quote_source_diversity == 0.0
-
-    def test_diversity_zero_when_no_gaps_cite_anything(self):
-        signals = svc._compute_quality_signals([], [_quote("q01")], [])
-        assert signals.quote_source_diversity == 0.0
-
-    def test_only_cited_quotes_count_toward_diversity(self):
-        # q03 (appstore) is in the pool but uncited → must not lift diversity.
-        quotes = [_quote("q01"), _quote("q02"), _quote("q03", source="appstore")]
-        gap = _gap(evidence=("q01", "q02"))
-        signals = svc._compute_quality_signals([gap], quotes, [])
-        assert signals.quote_source_diversity == 0.0
-
-    def test_severity_distribution_is_length_five_counts(self):
-        gaps = [
-            _gap(gap_id="g1"),  # severity 4
-            GapItem(gap_id="g2", gap="g", severity=1, frequency=2, spread=1,
-                    evidence_quote_ids=["q01", "q02"]),
-            GapItem(gap_id="g3", gap="g", severity=4, frequency=2, spread=2,
-                    evidence_quote_ids=["q01", "q02"]),
-        ]
-        signals = svc._compute_quality_signals(gaps, [_quote("q01"), _quote("q02")], [])
-        assert signals.severity_distribution == [1, 0, 0, 2, 0]
-
-    def test_single_source_gap_count_is_spread_equals_one(self):
-        gaps = [
-            GapItem(gap_id="g1", gap="g", severity=3, frequency=2, spread=1,
-                    evidence_quote_ids=["q01", "q02"]),
-            GapItem(gap_id="g2", gap="g", severity=3, frequency=2, spread=3,
-                    evidence_quote_ids=["q01", "q02"]),
-            GapItem(gap_id="g3", gap="g", severity=3, frequency=2, spread=1,
-                    evidence_quote_ids=["q01", "q02"]),
-        ]
-        signals = svc._compute_quality_signals(gaps, [_quote("q01"), _quote("q02")], [])
-        assert signals.single_source_gap_count == 2
-
-
-class TestQualitySignalsPersistence:
-    def test_done_run_persists_all_four_subfields(self, mocker):
-        competitors = [
-            _competitor(identifier="vid_1"),
-            _competitor(source="appstore", identifier="app_1",
-                        url="https://apps.apple.com/app/id123"),
-        ]
-        extract_returns = [
-            ([PainItem(source="youtube", source_id="vid_1", text="p1", quote_ids=["q01"])],
-             [_quote("q01")]),
-            ([], [_quote("q02", source="appstore", source_id="app_1")]),
-        ]
-        coverage = Coverage(quotes_retrieved=2, quotes_cited=2, citation_ratio=1.0)
-        done, _, _ = _wire_pipeline(
-            mocker, extract_returns=extract_returns,
-            gaps=[_gap(evidence=("q01", "q02"))], coverage=coverage,
-        )
-
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
-                                     category="productivity", competitors=competitors))
-
-        qs = done.call_args.kwargs["quality_signals"]
-        assert qs is not None
-        # _gap cites q01 (youtube) + q02 (appstore) → even split → diversity 0.5.
-        assert qs["quote_source_diversity"] == 0.5
-        assert qs["severity_distribution"] == [0, 0, 0, 1, 0]  # _gap is severity 4
-        assert qs["single_source_gap_count"] == 0  # _gap spread == 2
-        assert len(qs["extraction_yield"]) == 2
-
-    def test_extraction_yield_reflects_comment_and_pain_counts(self, mocker):
-        competitors = [_competitor(identifier="vid_1")]
-        # _ingest is mocked to return one comment row per source by _wire_pipeline.
-        extract_returns = [
-            ([PainItem(source="youtube", source_id="vid_1", text="p1", quote_ids=["q01"]),
-              PainItem(source="youtube", source_id="vid_1", text="p2", quote_ids=["q02"])],
-             [_quote("q01"), _quote("q02")]),
-        ]
-        coverage = Coverage(quotes_retrieved=2, quotes_cited=2, citation_ratio=1.0)
-        done, _, _ = _wire_pipeline(
-            mocker, extract_returns=extract_returns,
-            gaps=[_gap(evidence=("q01", "q02"))], coverage=coverage,
-        )
-
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
-                                     category="productivity", competitors=competitors))
-
-        yields = done.call_args.kwargs["quality_signals"]["extraction_yield"]
-        assert yields == [
-            {"source": "youtube", "comment_count": 1, "pain_item_count": 2},
-        ]
-
-    def test_computation_error_persists_null_and_run_still_done(self, mocker):
-        competitors = [_competitor(identifier="vid_1")]
-        coverage = Coverage(quotes_retrieved=1, quotes_cited=2, citation_ratio=1.0)
-        done, failed, _ = _wire_pipeline(
-            mocker, extract_returns=[([], [_quote("q01")])],
-            gaps=[_gap()], coverage=coverage,
-        )
-        mocker.patch.object(svc, "_compute_quality_signals",
-                            side_effect=RuntimeError("boom"))
-
-        asyncio.run(svc.run_pipeline(run_id=RUN_ID, idea="idea", target_gap=None,
-                                     category="productivity", competitors=competitors))
-
-        failed.assert_not_called()
-        done.assert_called_once()
-        assert done.call_args.kwargs["quality_signals"] is None
 
 
 class TestAppStoreIdResolution:
