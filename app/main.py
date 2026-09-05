@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
         # page reads them to render distinct, friendly 429 messages with a
         # retry-after hint (spec §9.3, issue #64). Without this the body still
         # carries a friendly detail, but the precise reason/timer is unreadable.
-        expose_headers=["Retry-After", "X-RateLimit-Reason", "X-RateLimit-Window"],
+        expose_headers=["Retry-After", "X-RateLimit-Reason"],
     )
 
     # Spec §6 / §10: keep run pages out of search indexes. Middleware (not a

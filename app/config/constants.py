@@ -42,42 +42,10 @@ MODEL_ROUTING = {
     "synthesis":          {"model": "gpt-4o", "temperature": 0.3, "max_tokens": 6000},
 }
 
-# Per-model OpenAI prices in USD per 1K tokens (slice 2 §6, issue #59, open
-# question Q3). Hardcoded in config next to MODEL_ROUTING rather than read from
-# an env/secret — prices churn slowly and a wrong number is a one-line edit. The
-# OpenAI transport (app/clients/openai.py) is the single choke point that turns
-# usage tokens into spend, so the daily-budget guard sees every stage's cost
-# without each call site knowing about the budget. Unknown models fall back to
-# DEFAULT_OPENAI_PRICE (conservative, non-zero) so a model swap can't silently
-# zero out budget accounting.
-OPENAI_PRICES = {
-    "gpt-4o":      {"input": 0.0025,  "output": 0.01},
-    "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
-    "gpt-5-mini":  {"input": 0.00025, "output": 0.002},
-}
-DEFAULT_OPENAI_PRICE = {"input": 0.0025, "output": 0.01}
-
-
-def openai_price(model: str) -> dict:
-    """Return the {input, output} USD-per-1K-token prices for *model*.
-
-    Falls back to ``DEFAULT_OPENAI_PRICE`` for an unlisted model so a per-stage
-    model swap (MODEL_ROUTING is architecture-as-config) keeps counting spend
-    instead of silently dropping it.
-    """
-    return OPENAI_PRICES.get(model, DEFAULT_OPENAI_PRICE)
-
-
-# Per-IP rate-limit ceilings (PRD §8, US-S6, slice 2 §6). A client may start at
-# most RATE_LIMIT_PER_HOUR runs in any rolling hour AND RATE_LIMIT_PER_DAY in
-# any rolling day; the 4th/hour or 11th/day POST /runs returns 429 rate_limited.
-# In config, not hardcoded in the guard (issue #59 acceptance criterion).
-RATE_LIMIT_PER_HOUR = 3
-RATE_LIMIT_PER_DAY = 10
-
-# Retry-After hint (seconds) returned with 429 busy — the concurrency guard has
-# no window to expire, so it's a fixed polite back-off matched to the frontend's
-# 5s status poll cadence (spec §9 New Run 429 handling).
+# Retry-After hint (seconds) returned with 429 busy by
+# run_pipeline_service.check_not_busy — the concurrency guard has no window to
+# expire, so it's a fixed polite back-off matched to the frontend's 5s status
+# poll cadence (spec §9 New Run 429 handling).
 BUSY_RETRY_AFTER_SECONDS = 60
 
 # Per-category engagement thresholds (PRD §7.5, spec §7 + §8). Consumed by the

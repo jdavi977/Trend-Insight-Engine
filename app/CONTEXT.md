@@ -72,8 +72,12 @@ read path filters a run out of the public surface by status any more.
 - Pre-flight ≤10s; full run ≤5 min p50; cap 5 concurrent OpenAI calls.
 - Sources fan out ≤10 concurrently, sequential within a source; retry once with
   backoff. ≥70% sources succeed → `done` + `partial_sources`; below → `failed`.
-- Rate limits: per-IP 3/hr, 10/day; daily OpenAI budget cap → `429 budget_exhausted`.
+- No per-IP rate limit and no OpenAI budget cap: both were **removed** in the
+  scope-down — the deploy does not expose the operator's keys to the public, so
+  there is no abuse surface for them to guard. `POST /runs` has one guard left.
 - Single active run per instance; 2nd submission → `429 busy` (queue UX is v1.1).
+  Enforced by `run_pipeline_service.check_not_busy()`, which owns the `_jobs`
+  registry it reads. The former `services/rate_limit_service.py` is deleted.
 
 ## Testing
 - Test tree at top-level `/tests/`, mirroring `app/` (`tests/api/`,

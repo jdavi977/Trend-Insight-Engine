@@ -100,7 +100,7 @@ Solo founders and indie builders wanting to validate a product idea before commm
 | Layer | What lives there |
 |---|---|
 | [`app/api/`](app/api/) | FastAPI routers — one per resource, calls services only |
-| [`app/services/`](app/services/) | Orchestration: pre-flight, run pipeline, extraction, rate limiting |
+| [`app/services/`](app/services/) | Orchestration: pre-flight, run pipeline, extraction |
 | [`app/ingestion/`](app/ingestion/) | YouTube comment + App Store review fetching |
 | [`app/preprocessing/`](app/preprocessing/) | Engagement filtering, PII redaction (regex + NER) |
 | [`app/llm/`](app/llm/) | Prompting, stage→model routing, JSON response validation |

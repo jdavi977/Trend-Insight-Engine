@@ -46,6 +46,7 @@ from app.clients.supabase import (
 )
 from app.config.constants import (
     APP_REVIEW_PAGES,
+    BUSY_RETRY_AFTER_SECONDS,
     LOW_SIGNAL_CANDIDATE_THRESHOLD,
     PARTIAL_SOURCE_THRESHOLD,
     SOURCE_RETRY_ATTEMPTS,
@@ -123,6 +124,27 @@ def has_running_pipeline() -> bool:
     stay in `_jobs` as a thin audit trail but don't count as active.
     """
     return any(job.get("status") == "running" for job in _jobs.values())
+
+
+def check_not_busy() -> None:
+    """Raise `429 busy` when a pipeline is already running on this instance.
+
+    This is the one guard left on the `POST /runs` front door. It is not an abuse
+    control — the per-IP rate limit and the daily OpenAI budget were removed once
+    the deploy stopped exposing the operator's keys to the public. It protects an
+    invariant instead: `_jobs` tracks a single in-process pipeline, so a second
+    concurrent run would interleave with the first rather than queue behind it.
+    A run queue is the v1.1 answer (PRD §15).
+    """
+    if has_running_pipeline():
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="A run is already in progress. Please try again shortly.",
+            headers={
+                "Retry-After": str(BUSY_RETRY_AFTER_SECONDS),
+                "X-RateLimit-Reason": "busy",
+            },
+        )
 
 
 # --- approve front door -----------------------------------------------------

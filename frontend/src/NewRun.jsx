@@ -33,7 +33,7 @@ import { categoryLabel } from "./format";
 const API_BASE = import.meta.env.VITE_API_BASE;
 
 // Render a `Retry-After` value (seconds) as a human hint. Empty if absent so
-// callers can omit the timer line entirely (e.g. budget_exhausted has no timer).
+// callers can omit the timer line entirely.
 function formatRetryAfter(retryAfterRaw) {
   const secs = Number(retryAfterRaw);
   if (!Number.isFinite(secs) || secs <= 0) return "";
@@ -44,10 +44,10 @@ function formatRetryAfter(retryAfterRaw) {
   return `about ${hrs} hour${hrs === 1 ? "" : "s"}`;
 }
 
-// The three slice-2 guards (issue #59) all return 429, distinguished by the
-// `X-RateLimit-Reason` header and timed by `Retry-After` (both exposed via CORS,
-// see app/main.py). Render a distinct, friendly message per reason honoring the
-// retry hint — slice 1 assumed the developer; slice 2 assumes a stranger (§9.3).
+// `429 busy` is the only guard left on POST /runs — the per-IP rate limit and
+// daily OpenAI budget guards were removed with the abuse surface. The reason is
+// still read from `X-RateLimit-Reason` and timed by `Retry-After` (both exposed
+// via CORS, see app/main.py), with a body fallback for any other 429.
 function rateLimitMessage(res, detail) {
   const reason = res.headers.get("X-RateLimit-Reason") || "";
   const hint = formatRetryAfter(res.headers.get("Retry-After"));
@@ -55,19 +55,15 @@ function rateLimitMessage(res, detail) {
   switch (reason) {
     case "busy":
       return `Another run is already in progress — the engine handles one run at a time.${retryLine || " Please try again shortly."}`;
-    case "rate_limited":
-      return `You've reached the run limit for now (3 per hour, 10 per day).${retryLine || " Please try again later."}`;
-    case "budget_exhausted":
-      return "Today's analysis budget has been reached. Please try again tomorrow.";
     default:
       // Header not readable (e.g. CORS not exposing it) — fall back to the body.
-      return `${detail || "The engine is busy or rate-limited."}${retryLine}`;
+      return `${detail || "The engine is busy."}${retryLine}`;
   }
 }
 
-// Turn a backend error response into a readable line. Slice-2 sad paths
-// (rate_limited / budget_exhausted / busy) arrive as 429; surface a distinct
-// friendly message per reason rather than failing silently (PRD §8, §9.3).
+// Turn a backend error response into a readable line. The `busy` sad path
+// arrives as 429; surface a friendly message rather than failing silently
+// (PRD §8, §9.3).
 async function readError(res) {
   let detail = "";
   try {
@@ -260,8 +256,8 @@ export default function NewRun() {
 }
 
 // The disclosure the submit step owes the user before anything is persisted:
-// completed runs are public by URL, review text is PII-stripped, and there are
-// per-IP ceilings (PRD §8; RATE_LIMIT_PER_HOUR / _PER_DAY in app/config).
+// completed runs are public by URL and review text is PII-stripped. The per-IP
+// ceilings this note used to quote were removed with the rate-limit guard.
 function PublicByUrlNote() {
   return (
     <div
@@ -284,7 +280,6 @@ function PublicByUrlNote() {
         the public feed by their{" "}
         <code style={{ fontFamily: "var(--tie-font-mono)", fontSize: ".85em" }}>run_id</code>. We
         don&apos;t index them in search engines; raw review text is PII-stripped at persist time.
-        Per-IP limits: 3 runs per hour, 10 per day.
       </div>
     </div>
   );

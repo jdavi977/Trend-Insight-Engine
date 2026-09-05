@@ -219,7 +219,6 @@ class TestFailureReason:
     def test_enum_values(self):
         assert {r.value for r in FailureReason} == {
             "server_restart",
-            "budget_exhausted",
             "sources_below_threshold",
             "internal_error",
         }

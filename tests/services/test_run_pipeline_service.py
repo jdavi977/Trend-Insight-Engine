@@ -429,3 +429,30 @@ class TestAppStoreIdResolution:
         c = _competitor(source="appstore", identifier="md.obsidian", url="https://example.com")
         with pytest.raises(ValueError):
             svc._appstore_review_id(c)
+
+
+class TestCheckNotBusy:
+    """Single-active-run guard, rehomed here when the per-IP rate limit and the
+    daily OpenAI budget guards were removed and `rate_limit_service` was deleted.
+    It guards the one-in-process-pipeline invariant, not abuse."""
+
+    def test_raises_busy_429_when_a_pipeline_is_running(self):
+        svc._jobs["other-run"] = {"status": "running", "stage": "synthesis"}
+
+        with pytest.raises(HTTPException) as exc:
+            svc.check_not_busy()
+
+        assert exc.value.status_code == 429
+        assert exc.value.headers["X-RateLimit-Reason"] == "busy"
+        assert int(exc.value.headers["Retry-After"]) > 0
+
+    def test_passes_when_no_pipeline_is_running(self):
+        svc.check_not_busy()  # no raise
+
+    def test_done_and_failed_jobs_do_not_count_as_running(self):
+        # `_jobs` keeps terminal jobs as a thin audit trail; they must not block
+        # the next run.
+        svc._jobs["a"] = {"status": "done"}
+        svc._jobs["b"] = {"status": "failed"}
+
+        svc.check_not_busy()  # no raise

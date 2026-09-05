@@ -56,11 +56,6 @@ const FAILURE_COPY = {
     message:
       "Fewer than 70% of the competitor sources came back, so we couldn’t synthesise gaps you could trust. Source errors are often transient — try the run again in a few minutes.",
   },
-  budget_exhausted: {
-    title: "Daily analysis budget reached.",
-    message:
-      "The engine hit its daily budget cap, so this run couldn’t complete. Please try again tomorrow when the budget resets.",
-  },
   internal_error: {
     title: "Something went wrong on our end.",
     message:

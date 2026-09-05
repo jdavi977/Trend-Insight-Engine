@@ -25,12 +25,15 @@ class FailureReason(str, Enum):
     """Constrained failure causes (slice 2 §5.3, promoted from slice-1 freeform).
 
     `internal_error` is the catch-all the `except Exception` path maps to; the
-    others are the specific sad paths the hardening layer detects. Mirrors the
-    DB CHECK constraint in ops/migrations/002_slice2_lifecycle_hardening.sql.
+    others are the specific sad paths the hardening layer detects.
+
+    `budget_exhausted` was removed with the daily OpenAI budget guard — nothing
+    can write it any more. The DB CHECK constraint
+    (ops/migrations/002_slice2_lifecycle_hardening.sql) still permits the value;
+    that is a harmless superset, since no writer emits it.
     """
 
     server_restart = "server_restart"
-    budget_exhausted = "budget_exhausted"
     sources_below_threshold = "sources_below_threshold"
     internal_error = "internal_error"
 

@@ -20,18 +20,16 @@ def load_fixture(name: str):
 
 @pytest.fixture(autouse=True)
 def _reset_guard_state():
-    """Isolate the in-process abuse/cost guard state between tests (issue #59).
+    """Isolate the in-process job registry between tests.
 
-    The per-IP rate-limit buckets, the daily OpenAI spend total, and the in-memory
-    `_jobs` registry are module-level singletons; without a reset they leak across
-    tests and make 429 assertions order-dependent.
+    `_jobs` is a module-level singleton backing the single-active-run guard;
+    without a reset it leaks across tests and makes the `429 busy` assertions
+    order-dependent. The per-IP rate-limit buckets and daily OpenAI spend total
+    that this fixture also used to clear were removed with those guards.
     """
-    from app.clients import openai as openai_client
-    from app.services import rate_limit_service, run_pipeline_service
+    from app.services import run_pipeline_service
 
     def _clear():
-        rate_limit_service.reset()
-        openai_client.reset_spend()
         run_pipeline_service._jobs.clear()
 
     _clear()
