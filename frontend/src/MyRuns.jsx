@@ -9,6 +9,11 @@
  * whose rows carry the run id as a monospace chip, because on this page the id
  * is the thing that makes the run "yours".
  *
+ * Paging is client-side (PAGE_SIZE rows at a time). It has to be: the visible
+ * list is the feed *after* the localStorage filter, so a backend `before`
+ * cursor page of 10 could yield anywhere from 0 to 10 of "mine". We fetch the
+ * feed window once and page over the filtered result.
+ *
  * Page-level component owns all state and is the only thing that talks to the
  * backend (frontend/CONTEXT.md).
  */
@@ -20,6 +25,7 @@ import { relativeTime } from "./format";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const FEED_LIMIT = 100;
+const PAGE_SIZE = 10;
 
 async function readError(res) {
   let detail = "";
@@ -43,6 +49,7 @@ export default function MyRuns() {
   const [runs, setRuns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +79,12 @@ export default function MyRuns() {
       active = false;
     };
   }, [myIds]);
+
+  // Newest-first ordering comes from the feed; slice the window this page shows.
+  const pageCount = Math.max(1, Math.ceil(runs.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const start = currentPage * PAGE_SIZE;
+  const pageRuns = runs.slice(start, start + PAGE_SIZE);
 
   return (
     <div className="tie-page">
@@ -105,16 +118,57 @@ export default function MyRuns() {
               background: "var(--tie-surface)",
             }}
           >
-            {runs.map((run, i) => (
+            {pageRuns.map((run, i) => (
               <MyRunRow
                 key={run.run_id}
                 run={run}
                 onOpen={() => onOpenRun(run.run_id)}
-                divider={i < runs.length - 1}
+                divider={i < pageRuns.length - 1}
               />
             ))}
           </div>
         )}
+
+        {!loading && !error && runs.length > 0 && pageCount > 1 && (
+          <Pager
+            page={currentPage}
+            pageCount={pageCount}
+            first={start + 1}
+            last={start + pageRuns.length}
+            total={runs.length}
+            onPrev={() => setPage(currentPage - 1)}
+            onNext={() => setPage(currentPage + 1)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Prev/next over the filtered list. Rendered only when there's more than one
+// page, so the empty and single-page states stay uncluttered.
+function Pager({ page, pageCount, first, last, total, onPrev, onNext }) {
+  return (
+    <div
+      style={{
+        marginTop: "1rem",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "1rem",
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ color: "var(--tie-fg-3)", fontSize: ".85rem" }}>
+        Showing {first}–{last} of {total} · page {page + 1} of {pageCount}
+      </div>
+      <div style={{ display: "flex", gap: ".5rem" }}>
+        <SecondaryButton size="sm" onClick={onPrev} disabled={page === 0}>
+          ← Previous
+        </SecondaryButton>
+        <SecondaryButton size="sm" onClick={onNext} disabled={page >= pageCount - 1}>
+          Next →
+        </SecondaryButton>
       </div>
     </div>
   );
