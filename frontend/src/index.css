@@ -1,64 +1,59 @@
-:root {
-  /* Surfaces */
-  --bg:        #ffffff;
-  --surface:   #f8f9fa;
-  --surface-2: #f1f3f4;
+/* Global base for the v2.2 shell. Ported from the `Trend v2.2.html` prototype's
+ * inline <style> block: reset, body type, selection and scrollbar treatment.
+ * Everything colour/size related is a `--tie-*` token (tokens.css) — the v1
+ * palette (--ink-*, --accent, --surface-*) left with the legacy pages.
+ */
 
-  /* Borders */
-  --line:   #c4c7cc;
-  --line-2: #9aa0a6;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-  /* Ink */
-  --ink-1: #202124;
-  --ink-2: #5f6368;
-  --ink-3: #80868b;
-  --ink-4: #bdc1c6;
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
 
-  /* Accent */
-  --accent:      #1a73e8;
-  --accent-hover:#1765cc;
-  --accent-soft: #e8f0fe;
-  --accent-ink:  #174ea6;
-
-  /* Status */
-  --green:      #137333;
-  --green-soft: #e6f4ea;
-  --red:        #c5221f;
-  --red-soft:   #fce8e6;
-  --amber:      #b06000;
-  --amber-soft: #fef7e0;
-
-  /* Radii */
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
-  --r-pill: 999px;
-
-  /* Spacing */
-  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
-  --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px; --s-9: 56px;
-
-  /* Type */
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  --ease: cubic-bezier(.2,.7,.2,1);
-  --dur:  180ms;
-
-  font-family: var(--font-sans);
-  line-height: 1.6;
-  font-weight: 400;
-  color: var(--ink-1);
-  background-color: var(--bg);
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: var(--tie-font-sans);
+  color: var(--tie-fg-1);
+  background: var(--tie-bg);
+  line-height: var(--tie-lh-loose);
+  font-weight: var(--tie-fw-regular);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: var(--bg);
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--tie-fg-1);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d8d8d8;
+  border-radius: var(--tie-radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b8b8;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }

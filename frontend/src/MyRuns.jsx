@@ -5,13 +5,18 @@
  * (see runStorage.js). No backend change. A run started in another browser — or
  * one that never reached `done` and so is absent from the feed — won't appear.
  *
+ * Rebuilt on the v2.2 design (prototype pages-myruns.jsx): a bordered list
+ * whose rows carry the run id as a monospace chip, because on this page the id
+ * is the thing that makes the run "yours".
+ *
  * Page-level component owns all state and is the only thing that talks to the
- * backend (frontend/CONTEXT.md). Navigation uses react-router-dom.
+ * backend (frontend/CONTEXT.md).
  */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PrimaryButton, SecondaryButton, Spinner, ErrorBanner } from "./components/atoms";
 import { getMyRunIds } from "./runStorage";
+import { relativeTime } from "./format";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 const FEED_LIMIT = 100;
@@ -25,22 +30,6 @@ async function readError(res) {
     detail = res.statusText;
   }
   return detail || `Request failed (${res.status}).`;
-}
-
-// Compact relative time ("3h ago"); falls back to a date for older runs.
-function relativeTime(iso) {
-  if (!iso) return "";
-  const then = new Date(iso);
-  if (Number.isNaN(then.getTime())) return "";
-  const secs = Math.round((Date.now() - then.getTime()) / 1000);
-  if (secs < 60) return "just now";
-  const mins = Math.round(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.round(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return then.toLocaleDateString();
 }
 
 export default function MyRuns() {
@@ -85,19 +74,17 @@ export default function MyRuns() {
   }, [myIds]);
 
   return (
-    <div className="tie-page tie-page--narrow">
-      <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
-        <div className="tie-hero-eyebrow">Trend Insight Engine</div>
-        <h1 className="tie-hero-title" style={{ fontSize: "2.25rem", marginBottom: ".5rem" }}>
-          My runs
+    <div className="tie-page">
+      <div style={{ marginTop: "1.5rem" }}>
+        <div className="tie-hero-eyebrow">My runs</div>
+        <h1 className="tie-hero-title" style={{ fontSize: "2rem" }}>
+          Just yours.
         </h1>
         <p className="tie-hero-sub">
-          Runs you started in this browser. There are no accounts in v1 — this list
-          lives only on this device, so clearing site data clears it.
+          We don&apos;t have accounts — “My Runs” is a frontend filter of the public feed against
+          the <code style={{ fontFamily: "var(--tie-font-mono)", fontSize: ".9em" }}>run_id</code>s
+          saved in your browser. Clear your local storage and these disappear.
         </p>
-        <div style={{ marginTop: "1.75rem" }}>
-          <PrimaryButton onClick={onNewRun}>Start a new run →</PrimaryButton>
-        </div>
       </div>
 
       <div style={{ marginTop: "2.5rem" }}>
@@ -108,11 +95,23 @@ export default function MyRuns() {
         ) : error ? (
           <ErrorBanner title="Couldn’t load your runs">{error}</ErrorBanner>
         ) : runs.length === 0 ? (
-          <EmptyState onNewRun={onNewRun} onBrowse={() => navigate("/")} />
+          <EmptyMyRuns onNewRun={onNewRun} onBrowse={() => navigate("/")} hasIds={myIds.size > 0} />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".75rem" }}>
-            {runs.map((run) => (
-              <RunRow key={run.run_id} run={run} onOpen={() => onOpenRun(run.run_id)} />
+          <div
+            style={{
+              border: "1px solid var(--tie-border)",
+              borderRadius: "var(--tie-radius-md)",
+              overflow: "hidden",
+              background: "var(--tie-surface)",
+            }}
+          >
+            {runs.map((run, i) => (
+              <MyRunRow
+                key={run.run_id}
+                run={run}
+                onOpen={() => onOpenRun(run.run_id)}
+                divider={i < runs.length - 1}
+              />
             ))}
           </div>
         )}
@@ -121,7 +120,7 @@ export default function MyRuns() {
   );
 }
 
-function RunRow({ run, onOpen }) {
+function MyRunRow({ run, onOpen, divider }) {
   const [hover, setHover] = useState(false);
   return (
     <button
@@ -130,66 +129,82 @@ function RunRow({ run, onOpen }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        textAlign: "left",
         width: "100%",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "1rem",
+        textAlign: "left",
         padding: "1.1rem 1.4rem",
         background: hover ? "var(--tie-surface-hover)" : "var(--tie-surface)",
-        border: `1px solid ${hover ? "var(--tie-border-hover)" : "var(--tie-border)"}`,
-        borderRadius: "var(--tie-radius-md)",
+        border: "none",
+        borderBottom: divider ? "1px solid var(--tie-divider)" : "none",
         cursor: "pointer",
-        fontFamily: "inherit",
-        transition: "background .15s ease, border-color .15s ease",
+        font: "inherit",
+        color: "inherit",
+        display: "grid",
+        gridTemplateColumns: "minmax(0,1fr) auto auto",
+        gap: "1.5rem",
+        alignItems: "center",
+        transition: "background .15s ease",
       }}
     >
-      <span
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: ".78rem", color: "var(--tie-fg-3)", marginBottom: 4 }}>
+          {relativeTime(run.completed_at)}
+        </div>
+        <div style={{ fontSize: "1rem", color: "var(--tie-fg-1)", fontWeight: 500, lineHeight: 1.4, textWrap: "pretty" }}>
+          {run.idea}
+        </div>
+      </div>
+      <code
         style={{
-          fontSize: "1rem",
-          fontWeight: 500,
-          color: "var(--tie-fg-1)",
-          lineHeight: 1.4,
-          minWidth: 0,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
+          fontFamily: "var(--tie-font-mono)",
+          color: "var(--tie-fg-3)",
+          fontSize: ".8rem",
+          background: "var(--tie-surface-muted)",
+          padding: "2px 8px",
+          borderRadius: 4,
           whiteSpace: "nowrap",
         }}
       >
-        {run.idea}
-      </span>
-      <span style={{ display: "flex", alignItems: "center", gap: ".75rem", flexShrink: 0 }}>
-        <span style={{ fontSize: ".82rem", color: "var(--tie-fg-3)", whiteSpace: "nowrap" }}>
-          {relativeTime(run.completed_at)}
-        </span>
-        <span aria-hidden="true" style={{ color: "var(--tie-fg-3)", fontSize: "1.1rem" }}>
-          →
-        </span>
+        {run.run_id}
+      </code>
+      <span
+        aria-hidden="true"
+        style={{ color: "var(--tie-fg-1)", opacity: hover ? 1 : 0.5, transition: "opacity .15s ease", fontSize: 18 }}
+      >
+        →
       </span>
     </button>
   );
 }
 
-function EmptyState({ onNewRun, onBrowse }) {
+// Two distinct empties: this browser has never started a run, or it has but
+// none of those runs has reached `done` yet (the feed only carries completed
+// runs, so an in-flight run is remembered locally but invisible here).
+function EmptyMyRuns({ onNewRun, onBrowse, hasIds }) {
   return (
     <div
       style={{
-        background: "var(--tie-surface-soft)",
-        border: "1px solid var(--tie-border-soft)",
+        border: "1px dashed var(--tie-border-strong)",
         borderRadius: "var(--tie-radius-md)",
-        padding: "2rem 1.6rem",
+        padding: "3rem 2rem",
         textAlign: "center",
-        color: "var(--tie-fg-3)",
+        background: "var(--tie-surface-soft)",
       }}
     >
-      <p style={{ margin: "0 0 1.1rem", fontSize: ".95rem", lineHeight: 1.5 }}>
-        No runs from this browser yet. Once you submit an idea and it completes, it
-        shows up here.
-      </p>
-      <div style={{ display: "flex", gap: ".5rem", justifyContent: "center" }}>
-        <PrimaryButton onClick={onNewRun}>Start a new run →</PrimaryButton>
-        <SecondaryButton onClick={onBrowse}>Browse all runs</SecondaryButton>
+      <div style={{ fontSize: "1rem", color: "var(--tie-fg-1)", fontWeight: 600, marginBottom: 6 }}>
+        {hasIds ? "Nothing finished yet." : "No runs yet."}
+      </div>
+      <div style={{ color: "var(--tie-fg-3)", fontSize: ".92rem", marginBottom: "1.25rem", lineHeight: 1.5 }}>
+        {hasIds
+          ? "You've started a run from this browser, but none has completed. Runs appear here once they reach done."
+          : "Start a run and we'll remember its ID locally."}
+      </div>
+      <div style={{ display: "flex", gap: ".5rem", justifyContent: "center", flexWrap: "wrap" }}>
+        <PrimaryButton size="sm" onClick={onNewRun}>
+          Start a run
+        </PrimaryButton>
+        <SecondaryButton size="sm" onClick={onBrowse}>
+          Browse all runs
+        </SecondaryButton>
       </div>
     </div>
   );

@@ -64,8 +64,15 @@
   /* ── Type ── */
   --tie-font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
+  /* Verbatim quotes only. Setting evidence in serif is what makes a quote read
+     as a quote rather than as more UI chrome (v2.2 design, QuoteBlock). */
+  --tie-font-serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --tie-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --tie-fs-hero: clamp(2rem, 5vw, 2.75rem);
+  --tie-fs-h2: 1.75rem;
+  --tie-fs-h3: 1.5rem;
+  --tie-fs-h4: 1.25rem;
   --tie-fs-body-lg: 1.15rem;
   --tie-fs-body: 1rem;
   --tie-fs-body-sm: 0.95rem;
@@ -83,6 +90,22 @@
   --tie-lh-loose: 1.6;
 
   --tie-tracking-tight: -0.02em;
+
+  /* ── Spacing scale ── */
+  --tie-space-1: 0.25rem;
+  --tie-space-2: 0.5rem;
+  --tie-space-3: 0.75rem;
+  --tie-space-4: 1rem;
+  --tie-space-5: 1.25rem;
+  --tie-space-6: 1.5rem;
+  --tie-space-8: 2rem;
+  --tie-space-10: 2.5rem;
+  --tie-space-12: 3rem;
+  --tie-space-16: 4rem;
+
+  /* ── Transitions ── */
+  --tie-ease: 0.2s ease;
+  --tie-ease-fast: 0.12s ease;
 }
 
 /* ── Page layout helpers ─────────────────────────────────── */
@@ -124,3 +147,7 @@
 /* ── Keyframes ───────────────────────────────────────────── */
 @keyframes tie-spin { to { transform: rotate(360deg); } }
 @keyframes tie-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes tie-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+/* Indeterminate sweep — the backend reports no per-source percentage, so the
+   running page animates a travelling bar rather than inventing progress. */
+@keyframes tie-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }

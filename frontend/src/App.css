@@ -1,487 +1,205 @@
-/* ── App shell ── */
+/* App shell — sticky site header, page area, site footer.
+ *
+ * Ported from the v2.2 prototype (chrome.jsx + the layout utilities in its
+ * index HTML). This replaces the slice-1 fixed sidebar: v2 is a document-shaped
+ * product (submit → review → read a report), so the chrome is a thin top bar
+ * plus a footer rather than a persistent app rail.
+ *
+ * The prototype wrote every rule as an inline `style` object. Chrome rules that
+ * need `:hover` / `:focus-visible` / media queries live here as classes instead;
+ * one-off page styling stays inline in the page component, as before.
+ */
+
 #root {
   width: 100%;
   text-align: left;
 }
 
-.app-layout {
-  display: grid;
-  grid-template-columns: 256px 1fr;
+.tie-app-shell {
   min-height: 100vh;
-}
-
-/* ── Sidebar ── */
-.sidebar {
-  border-right: 1px solid var(--line);
-  background: var(--bg);
-  padding: var(--s-5) var(--s-3);
   display: flex;
   flex-direction: column;
-  gap: var(--s-5);
+}
+
+.tie-main {
+  flex: 1;
+  width: 100%;
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.tie-header {
   position: sticky;
   top: 0;
-  height: 100vh;
-  overflow-y: auto;
-}
-
-/* Brand */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-2) var(--s-3);
-}
-
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--ink-1);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: -0.02em;
-  flex-shrink: 0;
-}
-
-.brand-name {
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  color: var(--ink-1);
-}
-
-/* Nav */
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nav-item {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: 10px var(--s-4);
-  border-radius: var(--r-pill);
-  color: var(--ink-1);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  font-family: var(--font-sans);
-  transition: background var(--dur) var(--ease);
-}
-
-.nav-item:hover { background: var(--surface); }
-
-.nav-item.active {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-
-.ico {
-  width: 18px;
-  height: 18px;
-  color: var(--ink-2);
-  flex-shrink: 0;
-  display: flex;
-}
-
-.ico svg {
-  width: 18px;
-  height: 18px;
-}
-
-.nav-item.active .ico { color: var(--accent); }
-
-/* ── Main content ── */
-.site-main {
-  padding: var(--s-7) var(--s-8) var(--s-9);
-  max-width: 1080px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* ── Responsive ── */
-@media (max-width: 960px) {
-  .app-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    position: static;
-    height: auto;
-    flex-direction: row;
-    align-items: center;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-    padding: var(--s-3);
-    gap: var(--s-2);
-    overflow-x: auto;
-  }
-
-  .brand { padding: var(--s-2); }
-
-  .nav {
-    flex-direction: row;
-    gap: 2px;
-  }
-
-  .nav-item {
-    padding: 8px var(--s-3);
-    white-space: nowrap;
-    border-radius: var(--r-pill);
-  }
-
-  .site-main {
-    padding: var(--s-5);
-  }
-}
-
-.app-shell {
-  background: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-.app-header h1 {
-  margin: 0 0 8px;
-  font-size: 32px;
-  color: #1a1a1a;
-}
-
-.app-subtitle {
-  margin: 0 0 22px;
-  color: #6b6b6b;
-}
-
-.input-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.input-row input {
-  flex: 1;
-  padding: 0.9rem 1rem;
-  border: 1px solid #d0d0d0;
-  border-radius: 12px;
-  font-size: 1rem;
-  background: #fff;
-  color: #1a1a1a;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.input-row input::placeholder {
-  color: #9ca3af;
-}
-
-.input-row input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-}
-
-.input-row button {
-  padding: 0.9rem 1.35rem;
-  border-radius: 12px;
-  border: none;
-  font-weight: 600;
-  font-size: 1rem;
-  color: #fff;
-  background: linear-gradient(135deg, #6366f1, #4338ca);
-  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.35);
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.2s ease,
-    opacity 0.2s ease;
-}
-
-.input-row button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(79, 70, 229, 0.45);
-}
-
-.input-row button:active {
-  transform: translateY(0);
-}
-
-.input-row button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.analytics-card {
-  text-align: left;
-  border: 1px solid #e5e5e5;
-  border-radius: 14px;
-  padding: 18px 18px 12px;
-  background: #fafafa;
-}
-
-.card-header {
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 1rem;
+  padding: 0.95rem 1.75rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--tie-border);
+  flex-shrink: 0;
 }
 
-.card-header h2 {
-  margin: 0;
-  color: #1a1a1a;
-  font-size: 20px;
-}
-
-.pill {
+.tie-brand {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #e5e5e5;
-  color: #4a4a4a;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.pill.muted {
-  background: #f0f0f0;
-  color: #6b6b6b;
-}
-
-.empty-state {
-  margin: 6px 0 12px;
-  color: #6b6b6b;
-}
-
-.error-message {
-  color: #b91c1c;
-  background: #fef2f2;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid #fecaca;
-  text-align: left;
-}
-
-.problems-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.problem-item {
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #fff;
-  padding: 12px 14px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.problem-title {
-  margin: 0 0 8px;
-  font-weight: 700;
-  color: #1a1a1a;
-}
-
-.problem-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.page-nav {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 24px;
-}
-
-.nav-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 12px;
-  border: 1px solid #d0d0d0;
-  font-weight: 600;
-  font-size: 1rem;
-  color: #4a4a4a;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-button:hover {
-  background: #f5f5f5;
-  color: #1a1a1a;
-  border-color: #b0b0b0;
-}
-
-.nav-button.active {
-  background: #1a1a1a;
-  color: #fff;
-  border-color: #1a1a1a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.pill--label {
-  gap: 6px;
-  font-weight: 500;
-}
-
-.scale-dots {
-  display: inline-flex;
-  gap: 3px;
-  align-items: center;
-}
-
-.scale-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #d0d0d0;
-}
-
-.scale-dot--filled {
-  background: #6366f1;
-}
-
-.retrieved-accordion {
-  margin-top: 16px;
-  border: 1px solid #e5e5e5;
-  border-radius: 14px;
-  background: #fafafa;
-  overflow: hidden;
-}
-
-.retrieved-accordion__toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
+  gap: 0.6rem;
   background: none;
   border: none;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  padding: 0;
   cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
+  color: var(--tie-fg-1);
+  font-weight: var(--tie-fw-semibold);
+  font-size: 1rem;
+  font-family: inherit;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
-.retrieved-accordion__toggle:hover {
-  background: #f0f0f0;
-}
-
-.retrieved-accordion__meta {
+.tie-nav {
   display: flex;
+  gap: 1.75rem;
   align-items: center;
-  gap: 8px;
 }
 
-.retrieved-accordion__chevron {
-  font-size: 1.2rem;
-  color: #6b6b6b;
-  transition: transform 0.2s ease;
-  display: inline-block;
-}
-
-.retrieved-accordion__chevron--open {
-  transform: rotate(180deg);
-}
-
-.retrieved-accordion__list {
-  list-style: none;
-  padding: 0 14px 14px;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.retrieved-accordion__item {
-  border: 1px solid #e5e5e5;
-  border-radius: 10px;
-  background: #fff;
-  padding: 12px 14px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
-.retrieved-accordion__problem {
-  margin: 0 0 8px;
-  font-weight: 600;
-  color: #1a1a1a;
-  font-size: 0.95rem;
-}
-
-.retrieved-accordion--nested {
-  margin-top: 10px;
-}
-
-.recurrence-pill {
+.tie-nav-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  gap: 6px;
+  padding: 0.25rem;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: var(--tie-fw-medium);
+  color: var(--tie-fg-2);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--tie-ease);
+}
+
+.tie-nav-link:hover {
+  color: var(--tie-fg-1);
+}
+
+.tie-nav-link.active {
+  color: var(--tie-fg-1);
+  font-weight: var(--tie-fw-semibold);
+}
+
+/* The underline sits on the header's bottom border, so it is pinned to the
+   header padding rather than to the link box. */
+.tie-nav-link.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -16px;
+  height: 2px;
+  background: var(--tie-fg-1);
+}
+
+.tie-nav-badge {
+  font-size: 0.72rem;
+  font-weight: var(--tie-fw-semibold);
+  padding: 1px 6px;
+  border-radius: var(--tie-radius-pill);
+  background: var(--tie-surface-muted);
+  color: var(--tie-fg-3);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.tie-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 3rem;
+  flex-wrap: wrap;
+  padding: 3rem 1.75rem 2.5rem;
+  background: var(--tie-surface);
+  border-top: 1px solid var(--tie-border);
   flex-shrink: 0;
 }
 
-.recurrence-pill--new {
-  background: #f3f4f6;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
+.tie-footer-blurb {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 320px;
 }
 
-.recurrence-pill--known {
-  background: #eef2ff;
-  color: #4338ca;
-  border: 1px solid #c7d2fe;
+.tie-footer-cols {
+  display: flex;
+  gap: 3rem;
+  flex-wrap: wrap;
 }
 
-@media (max-width: 640px) {
-  #root {
-    padding: 1.5rem 1rem 2rem;
-  }
+.tie-footer-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
-  .app-shell {
-    padding: 22px 18px;
-  }
+.tie-footer-col-title {
+  font-size: 0.75rem;
+  font-weight: var(--tie-fw-semibold);
+  color: var(--tie-fg-1);
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
-  .input-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.tie-footer-link {
+  color: var(--tie-fg-2);
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  transition: color var(--tie-ease);
+}
 
-  .input-row button {
-    width: 100%;
-    text-align: center;
-  }
+.tie-footer-link:hover {
+  color: var(--tie-fg-1);
+}
 
-  .page-nav {
-    flex-direction: column;
-    gap: 8px;
-  }
+/* ── Focus ───────────────────────────────────────────────── */
+.tie-brand:focus-visible,
+.tie-nav-link:focus-visible,
+.tie-footer-link:focus-visible {
+  outline: 2px solid var(--tie-accent);
+  outline-offset: 3px;
+  border-radius: var(--tie-radius-xs);
+}
 
-  .nav-button {
-    width: 100%;
+/* ── Narrow screens ──────────────────────────────────────── */
+@media (max-width: 720px) {
+  .tie-header {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+  .tie-nav {
+    gap: 1rem;
+  }
+  /* The header CTA duplicates the "New Run" link; drop it before the links
+     wrap. `!important` because PrimaryButton sets display inline. */
+  .tie-nav .tie-header-cta {
+    display: none !important;
+  }
+  .tie-footer {
+    padding: 2rem 1rem;
+    gap: 2rem;
+  }
+  .tie-footer-cols {
+    gap: 2rem;
   }
 }
