@@ -7,9 +7,6 @@
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)]([DEMO_URL])
 [![Tests](https://github.com/[USER]/[REPO]/actions/workflows/test.yml/badge.svg)](https://github.com/[USER]/[REPO]/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-<!-- Delete any badge you can't back up. A broken/dead demo badge hurts more
-     than no badge. -->
 
 ---
 
@@ -42,9 +39,6 @@ Solo founders and indie builders wanting to validate a product idea before commm
 - **Evidence is fetched, not recalled.** Real YouTube comments and App Store reviews per
   run, including ones written after any model's training cutoff — and recurrence is counted.
 - **Runs persist.** Addressable at `GET /runs/:id`, so a result can be revisited and shared.
-
-*Limits:* coverage is two sources (YouTube, iTunes RSS), and ranking/severity are still
-model judgment.
 
 ---
 
