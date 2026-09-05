@@ -3,8 +3,8 @@
 > Authority: [docs/PRD.md](../docs/PRD.md) (v2.2) §6 (US-4, US-5), §7.1, §7.6,
 > §7.8 — read those sections, not the whole file. v2 = **idea-in →
 > gaps-out**. The old 4-page weekly-trending / single-URL SPA (Home, Insights,
-> YouTube, App Store) is **replaced**. Legacy pages remain in `src/` pending the
-> v2 rebuild.
+> YouTube, App Store) is **replaced**, and its pages and CSS are gone from
+> `src/`.
 
 ## App Structure (v2)
 React 19 + Vite SPA, organised around the run lifecycle:
@@ -19,10 +19,31 @@ React 19 + Vite SPA, organised around the run lifecycle:
 - **My Runs** → frontend-only filter of the public feed against `localStorage`
   `run_id`s (no auth/accounts in v1).
 
-Pages live **flat in `src/`** (`HomeV2.jsx`, `NewRun.jsx`, `RunResult.jsx`) —
-there is no `src/pages/` directory. Legacy v1 pages (`HomePage`, `InsightsPage`,
-`YouTubePage`, `AppStorePage`) stay mounted in `App.jsx` on `/legacy/*` routes
-but are unlinked from nav; removal is slice 3.
+Pages live **flat in `src/`** (`HomeV2.jsx`, `NewRun.jsx`, `RunResult.jsx`,
+`MyRuns.jsx`) — there is no `src/pages/` directory.
+
+## Chrome & Design System
+The shell is a sticky top header + site footer (`components/SiteHeader.jsx`,
+`components/SiteFooter.jsx`), not a sidebar — v2 is document-shaped (submit →
+review → read a report). `App.jsx` is the shell: header, `<Routes>`, footer,
+plus scroll-to-top on navigation.
+
+The look comes from the **v2.2 design prototype** (`~/Downloads/Trend v2.2/`,
+Claude Design project `507bf203`). Its `--tie-*` tokens and `.tie-*` layout
+helpers live in `src/tokens.css`; the global reset lives in `src/index.css`;
+chrome rules needing `:hover` / media queries live in `src/App.css`. Everything
+else is inline `style` objects, as in the prototype.
+
+Where the prototype and the API disagree, **the API wins** — the prototype was
+drawn against mock data. Notably: `GET /runs` carries no category / signal /
+top-gap, `GapItem` has no `summary`, and the pipeline's per-source stage is not
+exposed, so the running page is deliberately indeterminate rather than faking
+progress. The prototype's `target_gap` field, thumbs-up, direction prompt and
+report dialog are **not ported** — those surfaces were cut (#76, #89).
+
+Shared atoms live in `components/atoms.jsx`; display helpers (`relativeTime`,
+`categoryLabel`) in `src/format.js`. Reuse them instead of ad-hoc hex values or
+a fourth copy of the time formatter.
 
 ## Run Lifecycle (what the UI polls)
 `pending → preflight_ready → running → done | failed`. New Run drives
@@ -69,9 +90,11 @@ non-terminal (`pending` / `preflight_ready` / `running`) and stops on
 - **`partial_sources` banner** if any sources failed, naming them.
 - **Ranked gap list** with **verbatim quotes prominent next to each claim** — not
   hidden in a drill-down (reinforces "decision support, not verdict").
-- Per gap, show: `severity` (1–5 scale), `frequency` (raw count), `spread`
-  (distinct competitors), and **citation count** (`len(evidence_quote_ids)`) —
-  2 citations is visibly weaker than 12 (§7.8).
+- Per gap, show: `spread` (distinct competitors) and **citation count**
+  (`len(evidence_quote_ids)`) — 2 citations is visibly weaker than 12 (§7.8).
+- Do **not** reintroduce a severity or frequency readout. Both were removed from
+  `GapItem`: severity was unanchored LLM output, and frequency was the citation
+  count under a second label (shown beside it as if independent).
 - **Coverage line:** render `coverage` as e.g. *"12 of 184 retrieved quotes were
   cited (6%)"*.
 - The page ends at the gap list + a "Start another run" CTA. The thumbs-up
@@ -81,6 +104,6 @@ non-terminal (`pending` / `preflight_ready` / `running`) and stops on
 
 ## Not in v2
 - No NPS / sentiment ratios (structured pain only).
-- No severity/frequency *color-coded-by-type* grouping (that was the v1 insight
-  view) — v2 ranks gaps, grounded in quotes, not typed insights.
+- No *color-coded-by-type* grouping (that was the v1 insight view) — v2 ranks
+  gaps, grounded in quotes, not typed insights.
 - No accounts, no real-time/streaming, no multi-idea comparison UI.

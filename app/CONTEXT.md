@@ -86,9 +86,13 @@ read path filters a run out of the public surface by status any more.
   measurement — a change that needs quality validation brings its own.
 
 ## v2 Domain Schema (schemas/runs.py)
-- `GapItem`: `gap_id`, `gap`, `severity` (1–5 rubric), `frequency` (raw count),
-  `spread` (distinct competitors), `competitors_present[]`, `evidence_quote_ids[]`
-  (≥2).
+- `GapItem`: `gap_id`, `gap`, `spread` (distinct competitors among cited quotes),
+  `competitors_present[]`, `evidence_quote_ids[]` (≥2).
+  `severity` and `frequency` were **removed**: severity was pure LLM output with
+  nothing anchoring it to the evidence, and `frequency` was `len(evidence_quote_ids)`
+  — the citation count under a second name, so it measured the model's citation
+  verbosity, not how often users raised the complaint. Every surviving field is
+  computed in Python from validated quote IDs.
 - `Quote` (keyed by `quote_id`): `source`, `source_id`, `text_redacted`, `like_count`.
 - `Coverage`: `quotes_retrieved`, `quotes_cited`, `citation_ratio`.
 - `RunResult` = strict terminal view; `RunStateResponse` = permissive any-stage view.

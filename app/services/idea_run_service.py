@@ -146,8 +146,6 @@ def _gaps_for(row: dict) -> list[dict]:
         {
             "gap_id": g["gap_id"],
             "gap": g["gap"],
-            "severity": g["severity"],
-            "frequency": g["frequency"],
             "spread": g["spread"],
             "competitors_present": g.get("competitors_present_json") or [],
             "evidence_quote_ids": g.get("evidence_quote_ids_json") or [],

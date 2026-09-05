@@ -39,17 +39,14 @@ class TestHappyPath:
         _mock_llm(mocker, [
             {
                 "gap": "Offline edits lost or overwritten on reconnect",
-                "severity": 5,
                 "evidence_quote_ids": ["q01", "q05", "q09", "q13", "q17", "q20"],
             },
             {
                 "gap": "Mobile editor lags on long notes",
-                "severity": 3,
                 "evidence_quote_ids": ["q02", "q07", "q12", "q18"],
             },
             {
                 "gap": "Pricing perceived as excessive",
-                "severity": 2,
                 "evidence_quote_ids": ["q03", "q14"],
             },
         ])
@@ -70,7 +67,6 @@ class TestHappyPath:
         _mock_llm(mocker, [
             {
                 "gap": "Offline edits lost on reconnect",
-                "severity": 5,
                 "evidence_quote_ids": ["q01", "q09", "q13", "q17"],
             },
         ])
@@ -78,7 +74,7 @@ class TestHappyPath:
         gaps, _ = synthesize(**pool)
 
         gap = gaps[0]
-        assert gap.frequency == 4
+        assert len(gap.evidence_quote_ids) == 4
         assert gap.spread == 4
         assert set(gap.competitors_present) == {
             "youtube:notion_review",
@@ -91,7 +87,6 @@ class TestHappyPath:
         _mock_llm(mocker, [
             {
                 "gap": "Bear iCloud sync drops edits",
-                "severity": 4,
                 "evidence_quote_ids": ["q11", "q13"],
             },
         ])
@@ -105,10 +100,9 @@ class TestHappyPath:
 class TestGroundingValidator:
     def test_gap_with_one_citation_rejected(self, pool, mocker):
         _mock_llm(mocker, [
-            {"gap": "Solo gripe", "severity": 3, "evidence_quote_ids": ["q01"]},
+            {"gap": "Solo gripe", "evidence_quote_ids": ["q01"]},
             {
                 "gap": "Real recurring gap",
-                "severity": 4,
                 "evidence_quote_ids": ["q01", "q05", "q17"],
             },
         ])
@@ -124,12 +118,10 @@ class TestGroundingValidator:
         _mock_llm(mocker, [
             {
                 "gap": "Hallucinated cite",
-                "severity": 5,
                 "evidence_quote_ids": ["q01", "q999"],
             },
             {
                 "gap": "Grounded cite",
-                "severity": 4,
                 "evidence_quote_ids": ["q02", "q07"],
             },
         ])
@@ -145,7 +137,6 @@ class TestGroundingValidator:
         _mock_llm(mocker, [
             {
                 "gap": "Looks-like-two-but-is-one",
-                "severity": 3,
                 "evidence_quote_ids": ["q01", "q01"],
             },
         ])
@@ -156,10 +147,12 @@ class TestGroundingValidator:
         assert coverage.quotes_cited == 0
         assert coverage.citation_ratio == 0.0
 
-    def test_invalid_severity_drops_only_that_gap(self, pool, mocker):
+    def test_schema_invalid_candidate_drops_only_that_gap(self, pool, mocker):
+        # Empty `gap` text trips GapItem's min_length=1 — the ValidationError
+        # must be contained to that candidate, not abort the whole batch.
         _mock_llm(mocker, [
-            {"gap": "Bad severity", "severity": 99, "evidence_quote_ids": ["q01", "q05"]},
-            {"gap": "Good gap", "severity": 4, "evidence_quote_ids": ["q11", "q13"]},
+            {"gap": "", "evidence_quote_ids": ["q01", "q05"]},
+            {"gap": "Good gap", "evidence_quote_ids": ["q11", "q13"]},
         ])
 
         gaps, _ = synthesize(**pool)
@@ -173,7 +166,7 @@ class TestRoutingAndPromptShape:
         mock_call = mocker.patch(
             MOCK_TARGET,
             return_value=json.dumps({"gaps": [
-                {"gap": "g", "severity": 3, "evidence_quote_ids": ["q01", "q05"]}
+                {"gap": "g", "evidence_quote_ids": ["q01", "q05"]}
             ]}),
         )
 
@@ -226,7 +219,7 @@ class TestDegenerateLLMOutput:
         mocker.patch(
             MOCK_TARGET,
             return_value=json.dumps([
-                {"gap": "wrapped", "severity": 3, "evidence_quote_ids": ["q01", "q05"]},
+                {"gap": "wrapped", "evidence_quote_ids": ["q01", "q05"]},
             ]),
         )
 
@@ -241,7 +234,7 @@ class TestDegenerateLLMOutput:
         fallback, this silently degraded to gaps=[] with no warning — seen in
         production logs (2026-07-11) across an entire run."""
         fenced = "```json\n" + json.dumps({"gaps": [
-            {"gap": "fenced gap", "severity": 3, "evidence_quote_ids": ["q01", "q05"]},
+            {"gap": "fenced gap", "evidence_quote_ids": ["q01", "q05"]},
         ]}) + "\n```"
         mocker.patch(MOCK_TARGET, return_value=fenced)
 

@@ -82,8 +82,6 @@ class SourceMetadata(BaseModel):
 class GapItem(BaseModel):
     gap_id: str = Field(min_length=1)
     gap: str = Field(min_length=1)
-    severity: int = Field(ge=1, le=5)
-    frequency: int = Field(ge=0)
     spread: int = Field(ge=0)
     competitors_present: List[str] = Field(default_factory=list)
     evidence_quote_ids: List[str] = Field(min_length=2)

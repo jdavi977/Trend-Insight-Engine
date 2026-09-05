@@ -6,6 +6,11 @@
  *      panel, low-signal acknowledgement gate, editable competitor list →
  *      POST /runs/:id/approve → open the run's result page.
  *
+ * Rebuilt on the v2.2 design (prototype pages-newrun.jsx + pages-preflight.jsx,
+ * "stacked" variant). The prototype's optional `target_gap` field is gone: it
+ * was folded into `idea` in the scope-down (issue #76), and `RunCreate` takes
+ * `idea` alone.
+ *
  * Page-level component owns all state and is the only thing that talks to the
  * backend (frontend/CONTEXT.md). Pre-flight sub-pieces below are page-specific.
  */
@@ -18,10 +23,12 @@ import {
   Pill,
   Spinner,
   ErrorBanner,
+  ErrorStateCard,
   SignalBadge,
   SourceIcon,
 } from "./components/atoms";
 import { rememberRunId } from "./runStorage";
+import { categoryLabel } from "./format";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -206,13 +213,14 @@ export default function NewRun() {
   return (
     <div className="tie-page tie-page--narrow">
       <div style={{ marginTop: "1.5rem" }}>
-        <div className="tie-hero-eyebrow">Step 1 of 2 · Submit</div>
+        <div className="tie-hero-eyebrow">Step 1 of 3 · Submit</div>
         <h1 className="tie-hero-title" style={{ fontSize: "2.25rem" }}>
           What are you thinking about building?
         </h1>
         <p className="tie-hero-sub">
-          One idea per run. Pre-flight will read across competitors and propose the
-          sources to mine for complaints — you review the list before the full run starts.
+          One idea per run. Vague (<em style={{ color: "var(--tie-fg-2)" }}>“2.5d survivor-like”</em>) or
+          specific (<em style={{ color: "var(--tie-fg-2)" }}>“notes app with offline sync”</em>) —
+          pre-flight will propose the competitors to read.
         </p>
       </div>
 
@@ -228,9 +236,11 @@ export default function NewRun() {
           />
         </Field>
 
+        <PublicByUrlNote />
+
         {error && <ErrorBanner title="Couldn’t run pre-flight">{error}</ErrorBanner>}
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginTop: ".5rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginTop: ".5rem", flexWrap: "wrap" }}>
           <div style={{ fontSize: ".82rem", color: "var(--tie-fg-3)" }}>
             Pre-flight runs in &lt;10s. You’ll review the competitor list before the full pipeline starts.
           </div>
@@ -245,6 +255,37 @@ export default function NewRun() {
           </PrimaryButton>
         </div>
       </form>
+    </div>
+  );
+}
+
+// The disclosure the submit step owes the user before anything is persisted:
+// completed runs are public by URL, review text is PII-stripped, and there are
+// per-IP ceilings (PRD §8; RATE_LIMIT_PER_HOUR / _PER_DAY in app/config).
+function PublicByUrlNote() {
+  return (
+    <div
+      style={{
+        padding: "1rem 1.1rem",
+        background: "var(--tie-surface-soft)",
+        border: "1px solid var(--tie-border-soft)",
+        borderRadius: "var(--tie-radius-md)",
+        fontSize: ".9rem",
+        color: "var(--tie-fg-2)",
+        lineHeight: 1.55,
+        display: "flex",
+        gap: ".75rem",
+        alignItems: "flex-start",
+      }}
+    >
+      <span aria-hidden="true" style={{ fontSize: "1rem", lineHeight: 1.4 }}>ⓘ</span>
+      <div>
+        <strong style={{ color: "var(--tie-fg-1)" }}>Public by URL.</strong> Completed runs appear on
+        the public feed by their{" "}
+        <code style={{ fontFamily: "var(--tie-font-mono)", fontSize: ".85em" }}>run_id</code>. We
+        don&apos;t index them in search engines; raw review text is PII-stripped at persist time.
+        Per-IP limits: 3 runs per hour, 10 per day.
+      </div>
     </div>
   );
 }
@@ -278,19 +319,33 @@ function PreflightReview({ runIdea, preflight, competitors, setCompetitors, ackn
   return (
     <div className="tie-page tie-page--narrow">
       <div style={{ marginTop: "1.5rem", marginBottom: "2rem" }}>
-        <div className="tie-hero-eyebrow">Step 2 of 2 · Review pre-flight</div>
+        <div className="tie-hero-eyebrow">Step 2 of 3 · Review pre-flight</div>
         <h1 className="tie-hero-title" style={{ fontSize: "2rem", marginBottom: ".5rem" }}>
           {noSources ? "No public sources found." : "Here’s what we’ll read."}
         </h1>
-        <p style={{ color: "var(--tie-fg-3)", fontSize: ".95rem", margin: 0 }}>
-          Idea: <span style={{ color: "var(--tie-fg-1)", fontWeight: 500 }}>“{runIdea}”</span>
-          {preflight.category && <span> · {preflight.category}</span>}
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: ".6rem", flexWrap: "wrap" }}>
+          <p style={{ color: "var(--tie-fg-3)", fontSize: ".95rem", margin: 0 }}>
+            Idea: <span style={{ color: "var(--tie-fg-1)", fontWeight: 500 }}>“{runIdea}”</span>
+          </p>
+          {preflight.category && <Pill muted>{categoryLabel(preflight.category)}</Pill>}
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         {noSources ? (
-          <NoSourcesPanel reasoning={preflight.signal_reasoning} />
+          <ErrorStateCard
+            icon="∅"
+            tone="neutral"
+            title="No public sources for this idea."
+            body={
+              <>
+                Pre-flight couldn’t surface any App Store apps or YouTube videos to mine for
+                complaints. {preflight.signal_reasoning ? <span>{preflight.signal_reasoning} </span> : null}
+                If you already know competitors worth reading, paste their App Store or YouTube URLs
+                below and we’ll run against those.
+              </>
+            }
+          />
         ) : (
           <>
             <SignalPanel signal={preflight.signal_strength} reasoning={preflight.signal_reasoning} />
@@ -328,30 +383,6 @@ function PreflightReview({ runIdea, preflight, competitors, setCompetitors, ackn
               "Approve and run →"
             )}
           </PrimaryButton>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// US-S1 (spec §9.3): zero candidates from pre-flight. Explain the situation and
-// point at the paste-URL editor below as the way forward, rather than dropping
-// the user into an empty competitor list that reads like a bug.
-function NoSourcesPanel({ reasoning }) {
-  return (
-    <div style={{ background: "var(--tie-surface-soft)", border: "1px solid var(--tie-border-strong)", borderRadius: "var(--tie-radius-md)", padding: "1.25rem 1.4rem" }}>
-      <div style={{ display: "flex", gap: ".75rem", alignItems: "flex-start" }}>
-        <span aria-hidden="true" style={{ fontSize: "1.05rem", lineHeight: 1.4 }}>🔍</span>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ margin: "0 0 .35rem", color: "var(--tie-fg-1)", fontSize: "1.05rem", fontWeight: 700 }}>
-            No public sources found for this idea.
-          </h3>
-          <p style={{ margin: 0, color: "var(--tie-fg-2)", fontSize: ".92rem", lineHeight: 1.55, textWrap: "pretty" }}>
-            Pre-flight couldn’t surface any App Store apps or YouTube videos to mine
-            for complaints. {reasoning ? <span>{reasoning} </span> : null}
-            If you already know competitors worth reading, paste their App Store or
-            YouTube URLs below and we’ll run against those.
-          </p>
         </div>
       </div>
     </div>
@@ -423,9 +454,9 @@ function CompetitorEditor({ competitors, setCompetitors }) {
 
   return (
     <div style={{ background: "var(--tie-surface)", border: "1px solid var(--tie-border)", borderRadius: "var(--tie-radius-md)", overflow: "hidden" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.1rem 1.4rem", borderBottom: "1px solid var(--tie-border)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", padding: "1.1rem 1.4rem", borderBottom: "1px solid var(--tie-border)", flexWrap: "wrap" }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--tie-fg-1)" }}>Competitors ({competitors.length})</h3>
+          <h2 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "var(--tie-fg-1)" }}>Competitors ({competitors.length})</h2>
           <p style={{ margin: "0.25rem 0 0", fontSize: ".85rem", color: "var(--tie-fg-3)" }}>
             Add, remove, or paste a URL. These are the sources we’ll read user complaints from.
           </p>
@@ -495,7 +526,7 @@ function CompetitorRow({ c, onRemove, divider }) {
         <div style={{ fontSize: ".82rem", color: "var(--tie-fg-3)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
           <span style={{ fontStyle: "italic" }}>{provenance}</span>
           <span aria-hidden="true">·</span>
-          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: ".75rem" }}>{c.identifier}</code>
+          <code style={{ fontFamily: "var(--tie-font-mono)", fontSize: ".75rem" }}>{c.identifier}</code>
         </div>
       </div>
       <button

@@ -204,7 +204,7 @@ def test_get_done_run_includes_gaps_from_gaps_table(client, mocker):
         "app.services.idea_run_service.list_gaps_for_run",
         return_value=[{
             "gap_id": "gap_001", "run_id": done["id"], "gap": "Offline edits lost",
-            "severity": 5, "frequency": 4, "spread": 2,
+            "spread": 2,
             "competitors_present_json": ["youtube:v1", "appstore:a1"],
             "evidence_quote_ids_json": ["q01", "q02"], "ordinal": 1,
         }],

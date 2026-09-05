@@ -38,8 +38,7 @@ def _quote(qid, source="youtube", source_id="vid_1", text="sync is broken"):
 
 
 def _gap(gap_id="gap_001", evidence=("q01", "q02")):
-    return GapItem(gap_id=gap_id, gap="Offline edits lost", severity=4,
-                   frequency=len(evidence), spread=2,
+    return GapItem(gap_id=gap_id, gap="Offline edits lost", spread=2,
                    competitors_present=["youtube:vid_1", "appstore:app_1"],
                    evidence_quote_ids=list(evidence))
 

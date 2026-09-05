@@ -339,8 +339,6 @@ def _gap_rows(run_id: str, gaps: list[GapItem]) -> list[dict]:
             "gap_id": gap.gap_id,
             "run_id": run_id,
             "gap": gap.gap,
-            "severity": gap.severity,
-            "frequency": gap.frequency,
             "spread": gap.spread,
             "competitors_present_json": gap.competitors_present,
             "evidence_quote_ids_json": gap.evidence_quote_ids,
