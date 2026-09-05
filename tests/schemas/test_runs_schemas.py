@@ -1,7 +1,7 @@
 """Boundary tests for app/schemas/runs.py (spec §5).
 
 Covers serialization round-trip + validation rules: GapItem requires ≥2
-evidence_quote_ids (PRD §7.7), Coverage.citation_ratio is bounded, severity is
+evidence_quote_ids (PRD §7.7), Coverage.citation_ratio is bounded, spread is
 1..5, RunApprove must carry at least one competitor.
 """
 from __future__ import annotations
@@ -54,8 +54,6 @@ def _gap(**overrides):
     base = {
         "gap_id": "g1",
         "gap": "no offline sync",
-        "severity": 4,
-        "frequency": 7,
         "spread": 3,
         "competitors_present": ["Notion", "Obsidian"],
         "evidence_quote_ids": ["q1", "q2"],
@@ -116,11 +114,9 @@ class TestGapItem:
         with pytest.raises(ValidationError):
             _gap(evidence_quote_ids=["q1"])
 
-    def test_severity_bounded(self):
+    def test_spread_non_negative(self):
         with pytest.raises(ValidationError):
-            _gap(severity=6)
-        with pytest.raises(ValidationError):
-            _gap(severity=0)
+            _gap(spread=-1)
 
     def test_round_trip(self):
         g = _gap()

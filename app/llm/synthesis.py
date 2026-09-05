@@ -33,14 +33,13 @@ Your task: produce a ranked list of distinct product GAPS — concrete unmet nee
 RULES (non-negotiable; violations will be discarded by a downstream validator):
 1. Every gap MUST cite at least 2 quote_ids drawn verbatim from the pool. Do NOT invent quote_ids.
 2. Prefer gaps that span multiple competitors over single-competitor gripes.
-3. severity is 1–5 (1 = mild nit, 3 = meaningful friction, 5 = dealbreaker / data loss).
-4. Rank gaps by importance (highest first). Aim for 3–7 gaps; fewer well-grounded gaps beats many weakly-grounded ones.
-5. Do NOT echo the idea text back as a gap. Gaps must be derived from the quotes.
+3. Rank gaps by importance (highest first). Aim for 3–7 gaps; fewer well-grounded gaps beats many weakly-grounded ones.
+4. Do NOT echo the idea text back as a gap. Gaps must be derived from the quotes.
 
 Return ONLY valid JSON in this shape:
 {
   "gaps": [
-    {"gap": "<one-sentence description>", "severity": 1-5, "evidence_quote_ids": ["<id>", "<id>", ...]}
+    {"gap": "<one-sentence description>", "evidence_quote_ids": ["<id>", "<id>", ...]}
   ]
 }
 """
@@ -129,8 +128,6 @@ def _build_gap(
         return GapItem(
             gap_id=f"gap_{ordinal:03d}",
             gap=candidate.get("gap", ""),
-            severity=candidate.get("severity", 0),
-            frequency=len(deduped),
             spread=len(competitors),
             competitors_present=competitors,
             evidence_quote_ids=deduped,
